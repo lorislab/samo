@@ -1,0 +1,11 @@
+[
+  {
+    "name": "com.sun.xml.internal.stream.XMLInputFactoryImpl",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  }
+]

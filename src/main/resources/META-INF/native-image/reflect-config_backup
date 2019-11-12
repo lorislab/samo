@@ -1,0 +1,185 @@
+[
+  {
+    "name": "com.sun.xml.internal.stream.XMLInputFactoryImpl",
+    "methods": [
+      {
+        "name": "<init>",
+        "parameterTypes": []
+      }
+    ]
+  },
+  {
+    "name": "com.jcraft.jsch.CipherNone"
+  },
+  {
+    "name": "com.jcraft.jsch.DHEC256"
+  },
+  {
+    "name": "com.jcraft.jsch.DHEC384"
+  },
+  {
+    "name": "com.jcraft.jsch.DHEC521"
+  },
+  {
+    "name": "com.jcraft.jsch.DHG1"
+  },
+  {
+    "name": "com.jcraft.jsch.DHG14"
+  },
+  {
+    "name": "com.jcraft.jsch.DHGEX"
+  },
+  {
+    "name": "com.jcraft.jsch.DHGEX256"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES128CBC"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES128CTR"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES192CBC"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES192CTR"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES256CBC"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.AES256CTR"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.ARCFOUR"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.ARCFOUR128"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.ARCFOUR256"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.BlowfishCBC"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.DH"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.ECDHN"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACMD5"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACMD596"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACSHA1"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACSHA1"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACSHA196"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.HMACSHA256"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.KeyPairGenDSA"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.KeyPairGenECDSA"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.KeyPairGenRSA"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.MD5"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.Random"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SHA1"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SHA256"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SHA384"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SHA512"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SignatureDSA"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SignatureECDSA256"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SignatureECDSA384"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SignatureECDSA521"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.SignatureRSA"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.TripleDESCBC"
+  },
+  {
+    "name": "com.jcraft.jsch.jce.TripleDESCTR"
+  },
+  {
+    "name": "com.jcraft.jsch.jcraft.Compression"
+  },
+  {
+    "name": "com.jcraft.jsch.jgss.GSSContextKrb5"
+  },
+  {
+    "name": "com.jcraft.jsch.UserAuthGSSAPIWithMIC"
+  },
+  {
+    "name": "com.jcraft.jsch.UserAuthKeyboardInteractive"
+  },
+  {
+    "name": "com.jcraft.jsch.UserAuthNone"
+  },
+  {
+    "name": "com.jcraft.jsch.UserAuthPassword"
+  },
+  {
+    "name": "com.jcraft.jsch.UserAuthPublicKey"
+  },
+  {
+    "name": "org.eclipse.jgit.api.MergeCommand$FastForwardMode"
+  },
+  {
+    "name": "org.eclipse.jgit.api.MergeCommand$FastForwardMode$Merge"
+  },
+  {
+    "name": "org.eclipse.jgit.internal.JGitText"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$AutoCRLF"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$CheckStat"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$EOL"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$EolStreamType"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$HideDotFiles"
+  },
+  {
+    "name": "org.eclipse.jgit.lib.CoreConfig$SymLinks"
+  }
+]
