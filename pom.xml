@@ -65,7 +65,7 @@
                         <manifest>
                             <addClasspath>true</addClasspath>
                             <classpathPrefix>lib/</classpathPrefix>
-                            <mainClass>org.lorislab.samo.Main</mainClass>
+                            <mainClass>org.lorislab.samo.Samo</mainClass>
                             <classpathLayoutType>repository</classpathLayoutType>
                         </manifest>
                     </archive>

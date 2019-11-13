@@ -1,6 +1,6 @@
-package org.lorislab.samo.maven;
+package org.lorislab.samo.data;
 
-import org.lorislab.samo.xml.XPathItem;
+import org.lorislab.samo.data.XPathItem;
 
 public class MavenProjectId {
     public XPathItem artifactId;

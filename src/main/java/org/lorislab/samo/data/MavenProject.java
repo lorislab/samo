@@ -1,7 +1,4 @@
-package org.lorislab.samo.maven;
-
-import com.github.zafarkhaja.semver.Version;
-import org.lorislab.samo.xml.XPathItem;
+package org.lorislab.samo.data;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;

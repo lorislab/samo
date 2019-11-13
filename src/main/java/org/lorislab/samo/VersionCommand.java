@@ -1,77 +1,108 @@
 package org.lorislab.samo;
 
 import com.github.zafarkhaja.semver.Version;
-import org.lorislab.samo.cli.CliUtil;
-import org.lorislab.samo.maven.MavenProject;
+import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
-import java.nio.file.Path;
-import java.util.Optional;
+@CommandLine.Command(name = "version",
+        description = "All version commands",
+        subcommands = {
+                VersionCommand.Release.class,
+                VersionCommand.Git.class,
+                VersionCommand.Info.class,
+                VersionCommand.Snapshot.class
 
-@CommandLine.Command(name = "version", subcommands = {
-        VersionCommand.Release.class,
-        VersionCommand.Git.class
-})
+        }
+)
 public class VersionCommand extends CommonCommand {
+
+    @CommandLine.Spec
+    CommandLine.Model.CommandSpec spec;
 
     @Override
     public void run() {
-        try {
-            MavenProject project = MavenProject.loadFromFile(pom);
-            System.out.println(project.id.version.value);
-        } catch (Exception ex) {
-            ex.printStackTrace();
+        spec.commandLine().usage(System.out);
+    }
+
+    @CommandLine.Command(name = "info", description = "Show current version")
+    public static class Info extends CommonCommand {
+
+        @Override
+        public void run() {
+            try {
+                MavenProject project = MavenProject.loadFromFile(pom);
+                logInfo(project.id.version.value);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
         }
     }
 
-    @CommandLine.Command(name = "release")
+    @CommandLine.Command(name = "release", description = "Set the release version")
     public static class Release extends CommonCommand {
 
         @Override
         public void run() {
             try {
                 MavenProject project = MavenProject.loadFromFile(pom);
-                System.out.println("Project: " + project.id);
+                logVerbose("Project: " + project.id);
                 Version version = Version.valueOf(project.id.version.value);
                 String releaseVersion = version.getNormalVersion();
+                logVerbose(releaseVersion);
                 project.setVersion(releaseVersion);
-                System.out.println("Change version from " + project.id.version.value + " to " + releaseVersion);
+                logInfo("Change version from " + project.id.version.value + " to " + releaseVersion);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
     }
 
-    @CommandLine.Command(name = "git")
+    @CommandLine.Command(name = "snapshot", description = "Set snapshot prerelease version")
+    public static class Snapshot extends CommonCommand {
+
+        @Override
+        public void run() {
+            try {
+                MavenProject project = MavenProject.loadFromFile(pom);
+                logVerbose("Project: " + project.id);
+                Version version = Version.valueOf(project.id.version.value);
+                version = version.setPreReleaseVersion("SNAPSHOT");
+                String releaseVersion = version.toString();
+                logVerbose(releaseVersion);
+
+                project.setVersion(releaseVersion);
+                logInfo("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+
+    @CommandLine.Command(name = "sha-prerelease", description = "Set git sha prerelease version")
     public static class Git extends CommonCommand {
 
         @Override
         public void run() {
             try {
                 MavenProject project = MavenProject.loadFromFile(pom);
-                if (verbose) {
-                    System.out.println("Project: " + project.id);
-                }
+                logVerbose("Project: " + project.id);
+
                 Version version = Version.valueOf(project.id.version.value);
 
-                CliUtil.Return r = CliUtil.callCli(getGitPath() + " rev-parse --short=" + length + " HEAD", "Error git sha", verbose);
-                if (verbose) {
-                    System.out.println("Git hash: " + r.response);
-                }
+                Return r = callCli(getGitPath() + " rev-parse --short=" + length + " HEAD", "Error git sha", verbose);
+                logVerbose("Git hash: " + r.response);
+
                 version = version.setPreReleaseVersion(r.response);
                 String releaseVersion = version.toString();
+                logVerbose(releaseVersion);
+
                 project.setVersion(releaseVersion);
-                System.out.println("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
+                logInfo("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
             } catch (Exception ex) {
                 ex.printStackTrace();
             }
         }
     }
 
-    static Path getGitPath() {
-        String helmExecutable = CliUtil.IS_WINDOWS ? "git.exe" : "git";
-        Optional<Path> path = CliUtil.findInPath(helmExecutable);
-        return path.orElseThrow(() -> new RuntimeException("git executable is not found."));
-    }
 
 }

@@ -1,4 +1,4 @@
-package org.lorislab.samo.xml;
+package org.lorislab.samo.data;
 
 import javax.xml.stream.XMLEventReader;
 import javax.xml.stream.XMLInputFactory;

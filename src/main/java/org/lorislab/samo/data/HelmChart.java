@@ -1,7 +1,4 @@
-package org.lorislab.samo.helm;
-
-import com.github.zafarkhaja.semver.Version;
-import org.lorislab.samo.yaml.YamlNode;
+package org.lorislab.samo.data;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -31,13 +28,6 @@ public class HelmChart {
         chart.version = root.get(CHART_VERSION);
         chart.name = root.get(CHART_NAME);
         return chart;
-    }
-
-    public void release() {
-        Version tmp = Version.valueOf(version.value);
-        String releaseVersion = tmp.getNormalVersion();
-        setVersion(releaseVersion);
-        System.out.println("Change version from " + version.value + " to " + releaseVersion);
     }
 
     public void setVersion(String newVersion) {
