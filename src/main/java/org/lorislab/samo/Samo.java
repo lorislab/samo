@@ -3,6 +3,8 @@ package org.lorislab.samo;
 import picocli.CommandLine;
 import picocli.CommandLine.Command;
 
+import java.util.concurrent.Callable;
+
 @Command(name = "samo",
         mixinStandardHelpOptions = true,
         version = "1.0",
@@ -11,7 +13,7 @@ import picocli.CommandLine.Command;
                 CommandLine.HelpCommand.class
         }
 )
-public class Samo extends CommonCommand implements Runnable {
+public class Samo extends CommonCommand implements Callable<Integer> {
 
     @CommandLine.Spec
     CommandLine.Model.CommandSpec spec;
@@ -21,8 +23,9 @@ public class Samo extends CommonCommand implements Runnable {
         System.exit(exitCode);
     }
 
-    public void run() {
+    public Integer call() {
         spec.commandLine().usage(System.out);
+        return CommandLine.ExitCode.OK;
     }
 
 }

@@ -10,11 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-public abstract class CommonCommand implements Runnable {
+public abstract class CommonCommand implements Callable<Integer> {
 
     @CommandLine.Option(
             names = { "-l", "--length" },
