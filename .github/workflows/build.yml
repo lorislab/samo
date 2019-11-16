@@ -21,6 +21,10 @@ jobs:
       uses: DeLaGuardo/setup-graalvm@1.0
       with:
         graalvm-version: '19.2.1'
+    - name: Java Version
+      run: |
+        java -version
+        mvn -version
     - name: Maven Build
       run: ./mvnw $MAVEN_CLI_OPTS clean package -Pnative
       
