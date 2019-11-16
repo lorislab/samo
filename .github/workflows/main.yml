@@ -1,0 +1,26 @@
+name: main
+
+on: [push]
+
+env:
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  MAVEN_CLI_OPTS: "--batch-mode"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - uses: actions/cache@v1
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-        
+    - name: Setup GraalVM environment
+      uses: DeLaGuardo/setup-graalvm@1.0
+      with:
+        graalvm-version: '19.2.1'
+    - name: Maven Build
+      run: ./mvnw $MAVEN_CLI_OPTS clean package -Pnative
+      
