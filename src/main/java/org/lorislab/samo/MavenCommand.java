@@ -122,9 +122,9 @@ public class MavenCommand implements Callable<Integer> {
     }
 
     /**
-     * Sets the maven project to git sha prerelease version.
+     * Sets the maven project to git hash prerelease version.
      */
-    @CommandLine.Command(name = "set-git", description = "Set git sha prerelease version")
+    @CommandLine.Command(name = "set-hash", description = "Set git hash prerelease version")
     public static class Git extends CommonCommand {
 
         /**
