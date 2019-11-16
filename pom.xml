@@ -38,6 +38,11 @@
         <finalName>${project.artifactId}</finalName>
         <plugins>
             <plugin>
+                <groupId>org.lorislab.maven</groupId>
+                <artifactId>semver-release-maven-plugin</artifactId>
+                <version>0.4.0</version>
+            </plugin>
+            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-dependency-plugin</artifactId>
                 <executions>
@@ -107,7 +112,7 @@
                                 </goals>
                                 <phase>package</phase>
                                 <configuration>
-                                    <buildArgs>--no-server --no-fallback</buildArgs>
+                                    <buildArgs>--no-fallback</buildArgs>
                                     <imageName>${project.artifactId}</imageName>
                                 </configuration>
                             </execution>
