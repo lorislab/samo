@@ -1,81 +1,142 @@
+/*
+ * Copyright 2019 lorislab.org.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.lorislab.samo;
 
+import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
-import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
-public abstract class CommonCommand implements Callable<Integer> {
+/**
+ * The common abstract command.
+ */
+abstract class CommonCommand implements Callable<Integer> {
 
+    /**
+     * The snapshot suffix
+     */
+    static final String SNAPSHOT = "SNAPSHOT";
+
+    /**
+     * Is windows flag.
+     */
+    private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
+
+    /**
+     * Verbose flag.
+     */
     @CommandLine.Option(
-            names = { "-l", "--length" },
-            paramLabel = "LENGTH",
-            defaultValue = "7",
-            required = true,
-            description = "the git sha length"
-    )
-    int length;
-
-    @CommandLine.Option(
-            names = { "-v", "--verbose" },
+            names = {"-v", "--verbose"},
             defaultValue = "false",
             required = true,
             description = "the verbose output"
     )
     boolean verbose;
 
+    /**
+     * The maven project file.
+     */
     @CommandLine.Option(
-            names = { "-f", "--file" },
+            names = {"-f", "--file"},
             paramLabel = "POM",
             defaultValue = "pom.xml",
             required = true,
             description = "the maven project file"
     )
-    File pom;
+    private File pom;
 
+    /**
+     * The log info message
+     *
+     * @param message the message.
+     */
     void logInfo(String message) {
-        System.out.println(message);
+        System.out.println("SAMO >> " + message);
     }
 
+    /**
+     * The log verbose message.
+     *
+     * @param message the message.
+     */
     void logVerbose(String message) {
         if (verbose) {
-            System.out.println(message);
+            System.out.println("SAMO >> " + message);
         }
     }
 
-    public static boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
-
-    public static class Return {
-        public int exitValue = 0;
-        public String response = "";
-        public String error = "";
+    /**
+     * Gets the maven project.
+     *
+     * @return the maven project.
+     * @throws Exception if the method fails.
+     */
+    MavenProject getMavenProject() throws Exception {
+        MavenProject project = MavenProject.loadFromFile(pom);
+        logVerbose("Project: " + project.id);
+        return project;
     }
 
-    Return callCli(String command, String errorMessage, final boolean verbose) {
+    /**
+     * CLI run result object.
+     */
+    static class Return {
+        /**
+         * The exit value.
+         */
+        int exitValue = 0;
+        /**
+         * The response.
+         */
+        String response = "";
+        /**
+         * The error response.
+         */
+        String error = "";
+    }
 
+    /**
+     * Call command line
+     *
+     * @param command
+     * @param errorMessage
+     * @return
+     */
+    Return cmd(String command, String errorMessage) {
         final Return result = new Return();
         try {
-            logVerbose("SAMO >> " + command);
             ProcessBuilder pb = new ProcessBuilder();
-            pb.command(command.split(" "));
-            pb.start();
-            final Process p = Runtime.getRuntime().exec(command);
-            CompletableFuture<String> soutFut = readOutStream(p.getInputStream());
-            CompletableFuture<String> serrFut = readOutStream(p.getErrorStream());
+            if (IS_WINDOWS) {
+                pb.command("cmd", "/c", command);
+            } else {
+                pb.command("bash", "-c", command);
+            }
+            logVerbose("" + pb.command());
+            final Process p = pb.start();
+            CompletableFuture<String> out = readOutStream(p.getInputStream());
+            CompletableFuture<String> err = readOutStream(p.getErrorStream());
             p.waitFor();
 
-            result.response =  soutFut.get();
-            result.error =  serrFut.get();
+            result.response = out.get();
+            result.error = err.get();
             result.exitValue = p.exitValue();
 
         } catch (Exception e) {
@@ -83,38 +144,30 @@ public abstract class CommonCommand implements Callable<Integer> {
         }
 
         if (result.exitValue != 0) {
+            logInfo("Output: " + result.response);
+            logVerbose("Error: " + result.error);
+            logVerbose("Exit code: " + result.exitValue);
             throw new RuntimeException(errorMessage);
         }
         return result;
     }
 
-
-    public static Optional<Path> findInPath(final String executable) {
-
-        final String[] paths = getPathsFromEnvironmentVariables();
-        return Stream.of(paths)
-                .map(Paths::get)
-                .map(path -> path.resolve(executable))
-                .filter(Files::exists)
-                .map(Path::toAbsolutePath)
-                .findFirst();
-    }
-
-    public  static String[] getPathsFromEnvironmentVariables() {
-        return System.getenv("PATH").split(Pattern.quote(File.pathSeparator));
-    }
-
-    static CompletableFuture<String> readOutStream(InputStream is) {
+    /**
+     * The output stream reader.
+     *
+     * @param is the input stream.
+     * @return the completable future to read the output stream.
+     */
+    private static CompletableFuture<String> readOutStream(InputStream is) {
         return CompletableFuture.supplyAsync(() -> {
             try (
                     InputStreamReader isr = new InputStreamReader(is);
                     BufferedReader br = new BufferedReader(isr);
-            ){
+            ) {
                 StringBuilder res = new StringBuilder();
                 String inputLine;
                 while ((inputLine = br.readLine()) != null) {
                     res.append(inputLine);
-                    //.append(System.lineSeparator())
                 }
                 return res.toString();
             } catch (Throwable e) {
@@ -123,15 +176,4 @@ public abstract class CommonCommand implements Callable<Integer> {
         });
     }
 
-    static Path getDockerPath() {
-        String helmExecutable = IS_WINDOWS ? "docker.exe" : "docker";
-        Optional<Path> path = findInPath(helmExecutable);
-        return path.orElseThrow(() -> new RuntimeException("docker executable is not found."));
-    }
-
-    static Path getGitPath() {
-        String helmExecutable = IS_WINDOWS ? "git.exe" : "git";
-        Optional<Path> path = findInPath(helmExecutable);
-        return path.orElseThrow(() -> new RuntimeException("git executable is not found."));
-    }
 }

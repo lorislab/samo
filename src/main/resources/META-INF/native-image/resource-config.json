@@ -2,5 +2,8 @@
   "bundles": [
   ],
   "resources" : [
+    {
+      "pattern": ".*/samo/pom.properties$"
+    }
   ]
 }
