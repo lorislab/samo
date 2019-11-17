@@ -41,6 +41,7 @@ public class CreateCommand implements Callable<Integer> {
 
     /**
      * Show help of the create command.
+     *
      * @return the exit code.
      */
     @Override
@@ -59,7 +60,7 @@ public class CreateCommand implements Callable<Integer> {
          * The message for the commit.
          */
         @CommandLine.Option(
-                names = { "-m", "--message" },
+                names = {"-m", "--message"},
                 defaultValue = "Development version ",
                 paramLabel = "MESSAGE",
                 required = true,
@@ -69,6 +70,7 @@ public class CreateCommand implements Callable<Integer> {
 
         /**
          * Create a release tag of the project and increase development version.
+         *
          * @return the exit code.
          * @throws Exception if the method fails.
          */
@@ -112,7 +114,7 @@ public class CreateCommand implements Callable<Integer> {
          * The message for the commit.
          */
         @CommandLine.Option(
-                names = { "-m", "--message" },
+                names = {"-m", "--message"},
                 defaultValue = "Create patch version ",
                 paramLabel = "MESSAGE",
                 required = true,
@@ -128,6 +130,7 @@ public class CreateCommand implements Callable<Integer> {
 
         /**
          * Create a patch branch for the release tag of the project and increase patch development version.
+         *
          * @return the exit code.
          * @throws Exception if the method fails.
          */
@@ -142,18 +145,23 @@ public class CreateCommand implements Callable<Integer> {
 
             Version pv = releaseVersion.incrementPatchVersion(SNAPSHOT);
 
-            // create & checkout branch
-            String branchName = releaseVersion.getMajorVersion() + "." + releaseVersion.getMinorVersion();
-            cmd( "git checkout -b " + branchName + " " +  version, "Error create and checkout branch");
+            try {
+                // create & checkout branch
+                String branchName = releaseVersion.getMajorVersion() + "." + releaseVersion.getMinorVersion();
+                cmd("git checkout -b " + branchName + " " + version, "Error create and checkout branch");
 
-            // change version
-            MavenProject project = getMavenProject();
-            project.setVersion(pv.toString());
+                // change version
+                MavenProject project = getMavenProject();
+                project.setVersion(pv.toString());
 
-            // git commit & push
-            cmd("git add .", "Error git add");
-            cmd("git commit -m \"" +  message + pv + "\"", "Error git commit");
-            cmd("git push -u origin " + branchName, "Error git push branch");
+                // git commit & push
+                cmd("git add .", "Error git add");
+                cmd("git commit -m \"" + message + pv + "\"", "Error git commit");
+                cmd("git push -u origin " + branchName, "Error git push branch");
+            } catch (Exception ex) {
+                cmd("rm -f .git/index.lock", "Error remove git index");
+                throw ex;
+            }
             return CommandLine.ExitCode.OK;
         }
     }

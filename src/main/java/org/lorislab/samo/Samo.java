@@ -31,6 +31,7 @@ import java.util.concurrent.Callable;
         subcommands = {
                 MavenCommand.class,
                 CreateCommand.class,
+                DockerCommand.class,
                 CommandLine.HelpCommand.class
         }
 )
