@@ -72,11 +72,13 @@ public class MavenProject {
      */
     public static MavenProject loadFromFile(File file) throws Exception {
         if (file == null || !file.exists() || file.isDirectory()) {
+            System.out.println("Error open maven file: " + file + " "  + (file == null) + " "  + !file.exists() + " "  + file.isDirectory());
             return null;
         }
 
         Map<String, XPathItem> items = XPathItem.find(file, ITEMS);
         if (items.isEmpty()) {
+            System.out.println("Error no xpath items found in the maven project file");
             return null;
         }
         MavenProject project = new MavenProject();
