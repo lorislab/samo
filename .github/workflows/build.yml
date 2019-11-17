@@ -5,6 +5,9 @@ on: [push]
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   MAVEN_CLI_OPTS: "--batch-mode"
+  GRAALVM_VER: 19.2.1
+  GRAALVM_HOME: .graalvm
+  JAVA_HOME: .graalvm
 
 jobs:
   build:
@@ -16,11 +19,19 @@ jobs:
         path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-maven-        
-    - name: Setup GraalVM environment
-      uses: DeLaGuardo/setup-graalvm@1.0
-      with:
-        graalvm-version: '19.2.1'
+          ${{ runner.os }}-maven-
+    - name: Install graalvm
+      run: |
+        curl https://github.com/oracle/graal/releases/download/vm-$GRAALVM_VER/graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz -O -J -L && tar xfz graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz && mv graalvm-ce-$GRAALVM_VER $GRAALVM_HOME && rm graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz
+        $GRAALVM_HOME/bin/gu install native-image
+#    - name: Setup GraalVM environment
+#      uses: DeLaGuardo/setup-graalvm@1.0
+#      with:
+#        graalvm-version: '19.2.1'
+    - name: Java
+      run: |
+        java -version
+        mvn -version
     - name: Set build version
       run: ./mvnw $MAVEN_CLI_OPTS semver-release:version-git-hash
     - name: Maven Build
