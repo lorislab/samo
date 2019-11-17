@@ -31,6 +31,21 @@ public class MavenProject {
     /**
      * The xpath artifact ID.
      */
+    static String PARENT_ARTIFACT_ID = "/project/parent/artifactId";
+
+    /**
+     * The xpath group ID.
+     */
+    static String PARENT_GROUP_ID = "/project/parent/groupId";
+
+    /**
+     * The xpath version.
+     */
+    static String PARENT_VERSION = "/project/parent/version";
+
+    /**
+     * The xpath artifact ID.
+     */
     static String MAVEN_ARTIFACT_ID = "/project/artifactId";
 
     /**
@@ -46,7 +61,7 @@ public class MavenProject {
     /**
      * The list of default xpath items to load.
      */
-    static Set<String> ITEMS = new HashSet<>(Arrays.asList(MAVEN_GROUP_ID, MAVEN_ARTIFACT_ID, MAVEN_VERSION));
+    static Set<String> ITEMS = new HashSet<>(Arrays.asList(PARENT_GROUP_ID, PARENT_ARTIFACT_ID, PARENT_VERSION, MAVEN_GROUP_ID, MAVEN_ARTIFACT_ID, MAVEN_VERSION));
 
     /**
      * The maven project file.
@@ -72,21 +87,32 @@ public class MavenProject {
      */
     public static MavenProject loadFromFile(File file) throws Exception {
         if (file == null || !file.exists() || file.isDirectory()) {
-            System.out.println("Error open maven file: " + file + " "  + (file == null) + " "  + !file.exists() + " "  + file.isDirectory());
             throw new RuntimeException("Error open maven file: " + file);
         }
 
         Map<String, XPathItem> items = XPathItem.find(file, ITEMS);
         if (items.isEmpty()) {
-            System.out.println("Error no xpath items found in the maven project file");
             throw new RuntimeException("Error no xpath items found in the maven project file");
         }
         MavenProject project = new MavenProject();
         project.file = file;
+        project.parent = new MavenProjectId();
+        project.parent.groupId = items.get(PARENT_GROUP_ID);
+        project.parent.artifactId = items.get(PARENT_ARTIFACT_ID);
+        project.parent.version = items.get(PARENT_VERSION);
         project.id = new MavenProjectId();
         project.id.groupId = items.get(MAVEN_GROUP_ID);
+        if (project.id.groupId == null) {
+            project.id.groupId = project.parent.groupId;
+        }
         project.id.artifactId = items.get(MAVEN_ARTIFACT_ID);
+        if (project.id.artifactId == null) {
+            project.id.artifactId = project.parent.artifactId;
+        }
         project.id.version = items.get(MAVEN_VERSION);
+        if (project.id.version == null) {
+            project.id.version = project.parent.version;
+        }
         return project;
     }
 
