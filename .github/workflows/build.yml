@@ -24,14 +24,6 @@ jobs:
       run: |
         curl https://github.com/oracle/graal/releases/download/vm-$GRAALVM_VER/graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz -O -J -L && tar xfz graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz && mv graalvm-ce-$GRAALVM_VER $GRAALVM_HOME && rm graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz
         $GRAALVM_HOME/bin/gu install native-image
-#    - name: Setup GraalVM environment
-#      uses: DeLaGuardo/setup-graalvm@1.0
-#      with:
-#        graalvm-version: '19.2.1'
-    - name: Java
-      run: |
-        java -version
-        mvn -version
     - name: Set build version
       run: ./mvnw $MAVEN_CLI_OPTS semver-release:version-git-hash
     - name: Maven Build
