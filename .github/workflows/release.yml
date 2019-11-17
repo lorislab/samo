@@ -1,10 +1,10 @@
-name: build
+name: release
 
 on:
   push:
-    branches:
+    branches-ignore:
       - '**'
-    tags-ignore:
+    tags:
       - '**'
 
 env:
@@ -30,7 +30,26 @@ jobs:
         curl https://github.com/oracle/graal/releases/download/vm-$GRAALVM_VER/graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz -O -J -L && tar xfz graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz && mv graalvm-ce-$GRAALVM_VER $GRAALVM_HOME && rm graalvm-ce-linux-amd64-$GRAALVM_VER.tar.gz
         $GRAALVM_HOME/bin/gu install native-image
     - name: Set build version
-      run: ./mvnw $MAVEN_CLI_OPTS semver-release:version-git-hash
+      run: ./mvnw $MAVEN_CLI_OPTS semver-release:version-release
     - name: Maven Build
       run: ./mvnw $MAVEN_CLI_OPTS clean package -Pnative
-      
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset
+      id: upload-release-asset
+      uses: actions/upload-release-asset@v1.0.1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./target/samo
+        asset_name: samo
+        asset_content_type: application/octet-stream
