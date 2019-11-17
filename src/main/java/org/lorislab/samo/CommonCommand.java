@@ -90,6 +90,7 @@ abstract class CommonCommand implements Callable<Integer> {
      * @throws Exception if the method fails.
      */
     MavenProject getMavenProject() throws Exception {
+        logVerbose("Open maven project file: " + pom);
         MavenProject project = MavenProject.loadFromFile(pom);
         logVerbose("Project: " + project.id);
         return project;
