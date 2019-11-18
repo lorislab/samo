@@ -187,6 +187,13 @@ abstract class CommonCommand implements Callable<Integer> {
     }
 
     String gitBranch() {
+        if (isGitHub()) {
+            String b = System.getenv("GITHUB_REF");
+            if (b != null && !b.isEmpty()) {
+                logVerbose("Github branch: " + b);
+                return b.replace("refs/heads/", "");
+            }
+        }
         Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
         logVerbose("Git branch: " + r.response);
         return r.response;
@@ -196,5 +203,12 @@ abstract class CommonCommand implements Callable<Integer> {
         Return r = cmd("git rev-parse --short=" + length + " HEAD", "Error git hash");
         logVerbose("Git hash: " + r.response);
         return r.response;
+    }
+
+    boolean isGitHub() {
+        String tmp = System.getenv("GITHUB_ACTIONS");
+        boolean result = Boolean.parseBoolean(tmp);
+        logVerbose("? Github: " + result);
+        return  result;
     }
 }
