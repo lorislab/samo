@@ -68,8 +68,17 @@ abstract class CommonCommand implements Callable<Integer> {
      *
      * @param message the message.
      */
+    void output(String message) {
+        System.out.println(message);
+    }
+
+    /**
+     * The log info message
+     *
+     * @param message the message.
+     */
     void logInfo(String message) {
-        System.out.println("SAMO >> " + message);
+        output("SAMO >> " + message);
     }
 
     /**
@@ -79,7 +88,7 @@ abstract class CommonCommand implements Callable<Integer> {
      */
     void logVerbose(String message) {
         if (verbose) {
-            System.out.println("SAMO >> " + message);
+            output("SAMO >> " + message);
         }
     }
 
@@ -117,9 +126,9 @@ abstract class CommonCommand implements Callable<Integer> {
     /**
      * Call command line
      *
-     * @param command
-     * @param errorMessage
-     * @return
+     * @param command the command.
+     * @param errorMessage the error message.
+     * @return the command line response.
      */
     Return cmd(String command, String errorMessage) {
         final Return result = new Return();
@@ -177,4 +186,15 @@ abstract class CommonCommand implements Callable<Integer> {
         });
     }
 
+    String gitBranch() {
+        Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
+        logVerbose("Git branch: " + r.response);
+        return r.response;
+    }
+
+    String gitHash(int length) {
+        Return r = cmd("git rev-parse --short=" + length + " HEAD", "Error git hash");
+        logVerbose("Git hash: " + r.response);
+        return r.response;
+    }
 }

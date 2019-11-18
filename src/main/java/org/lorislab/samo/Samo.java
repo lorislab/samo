@@ -32,6 +32,7 @@ import java.util.concurrent.Callable;
                 MavenCommand.class,
                 CreateCommand.class,
                 DockerCommand.class,
+                GitCommand.class,
                 CommandLine.HelpCommand.class
         }
 )

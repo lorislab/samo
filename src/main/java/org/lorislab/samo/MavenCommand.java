@@ -15,6 +15,7 @@
  */
 package org.lorislab.samo;
 
+import com.github.zafarkhaja.semver.Version;
 import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
@@ -26,7 +27,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "maven",
         description = "Maven version commands",
         subcommands = {
-                MavenCommand.Version.class,
+                MavenCommand.MavenVersion.class,
                 MavenCommand.Release.class,
                 MavenCommand.Git.class,
                 MavenCommand.Snapshot.class
@@ -55,7 +56,7 @@ public class MavenCommand implements Callable<Integer> {
      * The maven version command.
      */
     @CommandLine.Command(name = "version", description = "Show current maven version")
-    public static class Version extends CommonCommand {
+    public static class MavenVersion extends CommonCommand {
 
         /**
          * Returns the current version of the maven project.
@@ -66,7 +67,7 @@ public class MavenCommand implements Callable<Integer> {
         @Override
         public Integer call() throws Exception {
             MavenProject project = getMavenProject();
-            logInfo(project.id.version.value);
+            output(project.id.version.value);
             return CommandLine.ExitCode.OK;
         }
     }
@@ -86,7 +87,7 @@ public class MavenCommand implements Callable<Integer> {
         @Override
         public Integer call() throws Exception {
             MavenProject project = getMavenProject();
-            com.github.zafarkhaja.semver.Version version = com.github.zafarkhaja.semver.Version.valueOf(project.id.version.value);
+            Version version = Version.valueOf(project.id.version.value);
             String releaseVersion = version.getNormalVersion();
             logVerbose(releaseVersion);
             project.setVersion(releaseVersion);
@@ -110,7 +111,7 @@ public class MavenCommand implements Callable<Integer> {
         @Override
         public Integer call() throws Exception {
             MavenProject project = getMavenProject();
-            com.github.zafarkhaja.semver.Version version = com.github.zafarkhaja.semver.Version.valueOf(project.id.version.value);
+            Version version = Version.valueOf(project.id.version.value);
             version = version.setPreReleaseVersion(SNAPSHOT);
             String releaseVersion = version.toString();
             logVerbose(releaseVersion);
@@ -148,12 +149,11 @@ public class MavenCommand implements Callable<Integer> {
         @Override
         public Integer call() throws Exception {
             MavenProject project = getMavenProject();
-            com.github.zafarkhaja.semver.Version version = com.github.zafarkhaja.semver.Version.valueOf(project.id.version.value);
+            Version version = Version.valueOf(project.id.version.value);
 
-            Return r = cmd("git rev-parse --short=" + length + " HEAD", "Error git sha");
-            logVerbose("Git hash: " + r.response);
+            String hash = gitHash(length);
 
-            version = version.setPreReleaseVersion(r.response);
+            version = version.setPreReleaseVersion(hash);
             String releaseVersion = version.toString();
             logVerbose(releaseVersion);
 

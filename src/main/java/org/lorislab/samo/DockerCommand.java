@@ -111,11 +111,10 @@ public class DockerCommand implements Callable<Integer> {
         public Integer call() throws Exception {
             MavenProject project = getMavenProject();
 
-            Return r = cmd("git rev-parse --short=" + length + " HEAD", "Error git sha");
-            logVerbose("Git hash: " + r.response);
+            String hash = gitHash(length);
 
             Version version = Version.valueOf(project.id.version.value);
-            Version pullVersion = version.setPreReleaseVersion(r.response);
+            Version pullVersion = version.setPreReleaseVersion(hash);
 
             // set the docker release repository
             if (releaseRepository == null || releaseRepository.isEmpty()) {
@@ -218,9 +217,8 @@ public class DockerCommand implements Callable<Integer> {
 
             String branchTag = "";
             if (branch) {
-                Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
-                logVerbose("Git branch: " + r.response);
-                branchTag = repository + "/" + image + ":" + r.response;
+                String branchName = gitBranch();
+                branchTag = repository + "/" + image + ":" + branchName;
                 sb.append(" -t ").append(branchTag);
                 log.append(",").append(branchTag);
             }
