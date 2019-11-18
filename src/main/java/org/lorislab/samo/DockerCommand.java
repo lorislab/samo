@@ -172,12 +172,21 @@ public class DockerCommand implements Callable<Integer> {
         @CommandLine.Option(
                 names = {"-d", "--dockerfile"},
                 paramLabel = "DOCKERFILE",
-                defaultValue = ".",
-                required = true,
                 description = "the docker file"
         )
         String dockerfile;
 
+        /**
+         * The docker repository
+         */
+        @CommandLine.Option(
+                names = {"-c", "--context"},
+                paramLabel = "CONTEXT",
+                required = true,
+                defaultValue = ".",
+                description = "the docker build context"
+        )
+        String context;
 
         /**
          * Verbose flag.
@@ -222,7 +231,10 @@ public class DockerCommand implements Callable<Integer> {
                 sb.append(" -t ").append(branchTag);
                 log.append(",").append(branchTag);
             }
-            sb.append(" ").append(dockerfile);
+            if (dockerfile != null && !dockerfile.isEmpty()) {
+                sb.append(" -f ").append(dockerfile);
+            }
+            sb.append(" ").append(context);
             log.append("]");
 
             // execute the docker commands
