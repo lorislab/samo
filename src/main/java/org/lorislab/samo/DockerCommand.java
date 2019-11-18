@@ -171,7 +171,7 @@ public class DockerCommand implements Callable<Integer> {
          * The docker repository
          */
         @CommandLine.Option(
-                names = {"-f", "--dockerfile"},
+                names = {"-d", "--dockerfile"},
                 paramLabel = "DOCKERFILE",
                 defaultValue = ".",
                 required = true,
@@ -184,7 +184,7 @@ public class DockerCommand implements Callable<Integer> {
          * Verbose flag.
          */
         @CommandLine.Option(
-                names = {"-v", "--branch"},
+                names = {"-b", "--branch"},
                 defaultValue = "true",
                 required = true,
                 description = "tag the docker image with a branch name"
