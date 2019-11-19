@@ -70,7 +70,7 @@ public class DockerCommand implements Callable<Integer> {
         int length;
 
         /**
-         * The docker repository
+         * The docker image
          */
         @CommandLine.Option(
                 names = {"-i", "--image"},
@@ -85,9 +85,9 @@ public class DockerCommand implements Callable<Integer> {
         @CommandLine.Option(
                 names = {"-r", "--repository"},
                 paramLabel = "REPOSITORY",
-                defaultValue = "docker.io",
+                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
                 required = true,
-                description = "the docker repository"
+                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
         )
         String repository;
 
@@ -160,24 +160,25 @@ public class DockerCommand implements Callable<Integer> {
         @CommandLine.Option(
                 names = {"-r", "--repository"},
                 paramLabel = "REPOSITORY",
-                defaultValue = "docker.io",
+                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
                 required = true,
-                description = "the docker repository"
+                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
         )
         String repository;
 
         /**
-         * The docker repository
+         * The docker file.
          */
         @CommandLine.Option(
                 names = {"-d", "--dockerfile"},
                 paramLabel = "DOCKERFILE",
-                description = "the docker file"
+                defaultValue = "${env:SAMO_DOCKER_DOCKERFILE}",
+                description = "the docker file. Env: SAMO_DOCKER_DOCKERFILE"
         )
         String dockerfile;
 
         /**
-         * The docker repository
+         * The docker context.
          */
         @CommandLine.Option(
                 names = {"-c", "--context"},
@@ -267,9 +268,9 @@ public class DockerCommand implements Callable<Integer> {
         @CommandLine.Option(
                 names = {"-r", "--repository"},
                 paramLabel = "REPOSITORY",
-                defaultValue = "docker.io",
+                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
                 required = true,
-                description = "the docker repository"
+                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
         )
         String repository;
 
