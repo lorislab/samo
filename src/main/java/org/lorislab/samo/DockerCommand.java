@@ -92,16 +92,6 @@ public class DockerCommand implements Callable<Integer> {
         String repository;
 
         /**
-         * The docker repository
-         */
-        @CommandLine.Option(
-                names = {"-rr", "--release-repository"},
-                paramLabel = "REPOSITORY",
-                description = "the docker release repository"
-        )
-        String releaseRepository;
-
-        /**
          * Sets the maven project to release version.
          *
          * @return the exit code.
@@ -116,16 +106,11 @@ public class DockerCommand implements Callable<Integer> {
             Version version = Version.valueOf(project.id.version.value);
             Version pullVersion = version.setPreReleaseVersion(hash);
 
-            // set the docker release repository
-            if (releaseRepository == null || releaseRepository.isEmpty()) {
-                releaseRepository = repository;
-            }
-
             // set the docker image name.
             if (image == null || image.isEmpty()) {
                 image = project.id.artifactId.value;
             }
-            String imageRelease = releaseRepository + "/" + image + ":" + version.getNormalVersion();
+            String imageRelease = repository + "/" + image + ":" + version.getNormalVersion();
             String imagePull = repository + "/" + image + ":" + pullVersion;
 
             // execute the docker commands
@@ -201,6 +186,28 @@ public class DockerCommand implements Callable<Integer> {
         boolean branch;
 
         /**
+         * The docker password.
+         */
+        @CommandLine.Option(
+                names = {"-p", "--password"},
+                paramLabel = "PASSWORD",
+                defaultValue = "${env:SAMO_DOCKER_PASSWORD}",
+                description = "the docker login password"
+        )
+        String password;
+
+        /**
+         * The docker password.
+         */
+        @CommandLine.Option(
+                names = {"-u", "--username"},
+                paramLabel = "USERNAME",
+                defaultValue = "${env:SAMO_DOCKER_USERNAME}",
+                description = "the docker login username"
+        )
+        String username;
+
+        /**
          * Sets the maven project to release version.
          *
          * @return the exit code.
@@ -239,6 +246,9 @@ public class DockerCommand implements Callable<Integer> {
             log.append("]");
 
             // execute the docker commands
+            if (password != null && username != null) {
+                cmd("docker login -p " + password + " -u " + username, "Error docker login");
+            }
             cmd(sb.toString(), "Error build docker image");
 
             logInfo(log.toString());
@@ -275,6 +285,28 @@ public class DockerCommand implements Callable<Integer> {
         String repository;
 
         /**
+         * The docker password.
+         */
+        @CommandLine.Option(
+                names = {"-p", "--password"},
+                paramLabel = "PASSWORD",
+                defaultValue = "${env:SAMO_DOCKER_PASSWORD}",
+                description = "the docker login password"
+        )
+        String password;
+
+        /**
+         * The docker password.
+         */
+        @CommandLine.Option(
+                names = {"-u", "--username"},
+                paramLabel = "USERNAME",
+                defaultValue = "${env:SAMO_DOCKER_USERNAME}",
+                description = "the docker login username"
+        )
+        String username;
+
+        /**
          * Sets the maven project to release version.
          *
          * @return the exit code.
@@ -292,6 +324,9 @@ public class DockerCommand implements Callable<Integer> {
             String imageName = repository + "/" + image;
 
             // execute the docker commands
+            if (password != null && username != null) {
+                cmd("docker login -p " + password + " -u " + username, "Error docker login");
+            }
             cmd("docker push " + imageName, "Error push docker image");
 
             logInfo("docker push " + imageName);
