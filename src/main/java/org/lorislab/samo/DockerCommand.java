@@ -78,7 +78,7 @@ public class DockerCommand implements Callable<Integer> {
         @CommandLine.Option(
                 names = {"-j", "--config-file"},
                 paramLabel = "CONFIG-FILE",
-                defaultValue = "${env:SAMO_DOCKER_CONFIG_FILE:-~/docker/config.json}",
+                defaultValue = "${env:SAMO_DOCKER_CONFIG_FILE:-~/.docker/config.json}",
                 required = true,
                 description = "the docker config file. Env: SAMO_DOCKER_CONFIG_FILE"
         )
