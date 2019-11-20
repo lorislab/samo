@@ -98,6 +98,7 @@ public class DockerCommand implements Callable<Integer> {
 
             // write config to file
             Files.write(file, config.getBytes(StandardCharsets.UTF_8));
+            logInfo("The docker config file was created. File: " + file);
             return CommandLine.ExitCode.OK;
         }
     }
