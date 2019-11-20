@@ -19,6 +19,12 @@ import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 import com.github.zafarkhaja.semver.Version;
 
+import java.io.File;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.OpenOption;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 /**
@@ -27,6 +33,7 @@ import java.util.concurrent.Callable;
 @CommandLine.Command(name = "docker",
         description = "Docker version commands",
         subcommands = {
+                DockerCommand.Config.class,
                 DockerCommand.Release.class,
                 DockerCommand.Build.class,
                 DockerCommand.Push.class
@@ -51,10 +58,54 @@ public class DockerCommand implements Callable<Integer> {
         return CommandLine.ExitCode.OK;
     }
 
+    @CommandLine.Command(name = "config", description = "Configure the docker file.")
+    public static class Config extends CommonCommand {
+        /**
+         * The docker config
+         */
+        @CommandLine.Option(
+                names = {"-c", "--config"},
+                paramLabel = "CONFIG",
+                defaultValue = "${env:SAMO_DOCKER_CONFIG}",
+                required = true,
+                description = "the docker config. Env: SAMO_DOCKER_CONFIG"
+        )
+        String config;
+
+        /**
+         * The docker config
+         */
+        @CommandLine.Option(
+                names = {"-j", "--config-file"},
+                paramLabel = "CONFIG-FILE",
+                defaultValue = "${env:SAMO_DOCKER_CONFIG_FILE:-~/docker/config.json}",
+                required = true,
+                description = "the docker config file. Env: SAMO_DOCKER_CONFIG_FILE"
+        )
+        String configFile;
+
+        @Override
+        public Integer call() throws Exception {
+
+            Path file = Paths.get(configFile);
+
+            // create all directories
+            Path dir = file.getParent();
+            if (dir != null && !Files.exists(dir)) {
+                Files.createDirectories(dir);
+                logVerbose("The docker config directory was created: " + dir);
+            }
+
+            // write config to file
+            Files.write(file, config.getBytes(StandardCharsets.UTF_8));
+            return CommandLine.ExitCode.OK;
+        }
+    }
+
     /**
-     * Sets the maven project to release version.
+     * Release docker image.
      */
-    @CommandLine.Command(name = "release", description = "Set the release version")
+    @CommandLine.Command(name = "release", description = "Release docker image")
     public static class Release extends CommonCommand {
 
         /**
@@ -92,7 +143,7 @@ public class DockerCommand implements Callable<Integer> {
         String repository;
 
         /**
-         * Sets the maven project to release version.
+         * Release docker image
          *
          * @return the exit code.
          * @throws Exception if the method fails.
@@ -124,9 +175,9 @@ public class DockerCommand implements Callable<Integer> {
     }
 
     /**
-     * Sets the maven project to release version.
+     * Build docker image.
      */
-    @CommandLine.Command(name = "build", description = "Build docker version")
+    @CommandLine.Command(name = "build", description = "Build docker image")
     public static class Build extends CommonCommand {
 
         /**
@@ -186,29 +237,7 @@ public class DockerCommand implements Callable<Integer> {
         boolean branch;
 
         /**
-         * The docker password.
-         */
-        @CommandLine.Option(
-                names = {"-p", "--password"},
-                paramLabel = "PASSWORD",
-                defaultValue = "${env:SAMO_DOCKER_PASSWORD}",
-                description = "the docker login password"
-        )
-        String password;
-
-        /**
-         * The docker password.
-         */
-        @CommandLine.Option(
-                names = {"-u", "--username"},
-                paramLabel = "USERNAME",
-                defaultValue = "${env:SAMO_DOCKER_USERNAME}",
-                description = "the docker login username"
-        )
-        String username;
-
-        /**
-         * Sets the maven project to release version.
+         * Build docker image.
          *
          * @return the exit code.
          * @throws Exception if the method fails.
@@ -246,9 +275,6 @@ public class DockerCommand implements Callable<Integer> {
             log.append("]");
 
             // execute the docker commands
-            if (password != null && username != null) {
-                cmd("docker login -p " + password + " -u " + username, "Error docker login");
-            }
             cmd(sb.toString(), "Error build docker image");
 
             logInfo(log.toString());
@@ -259,7 +285,7 @@ public class DockerCommand implements Callable<Integer> {
     /**
      * Docker push command
      */
-    @CommandLine.Command(name = "push", description = "Push docker version")
+    @CommandLine.Command(name = "push", description = "Push docker image")
     public static class Push extends CommonCommand {
 
         /**
@@ -285,28 +311,6 @@ public class DockerCommand implements Callable<Integer> {
         String repository;
 
         /**
-         * The docker password.
-         */
-        @CommandLine.Option(
-                names = {"-p", "--password"},
-                paramLabel = "PASSWORD",
-                defaultValue = "${env:SAMO_DOCKER_PASSWORD}",
-                description = "the docker login password"
-        )
-        String password;
-
-        /**
-         * The docker password.
-         */
-        @CommandLine.Option(
-                names = {"-u", "--username"},
-                paramLabel = "USERNAME",
-                defaultValue = "${env:SAMO_DOCKER_USERNAME}",
-                description = "the docker login username"
-        )
-        String username;
-
-        /**
          * Sets the maven project to release version.
          *
          * @return the exit code.
@@ -324,9 +328,6 @@ public class DockerCommand implements Callable<Integer> {
             String imageName = repository + "/" + image;
 
             // execute the docker commands
-            if (password != null && username != null) {
-                cmd("docker login -p " + password + " -u " + username, "Error docker login");
-            }
             cmd("docker push " + imageName, "Error push docker image");
 
             logInfo("docker push " + imageName);
