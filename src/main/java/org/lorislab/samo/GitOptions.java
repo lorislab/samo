@@ -9,7 +9,6 @@ class GitOptions {
      */
     @CommandLine.Option(
             names = {"-l", "--length"},
-            paramLabel = "LENGTH",
             defaultValue = "7",
             required = true,
             description = "the git hash length"

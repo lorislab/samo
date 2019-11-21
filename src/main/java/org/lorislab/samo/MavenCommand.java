@@ -24,6 +24,7 @@ import picocli.CommandLine;
  */
 @CommandLine.Command(name = "maven",
         description = "Maven version commands",
+        showDefaultValues = true,
         mixinStandardHelpOptions = true,
         subcommands = {
                 MavenCommand.MavenVersion.class,
@@ -38,6 +39,7 @@ class MavenCommand extends SamoCommand {
      * The maven version command.
      */
     @CommandLine.Command(name = "version",
+            showDefaultValues = true,
             mixinStandardHelpOptions = true,
             description = "Show current maven version")
     public static class MavenVersion extends SamoCommand {
@@ -67,6 +69,7 @@ class MavenCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "set-release",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Set the release version")
     public static class Release extends SamoCommand {
 
@@ -96,6 +99,7 @@ class MavenCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "set-snapshot",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Set snapshot prerelease version")
     public static class Snapshot extends SamoCommand {
 
@@ -125,6 +129,7 @@ class MavenCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "set-hash",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Set git hash prerelease version")
     public static class Git extends SamoCommand {
 

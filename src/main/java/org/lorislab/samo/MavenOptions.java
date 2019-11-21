@@ -10,8 +10,7 @@ class MavenOptions {
      * The maven project file.
      */
     @CommandLine.Option(
-            names = {"-p", "--pom"},
-            paramLabel = "POM",
+            names = {"-f", "--file"},
             defaultValue = "pom.xml",
             required = true,
             description = "the maven project file"

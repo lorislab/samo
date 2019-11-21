@@ -25,6 +25,7 @@ import picocli.CommandLine;
 @CommandLine.Command(name = "create",
         description = "Create project commands",
         mixinStandardHelpOptions = true,
+        showDefaultValues = true,
         subcommands = {
                 CreateCommand.Release.class,
                 CreateCommand.Patch.class
@@ -37,6 +38,7 @@ class CreateCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "release",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Create release of the current project and state")
     public static class Release extends SamoCommand {
 
@@ -52,7 +54,6 @@ class CreateCommand extends SamoCommand {
         @CommandLine.Option(
                 names = {"-m", "--message"},
                 defaultValue = "Development version ",
-                paramLabel = "MESSAGE",
                 required = true,
                 description = "commit message for new development version"
         )
@@ -99,6 +100,7 @@ class CreateCommand extends SamoCommand {
 
     @CommandLine.Command(name = "patch",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Create patch of the release")
     public static class Patch extends SamoCommand {
 
@@ -114,7 +116,6 @@ class CreateCommand extends SamoCommand {
         @CommandLine.Option(
                 names = {"-m", "--message"},
                 defaultValue = "Create patch version ",
-                paramLabel = "MESSAGE",
                 required = true,
                 description = "commit message for patch version"
         )
@@ -123,7 +124,12 @@ class CreateCommand extends SamoCommand {
         /**
          * The release tag
          */
-        @CommandLine.Parameters(index = "0", description = "The release version (tag x.x.0) to patch", interactive = true)
+        @CommandLine.Option(
+                names = {"-t", "--tag"},
+                required = true,
+                interactive = true,
+                description = "The release version (tag x.x.0) to patch"
+        )
         String tag;
 
         /**
@@ -163,4 +169,5 @@ class CreateCommand extends SamoCommand {
             return CommandLine.ExitCode.OK;
         }
     }
+
 }

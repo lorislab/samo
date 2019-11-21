@@ -61,9 +61,7 @@ class SamoCommand implements Callable<Integer> {
      * @param message the message.
      */
     void info(String message, Object ... params) {
-        if (verbose) {
-            output("SAMO >> " + message + "\n", params);
-        }
+        output("SAMO >> " + message + "\n", params);
     }
 
     /**
@@ -218,6 +216,7 @@ class SamoCommand implements Callable<Integer> {
                 String inputLine;
                 while ((inputLine = br.readLine()) != null) {
                     res.append(inputLine);
+                    res.append("\n");
                 }
                 return res.toString();
             } catch (Throwable e) {

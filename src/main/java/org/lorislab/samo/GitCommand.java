@@ -23,6 +23,7 @@ import picocli.CommandLine;
 @CommandLine.Command(name = "git",
         mixinStandardHelpOptions = true,
         description = "Git commands",
+        showDefaultValues = true,
         subcommands = {
                 GitCommand.Branch.class,
                 GitCommand.Hash.class
@@ -55,6 +56,7 @@ class GitCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "hash",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Show the git hash")
     public static class Hash extends SamoCommand {
 

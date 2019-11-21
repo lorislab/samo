@@ -29,6 +29,7 @@ import java.nio.file.Paths;
  */
 @CommandLine.Command(name = "docker",
         description = "Docker version commands",
+        showDefaultValues = true,
         mixinStandardHelpOptions = true,
         subcommands = {
                 DockerCommand.Config.class,
@@ -40,6 +41,7 @@ import java.nio.file.Paths;
 class DockerCommand extends SamoCommand {
 
     @CommandLine.Command(name = "config",
+            showDefaultValues = true,
             mixinStandardHelpOptions = true,
             description = "Configure the docker file.")
     public static class Config extends SamoCommand {
@@ -92,6 +94,7 @@ class DockerCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "release",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Release docker image")
     public static class Release extends SamoCommand {
 
@@ -149,6 +152,7 @@ class DockerCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "build",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Build docker image")
     public static class Build extends SamoCommand {
 
@@ -163,7 +167,6 @@ class DockerCommand extends SamoCommand {
          */
         @CommandLine.Option(
                 names = {"-d", "--dockerfile"},
-                paramLabel = "DOCKERFILE",
                 defaultValue = "${env:SAMO_DOCKER_DOCKERFILE}",
                 description = "the docker file. Env: SAMO_DOCKER_DOCKERFILE"
         )
@@ -174,7 +177,6 @@ class DockerCommand extends SamoCommand {
          */
         @CommandLine.Option(
                 names = {"-c", "--context"},
-                paramLabel = "CONTEXT",
                 required = true,
                 defaultValue = ".",
                 description = "the docker build context"
@@ -182,7 +184,7 @@ class DockerCommand extends SamoCommand {
         String context;
 
         /**
-         * Verbose flag.
+         * Create docker image tag for the branch.
          */
         @CommandLine.Option(
                 names = {"-b", "--branch"},
@@ -247,6 +249,7 @@ class DockerCommand extends SamoCommand {
      */
     @CommandLine.Command(name = "push",
             mixinStandardHelpOptions = true,
+            showDefaultValues = true,
             description = "Push docker image")
     public static class Push extends SamoCommand {
 
@@ -310,5 +313,29 @@ class DockerCommand extends SamoCommand {
         if (options.image == null || options.image.isEmpty()) {
             options.image = project.id.artifactId.value;
         }
+    }
+
+    static class DockerOptions {
+
+        /**
+         * The docker repository
+         */
+        @CommandLine.Option(
+                names = {"-i", "--image"},
+                description = "the docker image. Default value maven project artifactId."
+        )
+        String image;
+
+        /**
+         * The docker repository
+         */
+        @CommandLine.Option(
+                names = {"-r", "--repository"},
+                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
+                required = true,
+                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
+        )
+        String repository;
+
     }
 }
