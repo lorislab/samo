@@ -19,13 +19,12 @@ import com.github.zafarkhaja.semver.Version;
 import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
-import java.util.concurrent.Callable;
-
 /**
  * The maven command.
  */
 @CommandLine.Command(name = "maven",
         description = "Maven version commands",
+        mixinStandardHelpOptions = true,
         subcommands = {
                 MavenCommand.MavenVersion.class,
                 MavenCommand.Release.class,
@@ -33,30 +32,21 @@ import java.util.concurrent.Callable;
                 MavenCommand.Snapshot.class
         }
 )
-public class MavenCommand implements Callable<Integer> {
-
-    /**
-     * The command specification.
-     */
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
-
-    /**
-     * Show help of the maven commands.
-     *
-     * @return the exit code.
-     */
-    @Override
-    public Integer call() {
-        spec.commandLine().usage(System.out);
-        return CommandLine.ExitCode.OK;
-    }
+class MavenCommand extends SamoCommand {
 
     /**
      * The maven version command.
      */
-    @CommandLine.Command(name = "version", description = "Show current maven version")
-    public static class MavenVersion extends CommonCommand {
+    @CommandLine.Command(name = "version",
+            mixinStandardHelpOptions = true,
+            description = "Show current maven version")
+    public static class MavenVersion extends SamoCommand {
+
+        /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * Returns the current version of the maven project.
@@ -66,7 +56,7 @@ public class MavenCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
             output(project.id.version.value);
             return CommandLine.ExitCode.OK;
         }
@@ -75,8 +65,16 @@ public class MavenCommand implements Callable<Integer> {
     /**
      * Sets the maven project to release version.
      */
-    @CommandLine.Command(name = "set-release", description = "Set the release version")
-    public static class Release extends CommonCommand {
+    @CommandLine.Command(name = "set-release",
+            mixinStandardHelpOptions = true,
+            description = "Set the release version")
+    public static class Release extends SamoCommand {
+
+        /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * Sets the maven project to release version.
@@ -86,12 +84,9 @@ public class MavenCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
             Version version = Version.valueOf(project.id.version.value);
-            String releaseVersion = version.getNormalVersion();
-            logVerbose(releaseVersion);
-            project.setVersion(releaseVersion);
-            logInfo("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
+            setMavenVersion(project, version.getNormalVersion());
             return CommandLine.ExitCode.OK;
         }
     }
@@ -99,8 +94,16 @@ public class MavenCommand implements Callable<Integer> {
     /**
      * Sets the maven project to snapshot version.
      */
-    @CommandLine.Command(name = "set-snapshot", description = "Set snapshot prerelease version")
-    public static class Snapshot extends CommonCommand {
+    @CommandLine.Command(name = "set-snapshot",
+            mixinStandardHelpOptions = true,
+            description = "Set snapshot prerelease version")
+    public static class Snapshot extends SamoCommand {
+
+        /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * Sets the maven project to snapshot version.
@@ -110,14 +113,9 @@ public class MavenCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
-            Version version = Version.valueOf(project.id.version.value);
-            version = version.setPreReleaseVersion(SNAPSHOT);
-            String releaseVersion = version.toString();
-            logVerbose(releaseVersion);
-
-            project.setVersion(releaseVersion);
-            logInfo("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
+            MavenProject project = getMavenProject(maven.pom);
+            String releaseVersion = preReleaseVersion(project, SNAPSHOT);
+            setMavenVersion(project, releaseVersion);
             return CommandLine.ExitCode.OK;
         }
     }
@@ -125,20 +123,22 @@ public class MavenCommand implements Callable<Integer> {
     /**
      * Sets the maven project to git hash prerelease version.
      */
-    @CommandLine.Command(name = "set-hash", description = "Set git hash prerelease version")
-    public static class Git extends CommonCommand {
+    @CommandLine.Command(name = "set-hash",
+            mixinStandardHelpOptions = true,
+            description = "Set git hash prerelease version")
+    public static class Git extends SamoCommand {
 
         /**
-         * The length of the git sha
+         * The maven options.
          */
-        @CommandLine.Option(
-                names = {"-l", "--length"},
-                paramLabel = "LENGTH",
-                defaultValue = "7",
-                required = true,
-                description = "the git sha length"
-        )
-        int length;
+        @CommandLine.Mixin
+        MavenOptions maven;
+
+        /**
+         * The git options.
+         */
+        @CommandLine.Mixin
+        GitOptions git;
 
         /**
          * Sets the maven project to git sha prerelease version.
@@ -148,17 +148,9 @@ public class MavenCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
-            Version version = Version.valueOf(project.id.version.value);
-
-            String hash = gitHash(length);
-
-            version = version.setPreReleaseVersion(hash);
-            String releaseVersion = version.toString();
-            logVerbose(releaseVersion);
-
-            project.setVersion(releaseVersion);
-            logInfo("Change version from " + project.id.version.value + " to " + releaseVersion + " in the file: " + project.file);
+            MavenProject project = getMavenProject(maven.pom);
+            String releaseVersion = preReleaseVersion(project, gitHash(git));
+            setMavenVersion(project, releaseVersion);
             return CommandLine.ExitCode.OK;
         }
     }

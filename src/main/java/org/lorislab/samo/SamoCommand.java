@@ -1,20 +1,6 @@
-/*
- * Copyright 2019 lorislab.org.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 package org.lorislab.samo;
 
+import com.github.zafarkhaja.semver.Version;
 import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
@@ -25,20 +11,17 @@ import java.io.InputStreamReader;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 
-/**
- * The common abstract command.
- */
-abstract class CommonCommand implements Callable<Integer> {
-
-    /**
-     * The snapshot suffix
-     */
-    static final String SNAPSHOT = "SNAPSHOT";
+class SamoCommand implements Callable<Integer> {
 
     /**
      * Is windows flag.
      */
     private static final boolean IS_WINDOWS = System.getProperty("os.name").toLowerCase().startsWith("windows");
+
+    /**
+     * The snapshot suffix
+     */
+    static final String SNAPSHOT = "SNAPSHOT";
 
     /**
      * Verbose flag.
@@ -52,33 +35,24 @@ abstract class CommonCommand implements Callable<Integer> {
     boolean verbose;
 
     /**
-     * The maven project file.
-     */
-    @CommandLine.Option(
-            names = {"-f", "--file"},
-            paramLabel = "POM",
-            defaultValue = "pom.xml",
-            required = true,
-            description = "the maven project file"
-    )
-    private File pom;
-
-    /**
-     * The log info message
+     * Show help of the tool.
      *
-     * @param message the message.
+     * @return the exit code.
      */
-    void output(String message) {
-        System.out.println(message);
+    public Integer call() throws Exception {
+        CommandLine.usage(this, System.out);
+        return CommandLine.ExitCode.OK;
     }
 
+
+
     /**
      * The log info message
      *
      * @param message the message.
      */
-    void logInfo(String message) {
-        output("SAMO >> " + message);
+    void output(String message, Object ... params) {
+        System.out.printf(message, params);
     }
 
     /**
@@ -86,10 +60,26 @@ abstract class CommonCommand implements Callable<Integer> {
      *
      * @param message the message.
      */
-    void logVerbose(String message) {
+    void info(String message, Object ... params) {
         if (verbose) {
-            output("SAMO >> " + message);
+            output("SAMO >> " + message + "\n", params);
         }
+    }
+
+    /**
+     * The log verbose message.
+     *
+     * @param message the message.
+     */
+    void debug(String message, Object ... params) {
+        if (verbose) {
+            info(message, params);
+        }
+    }
+
+    void setMavenVersion(MavenProject project, String version) {
+        project.setVersion(version);
+        info("Change version from " + project.id.version.value + " to " + version + " in the file: " + project.file);
     }
 
     /**
@@ -98,11 +88,61 @@ abstract class CommonCommand implements Callable<Integer> {
      * @return the maven project.
      * @throws Exception if the method fails.
      */
-    MavenProject getMavenProject() throws Exception {
-        logVerbose("Open maven project file: " + pom);
+    MavenProject getMavenProject(File pom) throws Exception {
+        debug("Open maven project file: %s", pom);
         MavenProject project = MavenProject.loadFromFile(pom);
-        logVerbose("Project: " + project.id);
+        debug("Maven project ID: %s", project.id);
         return project;
+    }
+
+    /**
+     * Gets the pre-release version of the maven project.
+     * @param project the maven project.
+     * @param preRelease the pre release tag.
+     * @return the corresponding pre release version.
+     */
+    String preReleaseVersion(MavenProject project, String preRelease) {
+        Version version = Version.valueOf(project.id.version.value);
+        version = version.setPreReleaseVersion(preRelease);
+        return version.toString();
+    }
+
+
+    /**
+     * Gets the git hash commit.
+     *
+     * @param options the git options.
+     * @return the corresponding git hash.
+     */
+    String gitHash(GitOptions options) {
+        Return r = cmd("git rev-parse --short=" + options.length + " HEAD", "Error git hash");
+        debug("Git hash: %s", r.response);
+        return r.response;
+    }
+
+    /**
+     * Gets the branch name.
+     *
+     * @return the git branch.
+     */
+    String gitBranch() {
+        if (isGitHub()) {
+            String b = System.getenv("GITHUB_REF");
+            if (b != null && !b.isEmpty()) {
+                debug("Github branch: %s", b);
+                return b.replace("refs/heads/", "");
+            }
+        }
+        Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
+        debug("Git branch: %s", r.response);
+        return r.response;
+    }
+
+    boolean isGitHub() {
+        String tmp = System.getenv("GITHUB_ACTIONS");
+        boolean result = Boolean.parseBoolean(tmp);
+        debug("? Github: %s", result);
+        return result;
     }
 
     /**
@@ -126,7 +166,7 @@ abstract class CommonCommand implements Callable<Integer> {
     /**
      * Call command line
      *
-     * @param command the command.
+     * @param command      the command.
      * @param errorMessage the error message.
      * @return the command line response.
      */
@@ -139,7 +179,7 @@ abstract class CommonCommand implements Callable<Integer> {
             } else {
                 pb.command("bash", "-c", command);
             }
-            logVerbose("" + pb.command());
+            debug("" + pb.command());
             final Process p = pb.start();
             CompletableFuture<String> out = readOutStream(p.getInputStream());
             CompletableFuture<String> err = readOutStream(p.getErrorStream());
@@ -154,9 +194,9 @@ abstract class CommonCommand implements Callable<Integer> {
         }
 
         if (result.exitValue != 0) {
-            logInfo("Output: " + result.response);
-            logVerbose("Error: " + result.error);
-            logVerbose("Exit code: " + result.exitValue);
+            debug("Output: %s", result.response);
+            debug("Error: %s", result.error);
+            debug("Exit code: %s", result.exitValue);
             throw new RuntimeException(errorMessage);
         }
         return result;
@@ -186,29 +226,4 @@ abstract class CommonCommand implements Callable<Integer> {
         });
     }
 
-    String gitBranch() {
-        if (isGitHub()) {
-            String b = System.getenv("GITHUB_REF");
-            if (b != null && !b.isEmpty()) {
-                logVerbose("Github branch: " + b);
-                return b.replace("refs/heads/", "");
-            }
-        }
-        Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
-        logVerbose("Git branch: " + r.response);
-        return r.response;
-    }
-
-    String gitHash(int length) {
-        Return r = cmd("git rev-parse --short=" + length + " HEAD", "Error git hash");
-        logVerbose("Git hash: " + r.response);
-        return r.response;
-    }
-
-    boolean isGitHub() {
-        String tmp = System.getenv("GITHUB_ACTIONS");
-        boolean result = Boolean.parseBoolean(tmp);
-        logVerbose("? Github: " + result);
-        return  result;
-    }
 }

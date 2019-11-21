@@ -15,23 +15,21 @@
  */
 package org.lorislab.samo;
 
+import com.github.zafarkhaja.semver.Version;
 import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
-import com.github.zafarkhaja.semver.Version;
 
-import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.concurrent.Callable;
 
 /**
  * The maven command.
  */
 @CommandLine.Command(name = "docker",
         description = "Docker version commands",
+        mixinStandardHelpOptions = true,
         subcommands = {
                 DockerCommand.Config.class,
                 DockerCommand.Release.class,
@@ -39,27 +37,13 @@ import java.util.concurrent.Callable;
                 DockerCommand.Push.class
         }
 )
-public class DockerCommand implements Callable<Integer> {
+class DockerCommand extends SamoCommand {
 
-    /**
-     * The command specification.
-     */
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
+    @CommandLine.Command(name = "config",
+            mixinStandardHelpOptions = true,
+            description = "Configure the docker file.")
+    public static class Config extends SamoCommand {
 
-    /**
-     * Show help of the maven commands.
-     *
-     * @return the exit code.
-     */
-    @Override
-    public Integer call() {
-        spec.commandLine().usage(System.out);
-        return CommandLine.ExitCode.OK;
-    }
-
-    @CommandLine.Command(name = "config", description = "Configure the docker file.")
-    public static class Config extends CommonCommand {
         /**
          * The docker config
          */
@@ -93,12 +77,12 @@ public class DockerCommand implements Callable<Integer> {
             Path dir = file.getParent();
             if (dir != null && !Files.exists(dir)) {
                 Files.createDirectories(dir);
-                logVerbose("The docker config directory was created: " + dir);
+                debug("The docker config directory was created: %s", dir);
             }
 
             // write config to file
             Files.write(file, config.getBytes(StandardCharsets.UTF_8));
-            logInfo("The docker config file was created. File: " + file);
+            debug("The docker config file was created. File: %s", file);
             return CommandLine.ExitCode.OK;
         }
     }
@@ -106,42 +90,28 @@ public class DockerCommand implements Callable<Integer> {
     /**
      * Release docker image.
      */
-    @CommandLine.Command(name = "release", description = "Release docker image")
-    public static class Release extends CommonCommand {
+    @CommandLine.Command(name = "release",
+            mixinStandardHelpOptions = true,
+            description = "Release docker image")
+    public static class Release extends SamoCommand {
 
         /**
-         * The length of the git sha
+         * The git options.
          */
-        @CommandLine.Option(
-                names = {"-l", "--length"},
-                paramLabel = "LENGTH",
-                defaultValue = "7",
-                required = true,
-                description = "the git sha length"
-        )
-        int length;
+        @CommandLine.Mixin
+        GitOptions git;
 
         /**
-         * The docker image
+         * The docker options.
          */
-        @CommandLine.Option(
-                names = {"-i", "--image"},
-                paramLabel = "IMAGE",
-                description = "the docker image. Default value maven project artifactId."
-        )
-        String image;
+        @CommandLine.Mixin
+        DockerOptions docker;
 
         /**
-         * The docker repository
+         * The maven options.
          */
-        @CommandLine.Option(
-                names = {"-r", "--repository"},
-                paramLabel = "REPOSITORY",
-                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
-                required = true,
-                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
-        )
-        String repository;
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * Release docker image
@@ -151,26 +121,25 @@ public class DockerCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
 
-            String hash = gitHash(length);
+            String hash = gitHash(git);
 
             Version version = Version.valueOf(project.id.version.value);
             Version pullVersion = version.setPreReleaseVersion(hash);
 
             // set the docker image name.
-            if (image == null || image.isEmpty()) {
-                image = project.id.artifactId.value;
-            }
-            String imageRelease = repository + "/" + image + ":" + version.getNormalVersion();
-            String imagePull = repository + "/" + image + ":" + pullVersion;
+            updateImage(docker, project);
+
+            String imageRelease = imageName(docker, version.getNormalVersion());
+            String imagePull = imageName(docker, pullVersion.toString());
 
             // execute the docker commands
             cmd("docker pull " + imagePull, "Error pull docker image");
             cmd("docker tag " + imagePull + " " + imageRelease, "Error tag docker image");
             cmd("docker push " + imageRelease, "Error docker push image");
 
-            logInfo("Docker push new release image: " + imageRelease);
+            info("Docker push new release image: %s", imageRelease);
             return CommandLine.ExitCode.OK;
         }
     }
@@ -178,30 +147,16 @@ public class DockerCommand implements Callable<Integer> {
     /**
      * Build docker image.
      */
-    @CommandLine.Command(name = "build", description = "Build docker image")
-    public static class Build extends CommonCommand {
+    @CommandLine.Command(name = "build",
+            mixinStandardHelpOptions = true,
+            description = "Build docker image")
+    public static class Build extends SamoCommand {
 
         /**
-         * The docker repository
+         * The docker options.
          */
-        @CommandLine.Option(
-                names = {"-i", "--image"},
-                paramLabel = "IMAGE",
-                description = "the docker image. Default value maven project artifactId."
-        )
-        String image;
-
-        /**
-         * The docker repository
-         */
-        @CommandLine.Option(
-                names = {"-r", "--repository"},
-                paramLabel = "REPOSITORY",
-                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
-                required = true,
-                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
-        )
-        String repository;
+        @CommandLine.Mixin
+        DockerOptions docker;
 
         /**
          * The docker file.
@@ -238,6 +193,12 @@ public class DockerCommand implements Callable<Integer> {
         boolean branch;
 
         /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
+
+        /**
          * Build docker image.
          *
          * @return the exit code.
@@ -245,12 +206,10 @@ public class DockerCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
 
             // set the docker image name.
-            if (image == null || image.isEmpty()) {
-                image = project.id.artifactId.value;
-            }
+            updateImage(docker, project);
 
             StringBuilder log = new StringBuilder();
             log.append("Docker build new images [");
@@ -258,14 +217,14 @@ public class DockerCommand implements Callable<Integer> {
             StringBuilder sb = new StringBuilder();
             sb.append("docker build");
 
-            String imageName = repository + "/" + image + ":" + project.id.version.value;
+            String imageName = imageName(docker, project.id.version.value);
             sb.append(" -t ").append(imageName);
             log.append(imageName);
 
             String branchTag = "";
             if (branch) {
                 String branchName = gitBranch();
-                branchTag = repository + "/" + image + ":" + branchName;
+                branchTag = imageName(docker, branchName);
                 sb.append(" -t ").append(branchTag);
                 log.append(",").append(branchTag);
             }
@@ -278,7 +237,7 @@ public class DockerCommand implements Callable<Integer> {
             // execute the docker commands
             cmd(sb.toString(), "Error build docker image");
 
-            logInfo(log.toString());
+            info(log.toString());
             return CommandLine.ExitCode.OK;
         }
     }
@@ -286,30 +245,22 @@ public class DockerCommand implements Callable<Integer> {
     /**
      * Docker push command
      */
-    @CommandLine.Command(name = "push", description = "Push docker image")
-    public static class Push extends CommonCommand {
+    @CommandLine.Command(name = "push",
+            mixinStandardHelpOptions = true,
+            description = "Push docker image")
+    public static class Push extends SamoCommand {
 
         /**
-         * The docker repository
+         * The docker options.
          */
-        @CommandLine.Option(
-                names = {"-i", "--image"},
-                paramLabel = "IMAGE",
-                description = "the docker image. Default value maven project artifactId."
-        )
-        String image;
+        @CommandLine.Mixin
+        DockerOptions docker;
 
         /**
-         * The docker repository
+         * The maven options.
          */
-        @CommandLine.Option(
-                names = {"-r", "--repository"},
-                paramLabel = "REPOSITORY",
-                defaultValue = "${env:SAMO_DOCKER_REPOSITORY:-docker.io}",
-                required = true,
-                description = "the docker repository. Env: SAMO_DOCKER_REPOSITORY"
-        )
-        String repository;
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * Sets the maven project to release version.
@@ -319,20 +270,45 @@ public class DockerCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
 
             // set the docker image name.
-            if (image == null || image.isEmpty()) {
-                image = project.id.artifactId.value;
-            }
+            updateImage(docker, project);
 
-            String imageName = repository + "/" + image;
+            String imageName = imageName(docker, null);
 
             // execute the docker commands
             cmd("docker push " + imageName, "Error push docker image");
 
-            logInfo("docker push " + imageName);
+            info("docker push %s", imageName);
             return CommandLine.ExitCode.OK;
+        }
+    }
+
+    /**
+     * Gets the image name.
+     *
+     * @param options the docker options.
+     * @param tag     the image tag.
+     * @return the corresponding image name.
+     */
+    static String imageName(DockerOptions options, String tag) {
+        String tmp = options.repository + "/" + options.image;
+        if (tag != null) {
+            tmp = tmp + ":" + tag;
+        }
+        return tmp;
+    }
+
+    /**
+     * Update the docker image to maven project artifact ID if there is no options image.
+     *
+     * @param options the docker options.
+     * @param project the maven project.
+     */
+    static void updateImage(DockerOptions options, MavenProject project) {
+        if (options.image == null || options.image.isEmpty()) {
+            options.image = project.id.artifactId.value;
         }
     }
 }

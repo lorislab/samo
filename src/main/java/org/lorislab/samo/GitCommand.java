@@ -17,42 +17,26 @@ package org.lorislab.samo;
 
 import picocli.CommandLine;
 
-import java.util.concurrent.Callable;
-
 /**
  * The git command.
  */
 @CommandLine.Command(name = "git",
+        mixinStandardHelpOptions = true,
         description = "Git commands",
         subcommands = {
                 GitCommand.Branch.class,
                 GitCommand.Hash.class
         }
 )
-public class GitCommand implements Callable<Integer> {
-
-    /**
-     * The command specification.
-     */
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
-
-    /**
-     * Show help of the maven commands.
-     *
-     * @return the exit code.
-     */
-    @Override
-    public Integer call() {
-        spec.commandLine().usage(System.out);
-        return CommandLine.ExitCode.OK;
-    }
+class GitCommand extends SamoCommand {
 
     /**
      * The maven version command.
      */
-    @CommandLine.Command(name = "branch", description = "Show current branch")
-    public static class Branch extends CommonCommand {
+    @CommandLine.Command(name = "branch",
+            mixinStandardHelpOptions = true,
+            description = "Show current branch")
+    public static class Branch extends SamoCommand {
 
         /**
          * Returns the current version of the maven project.
@@ -69,20 +53,16 @@ public class GitCommand implements Callable<Integer> {
     /**
      * Gets the git hash.
      */
-    @CommandLine.Command(name = "hash", description = "Show the git hash")
-    public static class Hash extends CommonCommand {
+    @CommandLine.Command(name = "hash",
+            mixinStandardHelpOptions = true,
+            description = "Show the git hash")
+    public static class Hash extends SamoCommand {
 
         /**
-         * The length of the git sha
+         * The git options.
          */
-        @CommandLine.Option(
-                names = {"-l", "--length"},
-                paramLabel = "LENGTH",
-                defaultValue = "7",
-                required = true,
-                description = "the git hash length"
-        )
-        int length;
+        @CommandLine.Mixin
+        GitOptions git;
 
         /**
          * Sets the maven project to release version.
@@ -91,7 +71,7 @@ public class GitCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() {
-            output(gitHash(length));
+            output(gitHash(git));
             return CommandLine.ExitCode.OK;
         }
     }

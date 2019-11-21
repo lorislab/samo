@@ -19,42 +19,32 @@ import com.github.zafarkhaja.semver.Version;
 import org.lorislab.samo.data.MavenProject;
 import picocli.CommandLine;
 
-import java.util.concurrent.Callable;
-
 /**
  * The create command.
  */
 @CommandLine.Command(name = "create",
         description = "Create project commands",
+        mixinStandardHelpOptions = true,
         subcommands = {
                 CreateCommand.Release.class,
                 CreateCommand.Patch.class
         }
 )
-public class CreateCommand implements Callable<Integer> {
-
-    /**
-     * The command specification.
-     */
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
-
-    /**
-     * Show help of the create command.
-     *
-     * @return the exit code.
-     */
-    @Override
-    public Integer call() {
-        spec.commandLine().usage(System.out);
-        return CommandLine.ExitCode.OK;
-    }
+class CreateCommand extends SamoCommand {
 
     /**
      * Create a release tag of the project and increase development version.
      */
-    @CommandLine.Command(name = "release", description = "Create release of the current project and state")
-    public static class Release extends CommonCommand {
+    @CommandLine.Command(name = "release",
+            mixinStandardHelpOptions = true,
+            description = "Create release of the current project and state")
+    public static class Release extends SamoCommand {
+
+        /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * The message for the commit.
@@ -76,7 +66,7 @@ public class CreateCommand implements Callable<Integer> {
          */
         @Override
         public Integer call() throws Exception {
-            MavenProject project = getMavenProject();
+            MavenProject project = getMavenProject(maven.pom);
             Version version = Version.valueOf(project.id.version.value);
             String releaseVersion = version.getNormalVersion();
 
@@ -92,7 +82,7 @@ public class CreateCommand implements Callable<Integer> {
                     newVersion = version.incrementPatchVersion(SNAPSHOT);
                 }
                 project.setVersion(newVersion.toString());
-                logInfo("Change version from " + project.id.version.value + " to " + newVersion + " in the file: " + project.file);
+                info("Change version from %s to %s in the file: %s", project.id.version.value, newVersion, project.file);
 
                 // git commit & push
                 cmd("git add .", "Error git add");
@@ -107,8 +97,16 @@ public class CreateCommand implements Callable<Integer> {
         }
     }
 
-    @CommandLine.Command(name = "patch", description = "Create patch of the release")
-    public static class Patch extends CommonCommand {
+    @CommandLine.Command(name = "patch",
+            mixinStandardHelpOptions = true,
+            description = "Create patch of the release")
+    public static class Patch extends SamoCommand {
+
+        /**
+         * The maven options.
+         */
+        @CommandLine.Mixin
+        MavenOptions maven;
 
         /**
          * The message for the commit.
@@ -151,7 +149,7 @@ public class CreateCommand implements Callable<Integer> {
                 cmd("git checkout -b " + branchName + " " + version, "Error create and checkout branch");
 
                 // change version
-                MavenProject project = getMavenProject();
+                MavenProject project = getMavenProject(maven.pom);
                 project.setVersion(pv.toString());
 
                 // git commit & push

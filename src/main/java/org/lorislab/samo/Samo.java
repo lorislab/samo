@@ -20,7 +20,6 @@ import picocli.CommandLine.Command;
 
 import java.io.InputStream;
 import java.util.Properties;
-import java.util.concurrent.Callable;
 
 /**
  * The main command.
@@ -36,13 +35,7 @@ import java.util.concurrent.Callable;
                 CommandLine.HelpCommand.class
         }
 )
-public class Samo extends CommonCommand implements Callable<Integer> {
-
-    /**
-     * The command specification.
-     */
-    @CommandLine.Spec
-    CommandLine.Model.CommandSpec spec;
+public class Samo extends SamoCommand {
 
     /**
      * Main method.
@@ -52,16 +45,6 @@ public class Samo extends CommonCommand implements Callable<Integer> {
     public static void main(String[] args) {
         int exitCode = new CommandLine(new Samo()).execute(args);
         System.exit(exitCode);
-    }
-
-    /**
-     * Show help of the tool.
-     *
-     * @return the exit code.
-     */
-    public Integer call() {
-        spec.commandLine().usage(System.out);
-        return CommandLine.ExitCode.OK;
     }
 
     /**
