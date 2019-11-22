@@ -188,11 +188,22 @@ class DockerCommand extends SamoCommand {
          */
         @CommandLine.Option(
                 names = {"-b", "--branch"},
-                defaultValue = "true",
+                defaultValue = "false",
                 required = true,
                 description = "tag the docker image with a branch name"
         )
         boolean branch;
+
+        /**
+         * Create docker image tag for the branch.
+         */
+        @CommandLine.Option(
+                names = {"-l", "--latest"},
+                defaultValue = "true",
+                required = true,
+                description = "tag the docker image with a branch name"
+        )
+        boolean latest;
 
         /**
          * The maven options.
@@ -223,10 +234,14 @@ class DockerCommand extends SamoCommand {
             sb.append(" -t ").append(imageName);
             log.append(imageName);
 
-            String branchTag = "";
             if (branch) {
                 String branchName = gitBranch();
-                branchTag = imageName(docker, branchName);
+                String branchTag = imageName(docker, branchName);
+                sb.append(" -t ").append(branchTag);
+                log.append(",").append(branchTag);
+            }
+            if (latest) {
+                String branchTag = imageName(docker, "latest");
                 sb.append(" -t ").append(branchTag);
                 log.append(",").append(branchTag);
             }
