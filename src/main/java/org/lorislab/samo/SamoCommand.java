@@ -216,7 +216,7 @@ class SamoCommand implements Callable<Integer> {
                 String inputLine;
                 while ((inputLine = br.readLine()) != null) {
                     res.append(inputLine);
-                    res.append("\n");
+//                    res.append("\n");
                 }
                 return res.toString();
             } catch (Throwable e) {

@@ -187,9 +187,10 @@ class DockerCommand extends SamoCommand {
          * Create docker image tag for the branch.
          */
         @CommandLine.Option(
-                names = {"-b", "--branch"},
-                defaultValue = "false",
+                names = {"-b", "--no-branch"},
+                defaultValue = "true",
                 required = true,
+                negatable = true,
                 description = "tag the docker image with a branch name"
         )
         boolean branch;
@@ -198,8 +199,9 @@ class DockerCommand extends SamoCommand {
          * Create docker image tag for the branch.
          */
         @CommandLine.Option(
-                names = {"-l", "--latest"},
+                names = {"-l", "--no-latest"},
                 defaultValue = "true",
+                negatable = true,
                 required = true,
                 description = "tag the docker image with a branch name"
         )
