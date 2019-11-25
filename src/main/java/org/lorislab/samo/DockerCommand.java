@@ -167,7 +167,7 @@ class DockerCommand extends SamoCommand {
          */
         @CommandLine.Option(
                 names = {"-d", "--dockerfile"},
-                defaultValue = "${env:SAMO_DOCKER_DOCKERFILE}",
+                defaultValue = "${env:SAMO_DOCKER_DOCKERFILE:-src/main/docker/Dockerfile}",
                 description = "the docker file. Env: SAMO_DOCKER_DOCKERFILE"
         )
         String dockerfile;
