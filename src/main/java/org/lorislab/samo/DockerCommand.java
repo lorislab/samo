@@ -244,7 +244,7 @@ class DockerCommand extends SamoCommand {
 
             String imageName = imageName(docker, project.id.version.value);
             sb.append(" -t ").append(imageName);
-            log.append(imageName);
+            log.append(project.id.version.value);
 
             if (branch) {
                 String branchName = gitBranch();
