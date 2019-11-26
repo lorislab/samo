@@ -236,8 +236,9 @@ class DockerCommand extends SamoCommand {
             updateImage(docker, project);
 
             StringBuilder log = new StringBuilder();
-            log.append("Docker build new images [");
+            log.append("Docker build new image '").append(imageName(docker, null));
 
+            log.append("' tags [");
             StringBuilder sb = new StringBuilder();
             sb.append("docker build");
 
@@ -249,17 +250,17 @@ class DockerCommand extends SamoCommand {
                 String branchName = gitBranch();
                 String branchTag = imageName(docker, branchName);
                 sb.append(" -t ").append(branchTag);
-                log.append(",").append(branchTag);
+                log.append(",").append(branchName);
             }
             if (latest) {
                 String branchTag = imageName(docker, "latest");
                 sb.append(" -t ").append(branchTag);
-                log.append(",").append(branchTag);
+                log.append(",latest");
             }
             if (tag != null && !tag.isEmpty()) {
                 String addTag = imageName(docker, tag);
                 sb.append(" -t ").append(addTag);
-                log.append(",").append(addTag);
+                log.append(",").append(tag);
             }
             if (dockerfile != null && !dockerfile.isEmpty()) {
                 sb.append(" -f ").append(dockerfile);
