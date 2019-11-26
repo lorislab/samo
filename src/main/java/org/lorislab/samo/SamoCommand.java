@@ -113,7 +113,7 @@ class SamoCommand implements Callable<Integer> {
      * @return the corresponding git hash.
      */
     String gitHash(GitOptions options) {
-        Return r = cmd("git rev-parse --short=" + options.length + " HEAD", "Error git hash");
+        Return r = cmd("git rev-parse --short=" + options.length + " HEAD", "Error git hash", false);
         debug("Git hash: %s", r.response);
         return r.response;
     }
@@ -134,7 +134,7 @@ class SamoCommand implements Callable<Integer> {
         if (isGitLab()) {
             return System.getenv("CI_COMMIT_REF_NAME");
         }
-        Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
+        Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name", false);
         debug("Git branch: %s", r.response);
         return r.response;
     }
@@ -189,6 +189,18 @@ class SamoCommand implements Callable<Integer> {
      * @return the command line response.
      */
     Return cmd(String command, String errorMessage) {
+        return cmd(command, errorMessage, true);
+    }
+
+    /**
+     * Call command line
+     *
+     * @param command      the command.
+     * @param errorMessage the error message.
+     * @param newline      add the new line character to the output stream.
+     * @return the command line response.
+     */
+    Return cmd(String command, String errorMessage, boolean newline) {
         final Return result = new Return();
         try {
             ProcessBuilder pb = new ProcessBuilder();
@@ -199,8 +211,8 @@ class SamoCommand implements Callable<Integer> {
             }
             debug("" + pb.command());
             final Process p = pb.start();
-            CompletableFuture<String> out = readOutStream(p.getInputStream());
-            CompletableFuture<String> err = readOutStream(p.getErrorStream());
+            CompletableFuture<String> out = readOutStream(p.getInputStream(), newline);
+            CompletableFuture<String> err = readOutStream(p.getErrorStream(), newline);
             p.waitFor();
 
             result.response = out.get();
@@ -226,7 +238,7 @@ class SamoCommand implements Callable<Integer> {
      * @param is the input stream.
      * @return the completable future to read the output stream.
      */
-    private static CompletableFuture<String> readOutStream(InputStream is) {
+    private static CompletableFuture<String> readOutStream(InputStream is, boolean newline) {
         return CompletableFuture.supplyAsync(() -> {
             try (
                     InputStreamReader isr = new InputStreamReader(is);
@@ -236,7 +248,9 @@ class SamoCommand implements Callable<Integer> {
                 String inputLine;
                 while ((inputLine = br.readLine()) != null) {
                     res.append(inputLine);
-//                    res.append("\n");
+                    if (newline) {
+                        res.append("\n");
+                    }
                 }
                 return res.toString();
             } catch (Throwable e) {
