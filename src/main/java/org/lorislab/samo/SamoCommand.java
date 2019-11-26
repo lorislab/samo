@@ -45,13 +45,12 @@ class SamoCommand implements Callable<Integer> {
     }
 
 
-
     /**
      * The log info message
      *
      * @param message the message.
      */
-    void output(String message, Object ... params) {
+    void output(String message, Object... params) {
         System.out.printf(message, params);
     }
 
@@ -60,7 +59,7 @@ class SamoCommand implements Callable<Integer> {
      *
      * @param message the message.
      */
-    void info(String message, Object ... params) {
+    void info(String message, Object... params) {
         output("SAMO >> " + message + "\n", params);
     }
 
@@ -69,7 +68,7 @@ class SamoCommand implements Callable<Integer> {
      *
      * @param message the message.
      */
-    void debug(String message, Object ... params) {
+    void debug(String message, Object... params) {
         if (verbose) {
             info(message, params);
         }
@@ -95,7 +94,8 @@ class SamoCommand implements Callable<Integer> {
 
     /**
      * Gets the pre-release version of the maven project.
-     * @param project the maven project.
+     *
+     * @param project    the maven project.
      * @param preRelease the pre release tag.
      * @return the corresponding pre release version.
      */
@@ -131,15 +131,35 @@ class SamoCommand implements Callable<Integer> {
                 return b.replace("refs/heads/", "");
             }
         }
+        if (isGitLab()) {
+            return System.getenv("CI_COMMIT_REF_NAME");
+        }
         Return r = cmd("git rev-parse --abbrev-ref HEAD", "Error git branch name");
         debug("Git branch: %s", r.response);
         return r.response;
     }
 
+    /**
+     * Returns {@code true} if the pipeline is github actions pipeline
+     *
+     * @return {@code true} if the pipeline is github actions pipeline
+     */
     boolean isGitHub() {
         String tmp = System.getenv("GITHUB_ACTIONS");
         boolean result = Boolean.parseBoolean(tmp);
         debug("? Github: %s", result);
+        return result;
+    }
+
+    /**
+     * Returns {@code true} if the pipeline is gitlab-ci pipeline.
+     *
+     * @return {@code true} if the pipeline is gitlab-ci pipeline.
+     */
+    boolean isGitLab() {
+        String tmp = System.getenv("GITLAB_CI");
+        boolean result = Boolean.parseBoolean(tmp);
+        debug("? GitLab: %s", result);
         return result;
     }
 
