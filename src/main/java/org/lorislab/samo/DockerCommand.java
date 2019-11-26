@@ -214,6 +214,15 @@ class DockerCommand extends SamoCommand {
         MavenOptions maven;
 
         /**
+         * The docker context.
+         */
+        @CommandLine.Option(
+                names = {"-t", "--tag"},
+                description = "the docker build add extra tag"
+        )
+        String tag;
+
+        /**
          * Build docker image.
          *
          * @return the exit code.
@@ -246,6 +255,11 @@ class DockerCommand extends SamoCommand {
                 String branchTag = imageName(docker, "latest");
                 sb.append(" -t ").append(branchTag);
                 log.append(",").append(branchTag);
+            }
+            if (tag != null && !tag.isEmpty()) {
+                String addTag = imageName(docker, tag);
+                sb.append(" -t ").append(addTag);
+                log.append(",").append(addTag);
             }
             if (dockerfile != null && !dockerfile.isEmpty()) {
                 sb.append(" -f ").append(dockerfile);
