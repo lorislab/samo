@@ -5,6 +5,8 @@
 *.so
 *.dylib
 samo
+build/
+coverage.txt
 
 # Test binary, build with `go test -c`
 *.test
