@@ -7,7 +7,7 @@
 
     <groupId>org.lorislab.cd</groupId>
     <artifactId>fluh</artifactId>
-    <version>0.23.31</version>
+    <version>0.23.31-19f7844</version>
 
     <name>fluh</name>
     <description>Flux helm chart watching repository job</description>

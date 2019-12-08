@@ -1,0 +1,4 @@
+---
+- op: replace
+  path: /version
+  value: 1.0.0
