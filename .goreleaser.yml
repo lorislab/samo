@@ -2,9 +2,16 @@ before:
   hooks:
     - go mod download
 builds:
-- env:
+- 
+  env:
   - GO111MODULE=on
   - CGO_ENABLED=0
+  goos:
+    - darwin
+    - linux
+    - windows
+  goarch:
+    - amd64
 archives:
 - replacements:
     darwin: Darwin
