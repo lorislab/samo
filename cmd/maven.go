@@ -75,8 +75,7 @@ var (
 		Long:  `Set the maven project version to git hash`,
 		Run: func(cmd *cobra.Command, args []string) {
 			project := internal.LoadMavenProject(mavenOptions.filename)
-			hash := internal.GitHash(gitOptions.gitHashLength)
-			fmt.Printf("%s\n", hash)
+			hash := gitHash(gitOptions.gitHashLength)
 			version := project.SetPrerelease(hash)
 			project.SetVersion(version)
 		},

@@ -2,9 +2,9 @@ package internal
 
 import (
 	"fmt"
-	"io/ioutil"
-
 	"github.com/Masterminds/semver"
+	log "github.com/sirupsen/logrus"
+	"io/ioutil"
 )
 
 const (
@@ -52,6 +52,14 @@ type MavenProject struct {
 	projectID, parentProjectID *MavenID
 }
 
+func (r MavenProject) semVer() *semver.Version {
+	tmp, err := semver.NewVersion(r.projectID.version.value)
+	if err != nil {
+		log.Panic(err)
+	}
+	return tmp
+}
+
 // HasParent returns true if project has a parent project
 func (r MavenProject) HasParent() bool {
 	return r.parentProjectID != nil
@@ -72,66 +80,65 @@ func (r MavenProject) Version() string {
 	return r.projectID.Version()
 }
 
-// NextReleaseVersion release version of the project
-func (r MavenProject) NextReleaseVersion() string {
-	tmp, err := semver.NewVersion(r.projectID.version.value)
-	if err != nil {
-		panic(err)
-	}
-
-	var result = semver.Version{}
-	if tmp.Patch() == 0 {
-		result = tmp.IncMinor()
-	} else {
-		result = tmp.IncPatch()
-	}
-	result, err = tmp.SetPrerelease("SNAPSHOT")
-	if err != nil {
-		panic(err)
-	}
+// NextPatchVersion release version of the project
+func (r MavenProject) NextPatchVersion() string {
+	tmp := r.semVer()
+	result := setPrerelease(*tmp, "")
+	result = result.IncPatch()
+	result = setPrerelease(result, "SNAPSHOT")
 	return result.String()
+}
+
+// NextReleaseVersion release version of the project
+func (r MavenProject) NextReleaseVersion(major bool) string {
+	tmp := r.semVer()
+	var result = semver.Version{}
+	if major {
+		result = tmp.IncMajor()
+	} else {
+		if tmp.Patch() == 0 {
+			result = tmp.IncMinor()
+		} else {
+			result = tmp.IncPatch()
+		}
+	}
+	result = setPrerelease(result, "SNAPSHOT")
+	return result.String()
+}
+
+func setPrerelease(ver semver.Version, pre string) semver.Version {
+	result, err := ver.SetPrerelease(pre)
+	if err != nil {
+		log.Panic(err)
+	}
+	return result
 }
 
 // ReleaseVersion release version of the project
 func (r MavenProject) ReleaseVersion() string {
-	semver, err := semver.NewVersion(r.projectID.version.value)
-	if err != nil {
-		panic(err)
-	}
-	ver, err := semver.SetPrerelease("")
-	if err != nil {
-		panic(err)
-	}
-	ver, err = ver.SetMetadata("")
-	if err != nil {
-		panic(err)
-	}
+	semver := r.semVer()
+	ver := setPrerelease(*semver, "SNAPSHOT")
+	ver = ver.IncPatch()
 	return ver.String()
 }
 
 // SetPrerelease release version of the project
 func (r MavenProject) SetPrerelease(prerelease string) string {
-	semver, err := semver.NewVersion(r.projectID.version.value)
-	if err != nil {
-		panic(err)
-	}
-	newVersion, err := semver.SetPrerelease(prerelease)
-	if err != nil {
-		panic(err)
-	}
+	semver := r.semVer()
+	newVersion := setPrerelease(*semver, prerelease)
 	return newVersion.String()
 }
 
 // SetVersion set project version
 func (r MavenProject) SetVersion(version string) {
 	replaceTextInFile(r.filename, version, r.projectID.version.begin(), r.projectID.version.end())
-	fmt.Printf("Update project '%s' version from [%s] to [%s]\n", r.filename, r.projectID.version.value, version)
+	log.Infof("Update project '%s' version from [%s] to [%s]\n", r.filename, r.projectID.version.value, version)
 }
 
 // SetParentVersion set project parent version
 func (r MavenProject) SetParentVersion(version string) {
 	replaceTextInFile(r.filename, version, r.parentProjectID.version.begin(), r.parentProjectID.version.end())
-	fmt.Printf("Update project '%s' parent version from [%s] to [%s]\n", r.filename, r.parentProjectID.version.value, version)
+	log.Infof("Update project '%s' parent version from [%s] to [%s]\n", r.filename, r.parentProjectID.version.value, version)
 }
 
 // LoadMavenProject load maven project
@@ -139,7 +146,7 @@ func LoadMavenProject(filename string) *MavenProject {
 	items := []string{projectVersion, projectGroupID, projectArtifactID, parentProjectArtifactID, parentProjectGroupID, parentProjectVersion}
 	result := FindXPathInFile(filename, items)
 	if result.IsEmpty() {
-		fmt.Printf("The file '%s' does not have maven structure.\n", filename)
+		log.Warnf("The file '%s' does not have maven structure.\n", filename)
 		return nil
 	}
 	projectID := &MavenID{groupdID: result.items[projectGroupID], artifactID: result.items[projectArtifactID], version: result.items[projectVersion]}
@@ -155,7 +162,7 @@ func LoadMavenProject(filename string) *MavenProject {
 func replaceTextInFile(filename, text string, b, e int64) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	result := string(buf)
 	result = result[:b] + text + result[e:]

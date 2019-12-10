@@ -3,7 +3,6 @@ package cmd
 import (
 	"bufio"
 	"os"
-	"os/exec"
 	"path/filepath"
 
 	"github.com/lorislab/samo/internal"
@@ -81,7 +80,7 @@ var (
 			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
 
 			if dockerOptions.branch {
-				branch := internal.GitBranch()
+				branch := gitBranch()
 				command = append(command, "-t", imageNameWithTag(image, branch))
 			}
 			if dockerOptions.latest {
@@ -95,10 +94,7 @@ var (
 			}
 			command = append(command, dockerOptions.context)
 
-			err := exec.Command("docker", command...).Run()
-			if err != nil {
-				panic(err)
-			}
+			execCmd("docker", command...)
 		},
 		TraverseChildren: true,
 	}
@@ -112,12 +108,7 @@ var (
 			if len(image) == 0 {
 				image = project.ArtifactID()
 			}
-
-			err := exec.Command("docker", "push", image).Run()
-			if err != nil {
-				panic(err)
-			}
-
+			execCmd("docker", "push", image)
 		},
 		TraverseChildren: true,
 	}
@@ -131,25 +122,17 @@ var (
 			if len(image) == 0 {
 				image = project.ArtifactID()
 			}
-			hash := internal.GitHash(dockerOptions.hashLength)
+			hash := gitHash(dockerOptions.hashLength)
 			pullVersion := project.SetPrerelease(hash)
 			releaseVersion := project.ReleaseVersion()
 
 			imagePull := imageNameWithTag(image, pullVersion)
-			err := exec.Command("docker", "pull", imagePull).Run()
-			if err != nil {
-				panic(err)
-			}
-			imageRelease := imageNameWithTag(image, releaseVersion)
-			err = exec.Command("docker", "tag", imagePull, imageRelease).Run()
-			if err != nil {
-				panic(err)
-			}
-			err = exec.Command("docker", "push", imageRelease).Run()
-			if err != nil {
-				panic(err)
-			}
+			execCmd("docker", "pull", imagePull)
 
+			imageRelease := imageNameWithTag(image, releaseVersion)
+			execCmd("docker", "tag", imagePull, imageRelease)
+
+			execCmd("docker", "push", imageRelease)
 		},
 		TraverseChildren: true,
 	}

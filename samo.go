@@ -5,6 +5,7 @@ import (
 
 	"github.com/lorislab/samo/cmd"
 	homedir "github.com/mitchellh/go-homedir"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	goVersion "go.hein.dev/go-version"
@@ -16,13 +17,17 @@ var (
 	commit    = "none"
 	date      = "unknown"
 	output    = "json"
-	// Verbose command line flag
-	Verbose bool
-	cfgFile string
-	rootCmd = &cobra.Command{
+	verbose   bool
+	cfgFile   string
+	rootCmd   = &cobra.Command{
 		Use:   "samo",
 		Short: "samo semantic version release utility",
 		Long:  "Simple semantic version release utility for maven, docker and helm chart",
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			if verbose {
+				log.SetLevel(log.DebugLevel)
+			}
+		},
 	}
 	versionCmd = &cobra.Command{
 		Use:   "version",
@@ -38,6 +43,9 @@ var (
 
 // Execute executes the root command.
 func main() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: true,
+	})
 	rootCmd.Execute()
 }
 
@@ -49,7 +57,7 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
-	rootCmd.PersistentFlags().BoolVarP(&Verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
 	viper.SetDefault("author", "Andrej Petras andrej@lorislab.org")
 }
 
@@ -64,9 +72,8 @@ func initConfig() {
 			panic(err)
 		}
 
-		// Search config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath(home)
-		viper.SetConfigName(".cobra")
+		viper.SetConfigName(".samo")
 	}
 
 	viper.AutomaticEnv()

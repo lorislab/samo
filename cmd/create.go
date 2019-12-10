@@ -1,24 +1,37 @@
 package cmd
 
 import (
-	"log"
-	"os/exec"
 	"strconv"
 
 	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/internal"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 func init() {
 	createCmd.AddCommand(createReleaseCmd)
 	addMavenFlags(createReleaseCmd)
+	createReleaseCmd.Flags().StringVarP(&(createOptions.devMsg), "message", "m", "Create new development version", "Commit message for new development version")
+	createReleaseCmd.Flags().BoolVarP(&(createOptions.major), "major", "a", false, "Create a major release")
 
 	createCmd.AddCommand(createPatchCmd)
 	addMavenFlags(createPatchCmd)
+	createPatchCmd.Flags().StringVarP(&(createOptions.tag), "tag", "t", "", "The tag versoin for the patch branch")
+	createPatchCmd.Flags().StringVarP(&(createOptions.patchMsg), "message", "m", "Create new patch version", "Commit message for new patch version")
+	createPatchCmd.MarkFlagRequired("tag")
+}
+
+type createFlags struct {
+	patchMsg string
+	devMsg   string
+	tag      string
+	major    bool
 }
 
 var (
+	createOptions = createFlags{}
+
 	createCmd = &cobra.Command{
 		Use:              "create",
 		Short:            "Create operation",
@@ -33,26 +46,14 @@ var (
 			project := internal.LoadMavenProject(mavenOptions.filename)
 			releaseVersion := project.ReleaseVersion()
 
-			err := exec.Command("git", "tag", releaseVersion).Run()
-			if err != nil {
-				gitRollback(err)
-			}
+			execGitCmd("git", "tag", releaseVersion)
 
-			newVersion := project.NextReleaseVersion()
+			newVersion := project.NextReleaseVersion(createOptions.major)
 			project.SetVersion(newVersion)
 
-			err = exec.Command("git", "add", ".").Run()
-			if err != nil {
-				gitRollback(err)
-			}
-			err = exec.Command("git", "commit", "-m", "\"Create new release\"").Run()
-			if err != nil {
-				gitRollback(err)
-			}
-			err = exec.Command("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*").Run()
-			if err != nil {
-				gitRollback(err)
-			}
+			execGitCmd("git", "add", ".")
+			execGitCmd("git", "commit", "-m", "\""+createOptions.devMsg+" ["+newVersion+"]\"")
+			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
 		},
 		TraverseChildren: true,
 	}
@@ -61,40 +62,31 @@ var (
 		Short: "Create patch of the release",
 		Long:  `Create patch of the release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			project := internal.LoadMavenProject(mavenOptions.filename)
-			ver, e := semver.NewVersion(project.Version())
+
+			tagVer, e := semver.NewVersion(createOptions.tag)
 			if e != nil {
-				panic(e)
+				log.Panic(e)
 			}
 
-			branchName := strconv.FormatInt(ver.Major(), 10) + "." + strconv.FormatInt(ver.Minor(), 10)
-			err := exec.Command("git", "checkout", "-b", branchName, project.Version()).Run()
-			if err != nil {
-				gitRollback(err)
-			}
+			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+			execGitCmd("git", "checkout", "-b", branchName, createOptions.tag)
 
-			err = exec.Command("git", "add", ".").Run()
-			if err != nil {
-				gitRollback(err)
-			}
-			err = exec.Command("git", "commit", "-m", "\"Create new release\"").Run()
-			if err != nil {
-				gitRollback(err)
-			}
-			err = exec.Command("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*").Run()
-			if err != nil {
-				gitRollback(err)
-			}
+			project := internal.LoadMavenProject(mavenOptions.filename)
+			patch := project.NextPatchVersion()
+			project.SetVersion(patch)
+
+			execGitCmd("git", "add", ".")
+			execGitCmd("git", "commit", "-m", "\""+createOptions.patchMsg+" ["+patch+"]\"")
+			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+
 		},
 		TraverseChildren: true,
 	}
 )
 
-func gitRollback(e error) {
-	log.Fatal(e)
-	err := exec.Command("rm", "-f", "o.git/index.lock").Run()
+func execGitCmd(name string, arg ...string) {
+	err := execCmdErr(name, arg...)
 	if err != nil {
-		panic(err)
+		execCmd("rm", "-f", "o.git/index.lock")
 	}
-	panic(e)
 }

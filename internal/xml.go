@@ -2,8 +2,8 @@ package internal
 
 import (
 	"encoding/xml"
+	log "github.com/sirupsen/logrus"
 	"io"
-	"log"
 	"os"
 	"strings"
 )
@@ -35,7 +35,7 @@ func (r XPathResult) IsEmpty() bool {
 func FindXPathInFile(filename string, items []string) *XPathResult {
 	file, err := os.Open(filename)
 	if err != nil {
-		panic(err)
+		log.Panic(err)
 	}
 	defer file.Close()
 
