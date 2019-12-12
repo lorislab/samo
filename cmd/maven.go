@@ -2,13 +2,21 @@ package cmd
 
 import (
 	"fmt"
+	"strconv"
 
+	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/internal"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 type mavenFlags struct {
-	filename string
+	filename      string
+	patchMsg      string
+	devMsg        string
+	tag           string
+	major         bool
+	gitHashLength string
 }
 
 func init() {
@@ -20,7 +28,18 @@ func init() {
 	addMavenFlags(mvnSetReleaseCmd)
 	mvnCmd.AddCommand(mvnSetHashCmd)
 	addMavenFlags(mvnSetHashCmd)
-	addGitFlags(mvnSetHashCmd)
+	mvnSetHashCmd.Flags().StringVarP(&(mavenOptions.gitHashLength), "length", "l", "7", "The git hash length")
+
+	mvnCmd.AddCommand(mvnCreateReleaseCmd)
+	addMavenFlags(mvnCreateReleaseCmd)
+	mvnCreateReleaseCmd.Flags().StringVarP(&(mavenOptions.devMsg), "message", "m", "Create new development version", "Commit message for new development version")
+	mvnCreateReleaseCmd.Flags().BoolVarP(&(mavenOptions.major), "major", "a", false, "Create a major release")
+
+	mvnCmd.AddCommand(mvnCreatePatchCmd)
+	addMavenFlags(mvnCreatePatchCmd)
+	mvnCreatePatchCmd.Flags().StringVarP(&(mavenOptions.tag), "tag", "t", "", "The tag version for the patch branch")
+	mvnCreatePatchCmd.Flags().StringVarP(&(mavenOptions.patchMsg), "message", "m", "Create new patch version", "Commit message for new patch version")
+	mvnCreatePatchCmd.MarkFlagRequired("tag")
 }
 
 func addMavenFlags(command *cobra.Command) {
@@ -75,9 +94,53 @@ var (
 		Long:  `Set the maven project version to git hash`,
 		Run: func(cmd *cobra.Command, args []string) {
 			project := internal.LoadMavenProject(mavenOptions.filename)
-			hash := gitHash(gitOptions.gitHashLength)
+			hash := gitHash(mavenOptions.gitHashLength)
 			version := project.SetPrerelease(hash)
 			project.SetVersion(version)
+		},
+		TraverseChildren: true,
+	}
+	mvnCreateReleaseCmd = &cobra.Command{
+		Use:   "create-release",
+		Short: "Create release of the current project and state",
+		Long:  `Create release of the current project and state`,
+		Run: func(cmd *cobra.Command, args []string) {
+			project := internal.LoadMavenProject(mavenOptions.filename)
+			releaseVersion := project.ReleaseVersion()
+
+			execGitCmd("git", "tag", releaseVersion)
+
+			newVersion := project.NextReleaseVersion(mavenOptions.major)
+			project.SetVersion(newVersion)
+
+			execGitCmd("git", "add", ".")
+			execGitCmd("git", "commit", "-m", mavenOptions.devMsg+" ["+newVersion+"]")
+			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+		},
+		TraverseChildren: true,
+	}
+	mvnCreatePatchCmd = &cobra.Command{
+		Use:   "create-patch",
+		Short: "Create patch of the release",
+		Long:  `Create patch of the release`,
+		Run: func(cmd *cobra.Command, args []string) {
+
+			tagVer, e := semver.NewVersion(mavenOptions.tag)
+			if e != nil {
+				log.Panic(e)
+			}
+
+			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+			execGitCmd("git", "checkout", "-b", branchName, mavenOptions.tag)
+
+			project := internal.LoadMavenProject(mavenOptions.filename)
+			patch := project.NextPatchVersion()
+			project.SetVersion(patch)
+
+			execGitCmd("git", "add", ".")
+			execGitCmd("git", "commit", "-m", mavenOptions.patchMsg+" ["+patch+"]")
+			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+
 		},
 		TraverseChildren: true,
 	}

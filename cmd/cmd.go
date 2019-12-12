@@ -14,7 +14,6 @@ func Main(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(mvnCmd)
 	rootCmd.AddCommand(gitCmd)
 	rootCmd.AddCommand(dockerCmd)
-	rootCmd.AddCommand(createCmd)
 }
 
 func execCmd(name string, arg ...string) {
