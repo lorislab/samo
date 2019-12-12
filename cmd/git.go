@@ -121,7 +121,7 @@ var (
 			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
 			execGitCmd("git", "checkout", "-b", branchName, mavenOptions.tag)
 			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-			log.Info("New patch branch for version [%s] created.", branchName)
+			log.Infof("New patch branch for version [%s] created.", branchName)
 
 		},
 		TraverseChildren: true,
