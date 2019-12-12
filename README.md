@@ -7,13 +7,12 @@ Samo is a tool to help with a project release.
 
 ## Commands
 ```bash
-Simple semantic version release utility for maven, docker and helm chart
+Samo is semantic version release utility for maven, git, docker and helm chart
 
 Usage:
   samo [command]
 
 Available Commands:
-  create      Create operation
   docker      Docker operation
   git         Git operation
   help        Help about any command
@@ -26,19 +25,16 @@ Flags:
   -v, --verbose         verbose output
 
 Use "samo [command] --help" for more information about a command.
-
 ```
 
 ### Release process of project
 
 Create new release run
 ```bash
-git tag v0.1.0
-git push --tags
+samo git create-release
 ```
 
 Create new patch branch run
 ```bash
-git checkout -b 0.1 v0.1.0
-git push origin 0.1
+samo git create-patch v0.1.0
 ```

@@ -21,8 +21,8 @@ var (
 	cfgFile   string
 	rootCmd   = &cobra.Command{
 		Use:   "samo",
-		Short: "samo semantic version release utility",
-		Long:  "Simple semantic version release utility for maven, docker and helm chart",
+		Short: "samo release utility",
+		Long:  "Samo is semantic version release utility for maven, git, docker and helm chart",
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			if verbose {
 				log.SetLevel(log.DebugLevel)
