@@ -24,7 +24,10 @@ func init() {
 	gitCmd.AddCommand(gitCreatePatchCmd)
 	gitCreatePatchCmd.Flags().StringVarP(&(gitOptions.tag), "tag", "t", "", "The tag version for the patch branch")
 	gitCreatePatchCmd.Flags().StringVarP(&(gitOptions.patchMsg), "message", "m", "Create new patch version", "Commit message for new patch version")
-	gitCreatePatchCmd.MarkFlagRequired("tag")
+	err := gitCreatePatchCmd.MarkFlagRequired("tag")
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 func addGitFlags(command *cobra.Command) {

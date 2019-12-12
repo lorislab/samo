@@ -46,7 +46,10 @@ func main() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: true,
 	})
-	rootCmd.Execute()
+	err := rootCmd.Execute()
+	if err != nil {
+		log.Panic(err)
+	}
 }
 
 func init() {
@@ -69,7 +72,7 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			panic(err)
+			log.Panic(err)
 		}
 
 		viper.AddConfigPath(home)

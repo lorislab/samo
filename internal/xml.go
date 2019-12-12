@@ -34,10 +34,20 @@ func (r XPathResult) IsEmpty() bool {
 // FindXPathInFile find the xpath items in the file
 func FindXPathInFile(filename string, items []string) *XPathResult {
 	file, err := os.Open(filename)
+	if file != nil {
+		defer func() {
+			if err := file.Close(); err != nil {
+				log.Panic(err)
+			}
+		}()
+	}
+
 	if err != nil {
 		log.Panic(err)
 	}
-	defer file.Close()
+	if err != nil {
+		log.Panic(err)
+	}
 
 	data := make(map[string]bool)
 	for _, x := range items {

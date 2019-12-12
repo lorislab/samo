@@ -66,10 +66,7 @@ var (
 		Long:  `Build the docker image`,
 		Run: func(cmd *cobra.Command, args []string) {
 			project := internal.LoadMavenProject(mavenOptions.filename)
-			image := dockerOptions.image
-			if len(image) == 0 {
-				image = project.ArtifactID()
-			}
+			image := dockerImage(project, dockerOptions)
 
 			var command []string
 
@@ -104,10 +101,8 @@ var (
 		Long:  `Push the docker image`,
 		Run: func(cmd *cobra.Command, args []string) {
 			project := internal.LoadMavenProject(mavenOptions.filename)
-			image := dockerOptions.image
-			if len(image) == 0 {
-				image = project.ArtifactID()
-			}
+			image := dockerImage(project, dockerOptions)
+
 			execCmd("docker", "push", image)
 		},
 		TraverseChildren: true,
@@ -118,10 +113,8 @@ var (
 		Long:  `Release the docker image`,
 		Run: func(cmd *cobra.Command, args []string) {
 			project := internal.LoadMavenProject(mavenOptions.filename)
-			image := dockerOptions.image
-			if len(image) == 0 {
-				image = project.ArtifactID()
-			}
+			image := dockerImage(project, dockerOptions)
+
 			hash := gitHash(dockerOptions.hashLength)
 			pullVersion := project.SetPrerelease(hash)
 			releaseVersion := project.ReleaseVersion()
@@ -156,8 +149,14 @@ var (
 					panic(err)
 				}
 				w := bufio.NewWriter(file)
-				w.WriteString(value)
-				w.Flush()
+				_, err = w.WriteString(value)
+				if err != nil {
+					panic(err)
+				}
+				err = w.Flush()
+				if err != nil {
+					panic(err)
+				}
 			}
 		},
 		TraverseChildren: true,
@@ -165,17 +164,14 @@ var (
 )
 
 func dockerImage(project *internal.MavenProject, options dockerFlags) string {
-	if len(options.image) == 0 {
-		return project.ArtifactID()
+	image := dockerOptions.image
+	if len(image) == 0 {
+		image = project.ArtifactID()
 	}
-	return options.image
-}
-
-func imageName(options dockerFlags) string {
-	if len(options.repository) > 0 {
-		return options.repository
+	if len(dockerOptions.repository) > 0 {
+		image = dockerOptions.repository + "/" + image
 	}
-	return options.repository + "/" + options.image
+	return image
 }
 
 func imageNameWithTag(name, tag string) string {

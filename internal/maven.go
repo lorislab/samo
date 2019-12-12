@@ -18,7 +18,7 @@ const (
 
 // MavenID maven project ID
 type MavenID struct {
-	groupdID, artifactID, version *XPathItem
+	groupID, artifactID, version *XPathItem
 }
 
 // Equals returns true if the maven ID's are equal
@@ -28,7 +28,7 @@ func (r MavenID) Equals(m *MavenID) bool {
 
 // ID the string representation of the maven ID
 func (r MavenID) ID() string {
-	return fmt.Sprintf("%s:%s:%s", r.groupdID.value, r.artifactID.value, r.version.value)
+	return fmt.Sprintf("%s:%s:%s", r.groupID.value, r.artifactID.value, r.version.value)
 }
 
 // Version the maven project version
@@ -38,7 +38,7 @@ func (r MavenID) Version() string {
 
 // GroupID the maven project version
 func (r MavenID) GroupID() string {
-	return r.groupdID.value
+	return r.groupID.value
 }
 
 // ArtifactID the maven project version
@@ -116,16 +116,16 @@ func setPrerelease(ver semver.Version, pre string) semver.Version {
 
 // ReleaseVersion release version of the project
 func (r MavenProject) ReleaseVersion() string {
-	semver := r.semVer()
-	ver := setPrerelease(*semver, "SNAPSHOT")
+	tmp := r.semVer()
+	ver := setPrerelease(*tmp, "SNAPSHOT")
 	ver = ver.IncPatch()
 	return ver.String()
 }
 
 // SetPrerelease release version of the project
 func (r MavenProject) SetPrerelease(prerelease string) string {
-	semver := r.semVer()
-	newVersion := setPrerelease(*semver, prerelease)
+	ver := r.semVer()
+	newVersion := setPrerelease(*ver, prerelease)
 	return newVersion.String()
 }
 
@@ -149,11 +149,11 @@ func LoadMavenProject(filename string) *MavenProject {
 		log.Warnf("The file '%s' does not have maven structure.\n", filename)
 		return nil
 	}
-	projectID := &MavenID{groupdID: result.items[projectGroupID], artifactID: result.items[projectArtifactID], version: result.items[projectVersion]}
+	projectID := &MavenID{groupID: result.items[projectGroupID], artifactID: result.items[projectArtifactID], version: result.items[projectVersion]}
 
 	var parentProjectID *MavenID
 	if result.items[parentProjectGroupID] != nil {
-		parentProjectID = &MavenID{groupdID: result.items[parentProjectGroupID], artifactID: result.items[parentProjectArtifactID], version: result.items[parentProjectVersion]}
+		parentProjectID = &MavenID{groupID: result.items[parentProjectGroupID], artifactID: result.items[parentProjectArtifactID], version: result.items[parentProjectVersion]}
 	}
 	project := &MavenProject{filename: filename, projectID: projectID, parentProjectID: parentProjectID}
 	return project
@@ -166,5 +166,8 @@ func replaceTextInFile(filename, text string, b, e int64) {
 	}
 	result := string(buf)
 	result = result[:b] + text + result[e:]
-	ioutil.WriteFile(filename, []byte(result), 0666)
+	err = ioutil.WriteFile(filename, []byte(result), 0666)
+	if err != nil {
+		log.Panic(err)
+	}
 }
