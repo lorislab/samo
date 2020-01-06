@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"github.com/spf13/viper"
 	"os/exec"
 	"strings"
 
@@ -14,6 +15,31 @@ func Main(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(mvnCmd)
 	rootCmd.AddCommand(gitCmd)
 	rootCmd.AddCommand(dockerCmd)
+}
+
+func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) {
+	addFlag(command, name, shorthand, value, usage)
+	err := command.MarkFlagRequired(name)
+	if err != nil {
+		log.Panic(err)
+	}
+}
+
+func addFlag(command *cobra.Command, name, shorthand string, value string, usage string) {
+	command.Flags().StringP(name, shorthand, value, usage)
+	addViper(command, name)
+}
+
+func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usage string) {
+	command.Flags().BoolP(name, shorthand, value, usage)
+	addViper(command, name)
+}
+
+func addViper(command *cobra.Command, name string) {
+	err := viper.BindPFlag(name, command.Flags().Lookup(name))
+	if err != nil {
+		panic(err)
+	}
 }
 
 func execCmd(name string, arg ...string) {

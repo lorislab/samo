@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/spf13/viper"
 	"os"
 	"strconv"
 	"strings"
@@ -13,39 +14,26 @@ import (
 
 func init() {
 	gitCmd.AddCommand(gitBranchCmd)
+
 	gitCmd.AddCommand(gitHashCmd)
-	addGitFlags(gitHashCmd)
+	addFlag(gitHashCmd, "hash-length", "l", "7", "The git hash length")
 
 	gitCmd.AddCommand(gitCreateReleaseCmd)
-	gitCreateReleaseCmd.Flags().StringVarP(&(gitOptions.devMsg), "message", "m", "Create new development version", "Commit message for new development version")
-	gitCreateReleaseCmd.Flags().BoolVarP(&(gitOptions.major), "major", "a", false, "Create a major release")
-	gitCreateReleaseCmd.Flags().StringVarP(&(gitOptions.tag), "tag", "t", "", "The tag release version")
+	addBoolFlag(gitCreateReleaseCmd, "release-major", "a", false, "Create a major release")
+	addFlag(gitCreateReleaseCmd, "release-tag", "t", "", "The tag release version")
 
 	gitCmd.AddCommand(gitCreatePatchCmd)
-	gitCreatePatchCmd.Flags().StringVarP(&(gitOptions.tag), "tag", "t", "", "The tag version for the patch branch")
-	gitCreatePatchCmd.Flags().StringVarP(&(gitOptions.patchMsg), "message", "m", "Create new patch version", "Commit message for new patch version")
-	err := gitCreatePatchCmd.MarkFlagRequired("tag")
-	if err != nil {
-		log.Panic(err)
-	}
-}
-
-func addGitFlags(command *cobra.Command) {
-	command.Flags().StringVarP(&(gitOptions.gitHashLength), "length", "l", "7", "The git hash length")
+	addFlagRequired(gitCreatePatchCmd, "patch-tag", "t", "", "The tag version for the patch branch")
 }
 
 type gitFlags struct {
-	gitHashLength string
-	patchMsg      string
-	devMsg        string
-	tag           string
-	major         bool
-	branch        string
+	HashLength string `mapstructure:"hash-length"`
+	ReleaseTag string `mapstructure:"release-tag"`
+	PatchTag   string `mapstructure:"patch-tag"`
+	Major      bool   `mapstructure:"release-major"`
 }
 
 var (
-	gitOptions = gitFlags{}
-
 	gitCmd = &cobra.Command{
 		Use:              "git",
 		Short:            "Git operation",
@@ -57,7 +45,6 @@ var (
 		Short: "Show the current git branch",
 		Long:  `Show the current git branch`,
 		Run: func(cmd *cobra.Command, args []string) {
-
 			fmt.Printf("%s\n", gitBranch())
 		},
 		TraverseChildren: true,
@@ -67,7 +54,8 @@ var (
 		Short: "Show the current git hash",
 		Long:  `Show the current git hash`,
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Printf("%s\n", gitHash(gitOptions.gitHashLength))
+			options := readGitOptions()
+			fmt.Printf("%s\n", gitHash(options.HashLength))
 		},
 		TraverseChildren: true,
 	}
@@ -76,7 +64,8 @@ var (
 		Short: "Create release of the current project and state",
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
-			ver := gitOptions.tag
+			options := readGitOptions()
+			ver := options.ReleaseTag
 			if len(ver) == 0 {
 				lastTag := execCmdOutput("git", "describe", "--tags")
 				log.Infof("Last release version [%s]", lastTag)
@@ -84,7 +73,7 @@ var (
 				if e != nil {
 					log.Panic(e)
 				}
-				if gitOptions.major {
+				if options.Major {
 					if tagVer.Patch() != 0 {
 						log.Errorf("Can not created major release from the patch version  [%s]!", lastTag)
 						os.Exit(0)
@@ -109,11 +98,12 @@ var (
 		TraverseChildren: true,
 	}
 	gitCreatePatchCmd = &cobra.Command{
-		Use:   "craete-patch",
+		Use:   "create-patch",
 		Short: "Create patch of the release",
 		Long:  `Create patch of the release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			tagVer, e := semver.NewVersion(gitOptions.tag)
+			options := readGitOptions()
+			tagVer, e := semver.NewVersion(options.PatchTag)
 			if e != nil {
 				log.Panic(e)
 			}
@@ -122,7 +112,7 @@ var (
 				os.Exit(0)
 			}
 			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
-			execGitCmd("git", "checkout", "-b", branchName, mavenOptions.tag)
+			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
 			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
 			log.Infof("New patch branch for version [%s] created.", branchName)
 
@@ -130,6 +120,15 @@ var (
 		TraverseChildren: true,
 	}
 )
+
+func readGitOptions() gitFlags {
+	gitOptions := gitFlags{}
+	err := viper.Unmarshal(&gitOptions)
+	if err != nil {
+		panic(err)
+	}
+	return gitOptions
+}
 
 func gitHash(length string) string {
 	return execCmdOutput("git", "rev-parse", "--short="+length, "HEAD")

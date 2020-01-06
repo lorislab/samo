@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/lorislab/samo/cmd"
 	homedir "github.com/mitchellh/go-homedir"
@@ -61,7 +62,6 @@ func init() {
 	cobra.OnInitialize(initConfig)
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
 	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
-	viper.SetDefault("author", "Andrej Petras andrej@lorislab.org")
 }
 
 func initConfig() {
@@ -79,6 +79,8 @@ func initConfig() {
 		viper.SetConfigName(".samo")
 	}
 
+	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
+	viper.SetEnvPrefix("SAMO")
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
