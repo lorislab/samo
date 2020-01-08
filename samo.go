@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/mitchellh/go-homedir"
 	"strings"
 
 	"github.com/lorislab/samo/cmd"
-	homedir "github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -69,6 +69,8 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
+		viper.AddConfigPath(".")
+
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {

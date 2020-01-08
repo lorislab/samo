@@ -12,19 +12,20 @@ import (
 )
 
 type mavenFlags struct {
-	Filename     string `mapstructure:"maven-file"`
-	PatchMsg     string `mapstructure:"maven-patch-message"`
-	DevMsg       string `mapstructure:"maven-release-message"`
-	PatchTag     string `mapstructure:"maven-patch-tag"`
-	ReleaseMajor bool   `mapstructure:"maven-release-major"`
-	HashLength   string `mapstructure:"maven-hash-length"`
-	Dockerfile   string `mapstructure:"maven-dockerfile"`
-	Context      string `mapstructure:"maven-docker-context"`
-	Branch       bool   `mapstructure:"maven-docker-branch"`
-	Latest       bool   `mapstructure:"maven-docker-latest"`
-	Repository   string `mapstructure:"maven-docker-repo"`
-	Image        string `mapstructure:"maven-docker-image"`
-	BuildTag     string `mapstructure:"maven-docker-tag"`
+	Filename        string `mapstructure:"maven-file"`
+	PatchMsg        string `mapstructure:"maven-patch-message"`
+	DevMsg          string `mapstructure:"maven-release-message"`
+	PatchTag        string `mapstructure:"maven-patch-tag"`
+	ReleaseMajor    bool   `mapstructure:"maven-release-major"`
+	HashLength      string `mapstructure:"maven-hash-length"`
+	Dockerfile      string `mapstructure:"maven-dockerfile"`
+	Context         string `mapstructure:"maven-docker-context"`
+	Branch          bool   `mapstructure:"maven-docker-branch"`
+	Latest          bool   `mapstructure:"maven-docker-latest"`
+	Repository      string `mapstructure:"maven-docker-repo"`
+	Image           string `mapstructure:"maven-docker-image"`
+	BuildTag        string `mapstructure:"maven-docker-tag"`
+	IgnoreLatestTag bool   `mapstructure:"maven-docker-ignore-latest"`
 }
 
 func init() {
@@ -61,6 +62,7 @@ func init() {
 	mvnCmd.AddCommand(dockerPushCmd)
 	addMavenFlags(dockerPushCmd)
 	addDockerImageFlags(dockerPushCmd)
+	addBoolFlag(dockerPushCmd, "maven-docker-ignore-latest", "p", true, "Ignore push latest tag to repository")
 
 	mvnCmd.AddCommand(dockerReleaseCmd)
 	addMavenFlags(dockerReleaseCmd)
@@ -221,6 +223,13 @@ var (
 			project := internal.LoadMavenProject(options.Filename)
 			image := dockerImage(project, options)
 
+			if options.IgnoreLatestTag {
+				tag := imageNameWithTag(image, "latest")
+				output := execCmdOutput("docker", "images", "-q", tag)
+				if len(output) > 0 {
+					execCmd("docker", "rmi", tag)
+				}
+			}
 			execCmd("docker", "push", image)
 		},
 		TraverseChildren: true,
