@@ -12,7 +12,7 @@ import (
 func init() {
 	dockerCmd.AddCommand(dockerConfigCmd)
 	addFlag(dockerConfigCmd, "docker-config", "e", "", "The docker configuration value")
-	addFlag(dockerConfigCmd, "config-file", "j", "~/.docker/config.json", "Docker client configuration client")
+	addFlag(dockerConfigCmd, "docker-config-file", "j", "~/.docker/config.json", "Docker client configuration client")
 }
 
 type dockerFlags struct {
