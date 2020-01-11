@@ -17,7 +17,7 @@ func init() {
 
 type dockerFlags struct {
 	Config     string `mapstructure:"docker-config"`
-	ConfigFile string `mapstructure:"config-file"`
+	ConfigFile string `mapstructure:"docker-config-file"`
 }
 
 var (
