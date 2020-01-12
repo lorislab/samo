@@ -42,9 +42,9 @@ var (
 			}
 
 			// check default for the pipeline
-			if options.Config == dockerConfigDefault {
+			if options.ConfigFile == dockerConfigDefault {
 				if isGitHub() {
-					options.Config = dockerConfigGithub
+					options.ConfigFile = dockerConfigGithub
 				}
 			}
 
