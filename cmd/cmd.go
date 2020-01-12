@@ -3,6 +3,7 @@ package cmd
 import (
 	"bytes"
 	"github.com/spf13/viper"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -78,4 +79,14 @@ func cmd(name string, arg ...string) []byte {
 		log.Panic(err)
 	}
 	return out
+}
+
+func isGitHub() bool {
+	tmp, exists := os.LookupEnv("GITHUB_REF")
+	return exists && len(tmp) > 0
+}
+
+func isGitLab() bool {
+	tmp, exists := os.LookupEnv("GITLAB_CI")
+	return exists && len(tmp) > 0
 }

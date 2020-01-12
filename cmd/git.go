@@ -150,16 +150,6 @@ func gitBranch() string {
 	return execCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
 }
 
-func isGitHub() bool {
-	tmp, exists := os.LookupEnv("GITHUB_REF")
-	return exists && len(tmp) > 0
-}
-
-func isGitLab() bool {
-	tmp, exists := os.LookupEnv("GITLAB_CI")
-	return exists && len(tmp) > 0
-}
-
 func execGitCmd(name string, arg ...string) {
 	err := execCmdErr(name, arg...)
 	if err != nil {

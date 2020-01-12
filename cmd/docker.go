@@ -2,17 +2,19 @@ package cmd
 
 import (
 	"bufio"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
-
-	"github.com/spf13/cobra"
 )
+
+const dockerConfigDefault string = "~/.docker/config.json"
+const dockerConfigGithub string = "/home/runner/.docker/config.json"
 
 func init() {
 	dockerCmd.AddCommand(dockerConfigCmd)
 	addFlag(dockerConfigCmd, "docker-config", "e", "", "The docker configuration value")
-	addFlag(dockerConfigCmd, "docker-config-file", "j", "~/.docker/config.json", "Docker client configuration client")
+	addFlag(dockerConfigCmd, "docker-config-file", "j", dockerConfigDefault, "Docker client configuration file.\n Github default: '"+dockerConfigGithub+"'\n")
 }
 
 type dockerFlags struct {
@@ -39,10 +41,18 @@ var (
 				panic(err)
 			}
 
+			// check default for the pipeline
+			if options.Config == dockerConfigDefault {
+				if isGitHub() {
+					options.Config = dockerConfigGithub
+				}
+			}
+
+			// create docker config.json
 			if len(options.Config) > 0 {
 
 				dir := filepath.Dir(options.ConfigFile)
-				err := os.MkdirAll(dir, os.ModeDir)
+				err := os.MkdirAll(dir, os.ModePerm)
 				if err != nil {
 					panic(err)
 				}
