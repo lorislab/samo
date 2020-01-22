@@ -5,11 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
 	log "github.com/sirupsen/logrus"
 )
 
-// Writes the data into the file
-func WriteToFile(filename , data string) {
+// WriteToFile writes the data into the file
+func WriteToFile(filename, data string) {
 	dir := filepath.Dir(filename)
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -32,7 +33,7 @@ func WriteToFile(filename , data string) {
 	}
 }
 
-// Replace test in the file at the position b and e
+// ReplaceTextInFile replaces test in the file at the position b and e
 func ReplaceTextInFile(filename, text string, b, e int64) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {

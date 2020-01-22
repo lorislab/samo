@@ -72,15 +72,6 @@ func execCmdErr(name string, arg ...string) error {
 	return err
 }
 
-func cmd(name string, arg ...string) []byte {
-	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output:\n", string(out))
-	if err != nil {
-		log.Panic(err)
-	}
-	return out
-}
-
 func isGitHub() bool {
 	tmp, exists := os.LookupEnv("GITHUB_REF")
 	return exists && len(tmp) > 0

@@ -2,10 +2,11 @@ package internal
 
 import (
 	"encoding/xml"
-	log "github.com/sirupsen/logrus"
 	"io"
 	"os"
 	"strings"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // XPathItem item in the xpath search
@@ -76,10 +77,8 @@ func FindXPathInFile(filename string, items []string) *XPathResult {
 			if data[path] {
 				result.items[path] = &XPathItem{value: se.Name.Local, index: decoder.InputOffset()}
 			}
-			break
 		case xml.EndElement:
 			path = strings.TrimSuffix(path, "/"+se.Name.Local)
-			break
 		case xml.CharData:
 			if data[path] {
 				result.items[path] = &XPathItem{value: string(se.Copy()), index: decoder.InputOffset()}
@@ -88,7 +87,6 @@ func FindXPathInFile(filename string, items []string) *XPathResult {
 					return result
 				}
 			}
-			break
 		}
 	}
 	return result

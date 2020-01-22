@@ -2,9 +2,10 @@ package internal
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/Masterminds/semver"
 	log "github.com/sirupsen/logrus"
-	"os"
 )
 
 const (
@@ -14,8 +15,8 @@ const (
 	parentProjectVersion    string = "/project/parent/version"
 	parentProjectGroupID    string = "/project/parent/groupId"
 	parentProjectArtifactID string = "/project/parent/artifactId"
-	mavenSettings			string = "/settings"
-	mavenSettingsServers	string = "/settings/servers"
+	mavenSettings           string = "/settings"
+	mavenSettingsServers    string = "/settings/servers"
 )
 
 // MavenID maven project ID
@@ -161,13 +162,13 @@ func LoadMavenProject(filename string) *MavenProject {
 	return project
 }
 
-// Creates or updates the maven server settings in the maven settings file
+// CreateMavenSettingsServer creates or updates the maven server settings in the maven settings file
 func CreateMavenSettingsServer(filename, id, username, password string) {
 	info, err := os.Stat(filename)
 
 	// if not exists create new file with maven server settings
 	if os.IsNotExist(err) {
-		WriteToFile(filename, createMavenSettingsServer(id, username, password, "<settings><servers>","</servers></settings>"))
+		WriteToFile(filename, createMavenSettingsServer(id, username, password, "<settings><servers>", "</servers></settings>"))
 		log.Infof("New maven settings file was created: %s", filename)
 	} else if !info.IsDir() {
 
@@ -200,8 +201,5 @@ func CreateMavenSettingsServer(filename, id, username, password string) {
 }
 
 func createMavenSettingsServer(id, username, password, prefix, suffix string) string {
-	return prefix + "<server><id>" + id+ "</id><username>"+username+"</username><password>"+password+"</password></server>" + suffix
+	return prefix + "<server><id>" + id + "</id><username>" + username + "</username><password>" + password + "</password></server>" + suffix
 }
-
-
-

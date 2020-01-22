@@ -27,7 +27,7 @@ type mavenFlags struct {
 	BuildTag                    string `mapstructure:"maven-docker-tag"`
 	IgnoreLatestTag             bool   `mapstructure:"maven-docker-ignore-latest"`
 	MavenSettingsFile           string `mapstructure:"maven-settings-file"`
-	MavenSettingsServerId       string `mapstructure:"maven-settings-server-id"`
+	MavenSettingsServerID       string `mapstructure:"maven-settings-server-id"`
 	MavenSettingsServerUsername string `mapstructure:"maven-settings-server-username"`
 	MavenSettingsServerPassword string `mapstructure:"maven-settings-server-password"`
 }
@@ -273,7 +273,7 @@ var (
 		Long:  `Add the maven repository server configuration to the maven settings file`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readMavenOptions()
-			internal.CreateMavenSettingsServer(options.MavenSettingsFile, options.MavenSettingsServerId, options.MavenSettingsServerUsername, options.MavenSettingsServerPassword)
+			internal.CreateMavenSettingsServer(options.MavenSettingsFile, options.MavenSettingsServerID, options.MavenSettingsServerUsername, options.MavenSettingsServerPassword)
 		},
 		TraverseChildren: true,
 	}
