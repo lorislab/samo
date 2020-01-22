@@ -73,6 +73,9 @@ func FindXPathInFile(filename string, items []string) *XPathResult {
 		switch se := t.(type) {
 		case xml.StartElement:
 			path = path + "/" + se.Name.Local
+			if data[path] {
+				result.items[path] = &XPathItem{value: se.Name.Local, index: decoder.InputOffset()}
+			}
 			break
 		case xml.EndElement:
 			path = strings.TrimSuffix(path, "/"+se.Name.Local)

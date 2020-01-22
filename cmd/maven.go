@@ -12,20 +12,24 @@ import (
 )
 
 type mavenFlags struct {
-	Filename        string `mapstructure:"maven-file"`
-	PatchMsg        string `mapstructure:"maven-patch-message"`
-	DevMsg          string `mapstructure:"maven-release-message"`
-	PatchTag        string `mapstructure:"maven-patch-tag"`
-	ReleaseMajor    bool   `mapstructure:"maven-release-major"`
-	HashLength      string `mapstructure:"maven-hash-length"`
-	Dockerfile      string `mapstructure:"maven-dockerfile"`
-	Context         string `mapstructure:"maven-docker-context"`
-	Branch          bool   `mapstructure:"maven-docker-branch"`
-	Latest          bool   `mapstructure:"maven-docker-latest"`
-	Repository      string `mapstructure:"maven-docker-repo"`
-	Image           string `mapstructure:"maven-docker-image"`
-	BuildTag        string `mapstructure:"maven-docker-tag"`
-	IgnoreLatestTag bool   `mapstructure:"maven-docker-ignore-latest"`
+	Filename                    string `mapstructure:"maven-file"`
+	PatchMsg                    string `mapstructure:"maven-patch-message"`
+	DevMsg                      string `mapstructure:"maven-release-message"`
+	PatchTag                    string `mapstructure:"maven-patch-tag"`
+	ReleaseMajor                bool   `mapstructure:"maven-release-major"`
+	HashLength                  string `mapstructure:"maven-hash-length"`
+	Dockerfile                  string `mapstructure:"maven-dockerfile"`
+	Context                     string `mapstructure:"maven-docker-context"`
+	Branch                      bool   `mapstructure:"maven-docker-branch"`
+	Latest                      bool   `mapstructure:"maven-docker-latest"`
+	Repository                  string `mapstructure:"maven-docker-repo"`
+	Image                       string `mapstructure:"maven-docker-image"`
+	BuildTag                    string `mapstructure:"maven-docker-tag"`
+	IgnoreLatestTag             bool   `mapstructure:"maven-docker-ignore-latest"`
+	MavenSettingsFile           string `mapstructure:"maven-settings-file"`
+	MavenSettingsServerId       string `mapstructure:"maven-settings-server-id"`
+	MavenSettingsServerUsername string `mapstructure:"maven-settings-server-username"`
+	MavenSettingsServerPassword string `mapstructure:"maven-settings-server-password"`
 }
 
 func init() {
@@ -68,6 +72,12 @@ func init() {
 	addMavenFlags(dockerReleaseCmd)
 	addGitHashLength(dockerReleaseCmd)
 	addDockerImageFlags(dockerReleaseCmd)
+
+	mvnCmd.AddCommand(settingsAddServer)
+	addFlag(settingsAddServer, "maven-settings-file", "s", ".m2/settings.xml", "The maven settings.xml file")
+	addFlag(settingsAddServer, "maven-settings-server-id", "", "github", "The maven repository server id")
+	addFlag(settingsAddServer, "maven-settings-server-username", "", "x-access-token", "The maven repository server username")
+	addFlag(settingsAddServer, "maven-settings-server-password", "", "${env.GITHUB_TOKEN}", "The maven repository server password")
 }
 
 func addGitHashLength(command *cobra.Command) {
@@ -254,6 +264,16 @@ var (
 			execCmd("docker", "tag", imagePull, imageRelease)
 
 			execCmd("docker", "push", imageRelease)
+		},
+		TraverseChildren: true,
+	}
+	settingsAddServer = &cobra.Command{
+		Use:   "settings-add-server",
+		Short: "Add the maven repository server to the settings",
+		Long:  `Add the maven repository server configuration to the maven settings file`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options := readMavenOptions()
+			internal.CreateMavenSettingsServer(options.MavenSettingsFile, options.MavenSettingsServerId, options.MavenSettingsServerUsername, options.MavenSettingsServerPassword)
 		},
 		TraverseChildren: true,
 	}

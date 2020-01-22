@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/Masterminds/semver"
 	log "github.com/sirupsen/logrus"
-	"io/ioutil"
+	"os"
 )
 
 const (
@@ -14,6 +14,8 @@ const (
 	parentProjectVersion    string = "/project/parent/version"
 	parentProjectGroupID    string = "/project/parent/groupId"
 	parentProjectArtifactID string = "/project/parent/artifactId"
+	mavenSettings			string = "/settings"
+	mavenSettingsServers	string = "/settings/servers"
 )
 
 // MavenID maven project ID
@@ -131,13 +133,13 @@ func (r MavenProject) SetPrerelease(prerelease string) string {
 
 // SetVersion set project version
 func (r MavenProject) SetVersion(version string) {
-	replaceTextInFile(r.filename, version, r.projectID.version.begin(), r.projectID.version.end())
+	ReplaceTextInFile(r.filename, version, r.projectID.version.begin(), r.projectID.version.end())
 	log.Infof("Update project '%s' version from [%s] to [%s]\n", r.filename, r.projectID.version.value, version)
 }
 
 // SetParentVersion set project parent version
 func (r MavenProject) SetParentVersion(version string) {
-	replaceTextInFile(r.filename, version, r.parentProjectID.version.begin(), r.parentProjectID.version.end())
+	ReplaceTextInFile(r.filename, version, r.parentProjectID.version.begin(), r.parentProjectID.version.end())
 	log.Infof("Update project '%s' parent version from [%s] to [%s]\n", r.filename, r.parentProjectID.version.value, version)
 }
 
@@ -159,15 +161,47 @@ func LoadMavenProject(filename string) *MavenProject {
 	return project
 }
 
-func replaceTextInFile(filename, text string, b, e int64) {
-	buf, err := ioutil.ReadFile(filename)
-	if err != nil {
-		log.Panic(err)
-	}
-	result := string(buf)
-	result = result[:b] + text + result[e:]
-	err = ioutil.WriteFile(filename, []byte(result), 0666)
-	if err != nil {
-		log.Panic(err)
+// Creates or updates the maven server settings in the maven settings file
+func CreateMavenSettingsServer(filename, id, username, password string) {
+	info, err := os.Stat(filename)
+
+	// if not exists create new file with maven server settings
+	if os.IsNotExist(err) {
+		WriteToFile(filename, createMavenSettingsServer(id, username, password, "<settings><servers>","</servers></settings>"))
+		log.Infof("New maven settings file was created: %s", filename)
+	} else if !info.IsDir() {
+
+		// search for xml path
+		items := []string{mavenSettings, mavenSettingsServers}
+		xpath := FindXPathInFile(filename, items)
+		if xpath.IsEmpty() {
+			log.Warnf("The file '%s' does not have maven settings structure.\n", filename)
+			return
+		}
+
+		// update xml for the xpath /settings/servers
+		servers := xpath.items[mavenSettingsServers]
+		if servers != nil {
+			ReplaceTextInFile(filename, createMavenSettingsServer(id, username, password, "", ""), servers.end(), servers.end())
+		} else {
+			// update xml for the xpath /settings
+			settings := xpath.items[mavenSettings]
+			if settings != nil {
+				ReplaceTextInFile(filename, createMavenSettingsServer(id, username, password, "<servers>", "</servers>"), settings.end(), settings.end())
+			} else {
+				log.Warnf("The maven settings file '%s' does not have %s or %s\n", filename, mavenSettings, mavenSettingsServers)
+				return
+			}
+		}
+		log.Infof("The maven settings file was updated: %s", filename)
+	} else {
+		log.Errorf("The maven settings file %s is not valid file.", filename)
 	}
 }
+
+func createMavenSettingsServer(id, username, password, prefix, suffix string) string {
+	return prefix + "<server><id>" + id+ "</id><username>"+username+"</username><password>"+password+"</password></server>" + suffix
+}
+
+
+

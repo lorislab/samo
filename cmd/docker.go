@@ -1,11 +1,10 @@
 package cmd
 
 import (
-	"bufio"
+	"github.com/lorislab/samo/internal"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"os"
-	"path/filepath"
 )
 
 const dockerConfigDefault string = "~/.docker/config.json"
@@ -50,26 +49,8 @@ var (
 
 			// create docker config.json
 			if len(options.Config) > 0 {
-
-				dir := filepath.Dir(options.ConfigFile)
-				err := os.MkdirAll(dir, os.ModePerm)
-				if err != nil {
-					panic(err)
-				}
-
-				file, err := os.Create(options.ConfigFile)
-				if err != nil {
-					panic(err)
-				}
-				w := bufio.NewWriter(file)
-				_, err = w.WriteString(options.Config)
-				if err != nil {
-					panic(err)
-				}
-				err = w.Flush()
-				if err != nil {
-					panic(err)
-				}
+				internal.WriteToFile(options.ConfigFile, options.Config)
+				log.Infof("New docker configuration file was created: %s", options.ConfigFile)
 			}
 		},
 		TraverseChildren: true,
