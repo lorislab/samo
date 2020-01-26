@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Masterminds/semver"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -55,14 +54,6 @@ type MavenProject struct {
 	projectID, parentProjectID *MavenID
 }
 
-func (r MavenProject) semVer() *semver.Version {
-	tmp, err := semver.NewVersion(r.projectID.version.value)
-	if err != nil {
-		log.Panic(err)
-	}
-	return tmp
-}
-
 // HasParent returns true if project has a parent project
 func (r MavenProject) HasParent() bool {
 	return r.parentProjectID != nil
@@ -81,55 +72,6 @@ func (r MavenProject) ArtifactID() string {
 // Version the maven project version
 func (r MavenProject) Version() string {
 	return r.projectID.Version()
-}
-
-// NextPatchVersion release version of the project
-func (r MavenProject) NextPatchVersion() string {
-	tmp := r.semVer()
-	result := setPrerelease(*tmp, "")
-	result = result.IncPatch()
-	result = setPrerelease(result, "SNAPSHOT")
-	return result.String()
-}
-
-// NextReleaseVersion release version of the project
-func (r MavenProject) NextReleaseVersion(major bool) string {
-	tmp := r.semVer()
-	var result = semver.Version{}
-	if major {
-		result = tmp.IncMajor()
-	} else {
-		if tmp.Patch() == 0 {
-			result = tmp.IncMinor()
-		} else {
-			result = tmp.IncPatch()
-		}
-	}
-	result = setPrerelease(result, "SNAPSHOT")
-	return result.String()
-}
-
-func setPrerelease(ver semver.Version, pre string) semver.Version {
-	result, err := ver.SetPrerelease(pre)
-	if err != nil {
-		log.Panic(err)
-	}
-	return result
-}
-
-// ReleaseVersion release version of the project
-func (r MavenProject) ReleaseVersion() string {
-	tmp := r.semVer()
-	ver := setPrerelease(*tmp, "SNAPSHOT")
-	ver = ver.IncPatch()
-	return ver.String()
-}
-
-// SetPrerelease release version of the project
-func (r MavenProject) SetPrerelease(prerelease string) string {
-	ver := r.semVer()
-	newVersion := setPrerelease(*ver, prerelease)
-	return newVersion.String()
 }
 
 // SetVersion set project version

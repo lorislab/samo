@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"bytes"
-	"github.com/spf13/viper"
+	"github.com/Masterminds/semver"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // Main the commands method
@@ -80,4 +82,94 @@ func isGitHub() bool {
 func isGitLab() bool {
 	tmp, exists := os.LookupEnv("GITLAB_CI")
 	return exists && len(tmp) > 0
+}
+
+func nextReleaseVersion(ver *semver.Version, major bool) semver.Version {
+	if major {
+		if ver.Patch() != 0 {
+			log.Errorf("Can not created major release from the patch version  [%s]!", ver)
+			os.Exit(0)
+		}
+		tmp := ver.IncMajor()
+		return tmp
+	}
+	prerelease := ver.Prerelease()
+	if len(prerelease) > 0 {
+		update, data := nextPrerelease(prerelease)
+		if update {
+			t, e := ver.SetPrerelease(data)
+			if e != nil {
+				log.Panic(e)
+			}
+			return t
+		}
+	}
+
+	if ver.Patch() != 0 {
+		return ver.IncPatch()
+	}
+
+	return ver.IncMinor()
+}
+
+func nextPrerelease(data string) (bool, string) {
+	if len(data) == 0 {
+		return false, data
+	}
+	numbers := numberRegex.FindAllString(data, -1)
+	if len(numbers) > 0 {
+		number := numbers[len(numbers)-1]
+		index, e := strconv.ParseInt(number, 10, 64)
+		if e != nil {
+			log.Panic(e)
+		}
+		index = index + 1
+		data = strings.TrimSuffix(data, number)
+		data = data + strconv.FormatInt(index, 10)
+		return true, data
+	}
+	return false, data
+}
+
+func createBuildVersionItems(ver *semver.Version) (int64, int64, int64, string) {
+	prerelease := ver.Prerelease()
+	patch := ver.Patch()
+	minor := ver.Minor()
+
+	if len(prerelease) > 0 {
+		update, data := nextPrerelease(prerelease)
+		if update {
+			prerelease = data + "."
+		}
+	} else if ver.Patch() != 0 {
+		patch = patch + 1
+	} else {
+		minor = minor + 1
+	}
+	return ver.Major(), minor, patch, prerelease
+}
+
+func createBuildVersionFromItems(major, minor, patch int64, prerelease, buildPrefix, count, build string) *semver.Version {
+	prerelease = prerelease + buildPrefix + count
+	return createVersion(major, minor, patch, prerelease, build)
+}
+
+//func createBuildVersion(ver *semver.Version, buildPrefix, count, build string) *semver.Version {
+//	major, minor, patch, prerelease := createBuildVersionItems(ver)
+//	return createBuildVersionFromItems(major, minor, patch, prerelease, buildPrefix, count, build)
+//}
+
+func createVersion(major, minor, path int64, prerelease, build string) *semver.Version {
+	r := strconv.FormatInt(major, 10) + "." + strconv.FormatInt(minor, 10) + "." + strconv.FormatInt(path, 10)
+	if len(prerelease) > 0 {
+		r = r + "-" + prerelease
+	}
+	if len(build) > 0 {
+		r = r + "+" + build
+	}
+	result, e := semver.NewVersion(r)
+	if e != nil {
+		log.Panic(e)
+	}
+	return result
 }
