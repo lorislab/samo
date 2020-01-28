@@ -2,11 +2,12 @@ package cmd
 
 import (
 	"bytes"
-	"github.com/Masterminds/semver"
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -129,11 +130,6 @@ func createBuildVersion(ver, count, hash, prefix string) semver.Version {
 		pre = pre + hash
 	}
 	return setPrerelease(tmp, pre)
-}
-
-// <VERSION>(+1)-<BUILD>-<HASH>
-func createReleaseVersion(ver string, major bool) semver.Version {
-	return nextReleaseVersion(createVersion(ver), major)
 }
 
 // <VERSION>

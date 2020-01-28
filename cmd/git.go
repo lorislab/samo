@@ -2,10 +2,11 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"os"
 	"regexp"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"github.com/Masterminds/semver"
 	log "github.com/sirupsen/logrus"
@@ -91,12 +92,7 @@ var (
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readGitOptions()
-			ver := options.ReleaseTag
-			if len(ver) == 0 {
-				lastTag, _, _ := gitCommit(options.HashLength)
-				v := createReleaseVersion(lastTag, options.Major)
-				ver = v.String()
-			}
+			ver := gitReleaseVersion(options.ReleaseTag, options.HashLength, options.Major)
 			msg := options.ReleaseTagMessage
 			if len(msg) == 0 {
 				msg = ver
@@ -113,12 +109,8 @@ var (
 		Long:  `Show release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readGitOptions()
-			ver := options.ReleaseTag
-			if len(ver) == 0 {
-				lastTag, _, _ := gitCommit(options.HashLength)
-				v := createReleaseVersion(lastTag, options.Major)
-				fmt.Printf("%s\n", v.String())
-			}
+			ver := gitReleaseVersion(options.ReleaseTag, options.HashLength, options.Major)
+			fmt.Printf("%s\n", ver)
 		},
 		TraverseChildren: true,
 	}
@@ -145,6 +137,17 @@ var (
 		TraverseChildren: true,
 	}
 )
+
+// <VERSION>(+1)-<BUILD>-<HASH>
+func gitReleaseVersion(tag, hashLength string, major bool) string {
+	ver := tag
+	if len(ver) == 0 {
+		lastTag, _, _ := gitCommit(hashLength)
+		v := nextReleaseVersion(createVersion(lastTag), major)
+		ver = v.String()
+	}
+	return ver
+}
 
 func readGitOptions() gitFlags {
 	gitOptions := gitFlags{}
