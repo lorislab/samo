@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
-	"strconv"
 	"strings"
+
+	"github.com/spf13/viper"
 
 	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/internal"
@@ -39,12 +39,21 @@ func init() {
 	mvnCmd.AddCommand(mvnVersionCmd)
 	addMavenFlags(mvnVersionCmd)
 
-	mvnCmd.AddCommand(mvnSetReleaseCmd)
-	addMavenFlags(mvnSetReleaseCmd)
+	mvnCmd.AddCommand(mvnSetReleaseVersionCmd)
+	addMavenFlags(mvnSetReleaseVersionCmd)
 
-	mvnCmd.AddCommand(mvnSetBuildCmd)
-	addMavenFlags(mvnSetBuildCmd)
-	addFlag(mvnSetBuildCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	mvnCmd.AddCommand(mvnReleaseVersionCmd)
+	addMavenFlags(mvnReleaseVersionCmd)
+
+	mvnCmd.AddCommand(mvnSetBuildVersionCmd)
+	addMavenFlags(mvnSetBuildVersionCmd)
+	addFlag(mvnSetBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addGitHashLength(mvnSetBuildVersionCmd, "maven-hash-length")
+
+	mvnCmd.AddCommand(mvnBuildVersionCmd)
+	addMavenFlags(mvnBuildVersionCmd)
+	addFlag(mvnBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addGitHashLength(mvnBuildVersionCmd, "maven-hash-length")
 
 	mvnCmd.AddCommand(mvnCreateReleaseCmd)
 	addMavenFlags(mvnCreateReleaseCmd)
@@ -60,12 +69,12 @@ func init() {
 	mvnCmd.AddCommand(dockerBuildCmd)
 	addMavenFlags(dockerBuildCmd)
 	addDockerImageFlags(dockerBuildCmd)
-	addGitHashLength(dockerBuildCmd)
+	addGitHashLength(dockerBuildCmd, "maven-hash-length")
 	addFlag(dockerBuildCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "The maven project dockerfile")
 	addFlag(dockerBuildCmd, "maven-docker-repo", "r", "", "The docker repository")
 	addFlag(dockerBuildCmd, "maven-docker-context", "c", ".", "The docker build context")
 	addFlag(dockerBuildCmd, "maven-docker-tag", "t", "", "Add the extra tag to the build image")
-	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "h", true, "Tag the docker image with a branch name")
+	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "k", true, "Tag the docker image with a branch name")
 	addBoolFlag(dockerBuildCmd, "maven-docker-latest", "e", true, "Tag the docker image with a latest")
 
 	mvnCmd.AddCommand(dockerPushCmd)
@@ -75,7 +84,7 @@ func init() {
 
 	mvnCmd.AddCommand(dockerReleaseCmd)
 	addMavenFlags(dockerReleaseCmd)
-	addGitHashLength(dockerReleaseCmd)
+	addGitHashLength(dockerReleaseCmd, "maven-hash-length")
 	addDockerImageFlags(dockerReleaseCmd)
 
 	mvnCmd.AddCommand(settingsAddServer)
@@ -85,9 +94,6 @@ func init() {
 	addFlag(settingsAddServer, "maven-settings-server-password", "", "${env.GITHUB_TOKEN}", "The maven repository server password")
 }
 
-func addGitHashLength(command *cobra.Command) {
-	addFlag(command, "maven-hash-length", "l", "7", "The git hash length")
-}
 func addDockerImageFlags(command *cobra.Command) {
 	addFlag(command, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
 }
@@ -116,22 +122,31 @@ var (
 		},
 		TraverseChildren: true,
 	}
-	mvnSetBuildCmd = &cobra.Command{
+	mvnSetBuildVersionCmd = &cobra.Command{
 		Use:   "set-build-version",
 		Short: "Set the maven project version to build version",
 		Long:  `Set the maven project version to build version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readMavenOptions()
 			project := internal.LoadMavenProject(options.Filename)
-
-			_, count, build := gitCommit()
-			major, minor, patch, prerelease := createBuildVersionItems(versionWithoutSnapshot(project))
-			ver := createBuildVersionFromItems(major, minor, patch, prerelease, options.BuildNumberPrefix, count, build)
+			ver := mavenBuildVersion(project, options)
 			project.SetVersion(ver.String())
 		},
 		TraverseChildren: true,
 	}
-	mvnSetReleaseCmd = &cobra.Command{
+	mvnBuildVersionCmd = &cobra.Command{
+		Use:   "build-version",
+		Short: "Show the maven project version to build version",
+		Long:  `Show the maven project version to build version`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options := readMavenOptions()
+			project := internal.LoadMavenProject(options.Filename)
+			ver := mavenBuildVersion(project, options)
+			fmt.Printf("%s\n", ver.String())
+		},
+		TraverseChildren: true,
+	}
+	mvnSetReleaseVersionCmd = &cobra.Command{
 		Use:   "set-release-version",
 		Short: "Set the maven project version to release",
 		Long:  `Set the maven project version to release`,
@@ -140,6 +155,18 @@ var (
 			project := internal.LoadMavenProject(options.Filename)
 			ver := versionWithoutSnapshot(project)
 			project.SetVersion(ver.String())
+		},
+		TraverseChildren: true,
+	}
+	mvnReleaseVersionCmd = &cobra.Command{
+		Use:   "release-version",
+		Short: "Show the maven project version to release",
+		Long:  `Show the maven project version to release`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options := readMavenOptions()
+			project := internal.LoadMavenProject(options.Filename)
+			ver := versionWithoutSnapshot(project)
+			fmt.Printf("%s\n", ver.String())
 		},
 		TraverseChildren: true,
 	}
@@ -159,7 +186,7 @@ var (
 			}
 			execGitCmd("git", "tag", "-a", releaseVersion, "-m", msg)
 
-			newVersion := snapshotPrerelease(nextReleaseVersion(ver, options.ReleaseMajor))
+			newVersion := addPrerelease(nextReleaseVersion(ver, options.ReleaseMajor), "SNAPSHOT")
 			project.SetVersion(newVersion.String())
 
 			execGitCmd("git", "add", ".")
@@ -179,18 +206,15 @@ var (
 				log.Panic(e)
 			}
 
-			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+			branchName := createPatchBranchName(tagVer)
 			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
 
-			// remove the prelrease
+			// remove the prerelease
 			ver := *tagVer
 			if len(ver.Prerelease()) > 0 {
-				ver, e = ver.SetPrerelease("")
-				if e != nil {
-					log.Panic(e)
-				}
+				ver = setPrerelease(ver, "")
 			}
-			ver = snapshotPrerelease(ver.IncPatch())
+			ver = addPrerelease(ver.IncPatch(), "SNAPSHOT")
 			project := internal.LoadMavenProject(options.Filename)
 			project.SetVersion(ver.String())
 
@@ -209,18 +233,15 @@ var (
 			options := readMavenOptions()
 			project := internal.LoadMavenProject(options.Filename)
 			image := dockerImage(project, options)
+			ver := versionWithoutSnapshot(project)
 
-			_, count, hash := gitCommit()
-			major, minor, patch, prerelease := createBuildVersionItems(versionWithoutSnapshot(project))
-			ver := createBuildVersionFromItems(major, minor, patch, prerelease, options.BuildNumberPrefix, count, hash)
-			releaseTag := createBuildVersionFromItems(major, minor, patch, prerelease, "", "", hash)
+			pre := updatePrereleaseToHashVersion(ver.Prerelease(), options.HashLength)
+			gitHashVer := setPrerelease(*ver, pre)
 
 			var command []string
-			command = append(command, "build", "-t", imageNameWithTag(image, ver.String()))
+			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
 
-			// add only the build version <version>+<hash>
-			command = append(command, "-t", imageNameWithTag(image, releaseTag.String()))
-
+			command = append(command, "-t", imageNameWithTag(image, gitHashVer.String()))
 			if options.Branch {
 				branch := gitBranch()
 				command = append(command, "-t", imageNameWithTag(image, branch))
@@ -267,25 +288,21 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readMavenOptions()
 
-			_, _, build := gitCommit()
-
+			// x.x.x
 			project := internal.LoadMavenProject(options.Filename)
-			releaseVersion := project.Version()
+			releaseVersion := versionWithoutSnapshot(project)
 
+			// x.x.x-hash
+			_, _, hash := gitCommit(options.HashLength)
 			ver := versionWithoutSnapshot(project)
-			pullVersion, err := ver.SetMetadata(build)
-			if err != nil {
-				log.Panic(err)
-			}
+			pullVersion := addPrerelease(*ver, hash)
 
 			image := dockerImage(project, options)
-
 			imagePull := imageNameWithTag(image, pullVersion.String())
 			execCmd("docker", "pull", imagePull)
 
-			imageRelease := imageNameWithTag(image, releaseVersion)
+			imageRelease := imageNameWithTag(image, releaseVersion.String())
 			execCmd("docker", "tag", imagePull, imageRelease)
-
 			execCmd("docker", "push", imageRelease)
 		},
 		TraverseChildren: true,
@@ -326,26 +343,34 @@ func readMavenOptions() mavenFlags {
 	return mavenOptions
 }
 
-func snapshotPrerelease(ver semver.Version) semver.Version {
-	tmp := "SNAPSHOT"
-	if len(ver.Prerelease()) > 0 {
-		tmp = ver.Prerelease() + "-" + tmp
-	}
-	return setPrerelease(ver, tmp)
-}
-
-func setPrerelease(ver semver.Version, prerelease string) semver.Version {
-	result, err := ver.SetPrerelease(prerelease)
-	if err != nil {
-		log.Panic(err)
-	}
-	return result
-}
-
 func versionWithoutSnapshot(project *internal.MavenProject) *semver.Version {
-	v, e := semver.NewVersion(strings.TrimSuffix(project.Version(), "-SNAPSHOT"))
-	if e != nil {
-		log.Panic(e)
+	return createVersion(strings.TrimSuffix(project.Version(), "-SNAPSHOT"))
+}
+
+func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semver.Version {
+	cr := versionWithoutSnapshot(project)
+	_, count, hash := gitCommit(options.HashLength)
+	return createBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix)
+}
+
+// x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash
+func updatePrereleaseToHashVersion(ver, length string) string {
+	pre := ver
+	if len(pre) > 0 {
+		hi := strings.LastIndex(pre, ".")
+		if hi != -1 {
+			pre = pre[0:hi]
+			ri := strings.LastIndex(pre, ".")
+			if ri != -1 {
+				pre = pre[0:ri]
+			} else {
+				pre = ""
+			}
+		}
 	}
-	return v
+	_, _, hash := gitCommit(length)
+	if len(pre) > 0 {
+		pre = pre + "."
+	}
+	return pre + hash
 }

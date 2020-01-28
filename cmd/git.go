@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/viper"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -21,16 +20,19 @@ func init() {
 	gitCmd.AddCommand(gitBranchCmd)
 	gitCmd.AddCommand(gitBuildVersionCmd)
 	addFlag(gitBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addGitHashLength(gitBuildVersionCmd, "hash-length")
 
 	gitCmd.AddCommand(gitHashCmd)
-	addFlag(gitHashCmd, "hash-length", "l", "7", "The git hash length")
+	addGitHashLength(gitHashCmd, "hash-length")
 
 	gitCmd.AddCommand(gitCreateReleaseCmd)
 	addBoolFlag(gitCreateReleaseCmd, "release-major", "a", false, "Create a major release")
 	addFlag(gitCreateReleaseCmd, "release-tag", "t", "", "The tag release version")
 	addFlag(gitCreateReleaseCmd, "release-tag-message", "m", "", "The release tag message")
+	addGitHashLength(gitCreateReleaseCmd, "hash-length")
 
 	gitCmd.AddCommand(gitReleaseVersionCmd)
+	addGitHashLength(gitReleaseVersionCmd, "hash-length")
 
 	gitCmd.AddCommand(gitCreatePatchCmd)
 	addFlagRequired(gitCreatePatchCmd, "patch-tag", "t", "", "The tag version for the patch branch")
@@ -77,7 +79,8 @@ var (
 		Long:  `Show the current git build version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readGitOptions()
-			ver := gitBuildVersion(options.BuildNumberPrefix)
+			lastTag, count, hash := gitCommit(options.HashLength)
+			ver := createBuildVersion(lastTag, count, hash, options.BuildNumberPrefix)
 			fmt.Printf("%s\n", ver.String())
 		},
 		TraverseChildren: true,
@@ -90,7 +93,8 @@ var (
 			options := readGitOptions()
 			ver := options.ReleaseTag
 			if len(ver) == 0 {
-				v := createReleaseVersion(options.Major)
+				lastTag, _, _ := gitCommit(options.HashLength)
+				v := createReleaseVersion(lastTag, options.Major)
 				ver = v.String()
 			}
 			msg := options.ReleaseTagMessage
@@ -111,7 +115,8 @@ var (
 			options := readGitOptions()
 			ver := options.ReleaseTag
 			if len(ver) == 0 {
-				v := createReleaseVersion(options.Major)
+				lastTag, _, _ := gitCommit(options.HashLength)
+				v := createReleaseVersion(lastTag, options.Major)
 				fmt.Printf("%s\n", v.String())
 			}
 		},
@@ -131,7 +136,7 @@ var (
 				log.Errorf("Can not created patch branch from the patch version  [%s]!", tagVer.Original())
 				os.Exit(0)
 			}
-			branchName := strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+			branchName := createPatchBranchName(tagVer)
 			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
 			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
 			log.Infof("New patch branch for version [%s] created.", branchName)
@@ -140,22 +145,6 @@ var (
 		TraverseChildren: true,
 	}
 )
-
-func createReleaseVersion(major bool) semver.Version {
-	lastTag := gitLastTag()
-	log.Debugf("Last release version [%s]", lastTag)
-	tagVer, e := semver.NewVersion(lastTag)
-	if e != nil {
-		log.Panic(e)
-	}
-	return nextReleaseVersion(tagVer, major)
-}
-
-func gitBuildVersion(buildPrefix string) *semver.Version {
-	ver, count, build := gitCommit()
-	major, minor, patch, prerelease := createBuildVersionItems(ver)
-	return createBuildVersionFromItems(major, minor, patch, prerelease, buildPrefix, count, build)
-}
 
 func readGitOptions() gitFlags {
 	gitOptions := gitFlags{}
@@ -166,26 +155,20 @@ func readGitOptions() gitFlags {
 	return gitOptions
 }
 
-func gitLastTag() string {
-	return execCmdOutput("git", "describe", "--abbrev=0")
-}
-
-func gitCommit() (*semver.Version, string, string) {
-	lastTag := gitLastTag()
+func gitCommit(length string) (string, string, string) {
+	lastTag := execCmdOutput("git", "describe", "--abbrev=0")
 	log.Debugf("Last tag %s", lastTag)
-	describe := execCmdOutput("git", "describe", "--long")
+	describe := execCmdOutput("git", "describe", "--long", "--abbrev="+length)
 	describe = strings.TrimPrefix(describe, lastTag+"-")
 	items := strings.Split(describe, "-")
-
-	ver, e := semver.NewVersion(lastTag)
-	if e != nil {
-		log.Panic(e)
-	}
-	return ver, items[0], items[1]
+	return lastTag, items[0], items[1]
 }
 
 func gitHash(length string) string {
-	return execCmdOutput("git", "rev-parse", "--short="+length, "HEAD")
+	if len(length) > 0 {
+		return execCmdOutput("git", "rev-parse", "--short="+length, "HEAD")
+	}
+	return execCmdOutput("git", "rev-parse", "HEAD")
 }
 
 func gitBranch() string {

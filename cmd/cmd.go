@@ -38,6 +38,10 @@ func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usa
 	addViper(command, name)
 }
 
+func addGitHashLength(command *cobra.Command, name string) {
+	addFlag(command, name, "l", "12", "The git hash length")
+}
+
 func addViper(command *cobra.Command, name string) {
 	err := viper.BindPFlag(name, command.Flags().Lookup(name))
 	if err != nil {
@@ -84,6 +88,65 @@ func isGitLab() bool {
 	return exists && len(tmp) > 0
 }
 
+// Adds the string to the prerelease in the version
+func addPrerelease(ver semver.Version, prerelease string) semver.Version {
+	tmp := ver.Prerelease()
+	if len(tmp) > 0 {
+		tmp = tmp + "-"
+	}
+	tmp = tmp + prerelease
+	return setPrerelease(ver, tmp)
+}
+
+// Sets the prerelease in the version
+func setPrerelease(ver semver.Version, prerelease string) semver.Version {
+	result, err := ver.SetPrerelease(prerelease)
+	if err != nil {
+		log.Panic(err)
+	}
+	return result
+}
+
+// Create patch branch name from the version
+func createPatchBranchName(ver *semver.Version) string {
+	return strconv.FormatInt(ver.Major(), 10) + "." + strconv.FormatInt(ver.Minor(), 10)
+}
+
+// <VERSION>-<BUILD>-<HASH>
+func createBuildVersion(ver, count, hash, prefix string) semver.Version {
+	tmp := nextReleaseVersion(createVersion(ver), false)
+	pre := tmp.Prerelease()
+	if len(count) > 0 {
+		if len(pre) > 0 {
+			pre = pre + "."
+		}
+		pre = pre + prefix + count
+	}
+	if len(hash) > 0 {
+		if len(pre) > 0 {
+			pre = pre + "."
+		}
+		pre = pre + hash
+	}
+	return setPrerelease(tmp, pre)
+}
+
+// <VERSION>(+1)-<BUILD>-<HASH>
+func createReleaseVersion(ver string, major bool) semver.Version {
+	return nextReleaseVersion(createVersion(ver), major)
+}
+
+// <VERSION>
+func createVersion(ver string) *semver.Version {
+	tmp := ver
+	result, e := semver.NewVersion(tmp)
+	if e != nil {
+		log.Panic(e)
+	}
+	return result
+}
+
+// Creates next release version
 func nextReleaseVersion(ver *semver.Version, major bool) semver.Version {
 	if major {
 		if ver.Patch() != 0 {
@@ -97,21 +160,16 @@ func nextReleaseVersion(ver *semver.Version, major bool) semver.Version {
 	if len(prerelease) > 0 {
 		update, data := nextPrerelease(prerelease)
 		if update {
-			t, e := ver.SetPrerelease(data)
-			if e != nil {
-				log.Panic(e)
-			}
-			return t
+			return setPrerelease(*ver, data)
 		}
 	}
-
 	if ver.Patch() != 0 {
 		return ver.IncPatch()
 	}
-
 	return ver.IncMinor()
 }
 
+// Finds the number in the prerelease and increment
 func nextPrerelease(data string) (bool, string) {
 	if len(data) == 0 {
 		return false, data
@@ -129,47 +187,4 @@ func nextPrerelease(data string) (bool, string) {
 		return true, data
 	}
 	return false, data
-}
-
-func createBuildVersionItems(ver *semver.Version) (int64, int64, int64, string) {
-	prerelease := ver.Prerelease()
-	patch := ver.Patch()
-	minor := ver.Minor()
-
-	if len(prerelease) > 0 {
-		update, data := nextPrerelease(prerelease)
-		if update {
-			prerelease = data + "."
-		}
-	} else if ver.Patch() != 0 {
-		patch = patch + 1
-	} else {
-		minor = minor + 1
-	}
-	return ver.Major(), minor, patch, prerelease
-}
-
-func createBuildVersionFromItems(major, minor, patch int64, prerelease, buildPrefix, count, build string) *semver.Version {
-	prerelease = prerelease + buildPrefix + count
-	return createVersion(major, minor, patch, prerelease, build)
-}
-
-//func createBuildVersion(ver *semver.Version, buildPrefix, count, build string) *semver.Version {
-//	major, minor, patch, prerelease := createBuildVersionItems(ver)
-//	return createBuildVersionFromItems(major, minor, patch, prerelease, buildPrefix, count, build)
-//}
-
-func createVersion(major, minor, path int64, prerelease, build string) *semver.Version {
-	r := strconv.FormatInt(major, 10) + "." + strconv.FormatInt(minor, 10) + "." + strconv.FormatInt(path, 10)
-	if len(prerelease) > 0 {
-		r = r + "-" + prerelease
-	}
-	if len(build) > 0 {
-		r = r + "+" + build
-	}
-	result, e := semver.NewVersion(r)
-	if e != nil {
-		log.Panic(e)
-	}
-	return result
 }
