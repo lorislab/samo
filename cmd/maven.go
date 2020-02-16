@@ -350,7 +350,7 @@ func versionWithoutSnapshot(project *internal.MavenProject) *semver.Version {
 func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semver.Version {
 	cr := versionWithoutSnapshot(project)
 	_, count, hash := gitCommit(options.HashLength)
-	return createBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix)
+	return createMavenBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix)
 }
 
 // x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash

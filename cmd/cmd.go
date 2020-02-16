@@ -113,9 +113,19 @@ func createPatchBranchName(ver *semver.Version) string {
 	return strconv.FormatInt(ver.Major(), 10) + "." + strconv.FormatInt(ver.Minor(), 10)
 }
 
-// <VERSION>-<BUILD>-<HASH>
+// <VERSION>-<BUILD>-<HASH> - do not increment the version
+func createMavenBuildVersion(ver, count, hash, prefix string) semver.Version {
+	tmp := createVersion(ver)
+	return addBuildInfo(*tmp, count, hash, prefix)
+}
+
+// <VERSION>-<BUILD>-<HASH> - increment the version
 func createBuildVersion(ver, count, hash, prefix string) semver.Version {
 	tmp := nextReleaseVersion(createVersion(ver), false)
+	return addBuildInfo(tmp, count, hash, prefix)
+}
+
+func addBuildInfo(tmp semver.Version, count, hash, prefix string) semver.Version {
 	pre := tmp.Prerelease()
 	if len(count) > 0 {
 		if len(pre) > 0 {
