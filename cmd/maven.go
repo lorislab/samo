@@ -33,6 +33,7 @@ type mavenFlags struct {
 	MavenSettingsServerPassword string `mapstructure:"maven-settings-server-password"`
 	ReleaseTagMessage           string `mapstructure:"release-tag-message"`
 	BuildNumberPrefix           string `mapstructure:"build-number-prefix"`
+	BuildNumberLength           int    `mapstructure:"build-number-length"`
 }
 
 func init() {
@@ -48,11 +49,13 @@ func init() {
 	mvnCmd.AddCommand(mvnSetBuildVersionCmd)
 	addMavenFlags(mvnSetBuildVersionCmd)
 	addFlag(mvnSetBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addIntFlag(mvnSetBuildVersionCmd, "build-number-length", "e", 3, "The build number length")
 	addGitHashLength(mvnSetBuildVersionCmd, "maven-hash-length")
 
 	mvnCmd.AddCommand(mvnBuildVersionCmd)
 	addMavenFlags(mvnBuildVersionCmd)
 	addFlag(mvnBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addIntFlag(mvnBuildVersionCmd, "build-number-length", "e", 3, "The build number length")
 	addGitHashLength(mvnBuildVersionCmd, "maven-hash-length")
 
 	mvnCmd.AddCommand(mvnCreateReleaseCmd)
@@ -350,7 +353,7 @@ func versionWithoutSnapshot(project *internal.MavenProject) *semver.Version {
 func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semver.Version {
 	cr := versionWithoutSnapshot(project)
 	_, count, hash := gitCommit(options.HashLength)
-	return createMavenBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix)
+	return createMavenBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
 }
 
 // x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash

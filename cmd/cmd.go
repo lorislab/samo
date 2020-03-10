@@ -34,6 +34,11 @@ func addFlag(command *cobra.Command, name, shorthand string, value string, usage
 	addViper(command, name)
 }
 
+func addIntFlag(command *cobra.Command, name, shorthand string, value int, usage string) {
+	command.Flags().IntP(name, shorthand, value, usage)
+	addViper(command, name)
+}
+
 func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usage string) {
 	command.Flags().BoolP(name, shorthand, value, usage)
 	addViper(command, name)
@@ -114,23 +119,24 @@ func createPatchBranchName(ver *semver.Version) string {
 }
 
 // <VERSION>-<BUILD>-<HASH> - do not increment the version
-func createMavenBuildVersion(ver, count, hash, prefix string) semver.Version {
+func createMavenBuildVersion(ver, count, hash, prefix string, length int) semver.Version {
 	tmp := createVersion(ver)
-	return addBuildInfo(*tmp, count, hash, prefix)
+	return addBuildInfo(*tmp, count, hash, prefix, length)
 }
 
 // <VERSION>-<BUILD>-<HASH> - increment the version
-func createBuildVersion(ver, count, hash, prefix string) semver.Version {
+func createBuildVersion(ver, count, hash, prefix string, length int) semver.Version {
 	tmp := nextReleaseVersion(createVersion(ver), false)
-	return addBuildInfo(tmp, count, hash, prefix)
+	return addBuildInfo(tmp, count, hash, prefix, length)
 }
 
-func addBuildInfo(tmp semver.Version, count, hash, prefix string) semver.Version {
+func addBuildInfo(tmp semver.Version, count, hash, prefix string, length int) semver.Version {
 	pre := tmp.Prerelease()
 	if len(count) > 0 {
 		if len(pre) > 0 {
 			pre = pre + "."
 		}
+		count = lpad(count, "0", length)
 		pre = pre + prefix + count
 	}
 	if len(hash) > 0 {
@@ -193,4 +199,11 @@ func nextPrerelease(data string) (bool, string) {
 		return true, data
 	}
 	return false, data
+}
+
+func lpad(data, pad string, length int) string {
+	for i := len(data); i < length; i++ {
+		data = pad + data
+	}
+	return data
 }

@@ -21,6 +21,7 @@ func init() {
 	gitCmd.AddCommand(gitBranchCmd)
 	gitCmd.AddCommand(gitBuildVersionCmd)
 	addFlag(gitBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
+	addIntFlag(gitBuildVersionCmd, "build-number-length", "e", 3, "The build number length")
 	addGitHashLength(gitBuildVersionCmd, "hash-length")
 
 	gitCmd.AddCommand(gitHashCmd)
@@ -45,6 +46,7 @@ type gitFlags struct {
 	PatchTag          string `mapstructure:"patch-tag"`
 	Major             bool   `mapstructure:"release-major"`
 	BuildNumberPrefix string `mapstructure:"build-number-prefix"`
+	BuildNumberLength int    `mapstructure:"build-number-length"`
 	ReleaseTagMessage string `mapstructure:"release-tag-message"`
 }
 
@@ -81,7 +83,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readGitOptions()
 			lastTag, count, hash := gitCommit(options.HashLength)
-			ver := createBuildVersion(lastTag, count, hash, options.BuildNumberPrefix)
+			ver := createBuildVersion(lastTag, count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
 			fmt.Printf("%s\n", ver.String())
 		},
 		TraverseChildren: true,
