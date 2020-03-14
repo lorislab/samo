@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -41,7 +42,7 @@ func init() {
 }
 
 type gitFlags struct {
-	HashLength        string `mapstructure:"hash-length"`
+	HashLength        int    `mapstructure:"hash-length"`
 	ReleaseTag        string `mapstructure:"release-tag"`
 	PatchTag          string `mapstructure:"patch-tag"`
 	Major             bool   `mapstructure:"release-major"`
@@ -141,7 +142,7 @@ var (
 )
 
 // <VERSION>(+1)-<BUILD>-<HASH>
-func gitReleaseVersion(tag, hashLength string, major bool) string {
+func gitReleaseVersion(tag string, hashLength int, major bool) string {
 	ver := tag
 	if len(ver) == 0 {
 		lastTag, _, _ := gitCommit(hashLength)
@@ -160,18 +161,39 @@ func readGitOptions() gitFlags {
 	return gitOptions
 }
 
-func gitCommit(length string) (string, string, string) {
-	lastTag := execCmdOutput("git", "describe", "--abbrev=0")
+func gitCommit(length int) (string, string, string) {
+	// search for latest annotated tag
+	lastTag, err := execCmdOutputErr("git", "describe", "--abbrev=0")
 	log.Debugf("Last tag %s", lastTag)
-	describe := execCmdOutput("git", "describe", "--long", "--abbrev="+length)
-	describe = strings.TrimPrefix(describe, lastTag+"-")
-	items := strings.Split(describe, "-")
-	return lastTag, items[0], items[1]
+	if err == nil {
+		// get metadata from the git describe
+		describe, err := execCmdOutputErr("git", "describe", "--long", "--abbrev="+strconv.Itoa(length))
+		if err == nil {
+			describe = strings.TrimPrefix(describe, lastTag+"-")
+			items := strings.Split(describe, "-")
+			return lastTag, items[0], items[1]
+		}
+	}
+	// not tag found in the git repository
+	lastTag = "0.0.0"
+	count := "0"
+	// git commit hash
+	hash, err := execCmdOutputErr("git", "rev-parse", "--short="+strconv.Itoa(length), "HEAD")
+	if err != nil {
+		hash = lpad("", "0", length)
+	} else {
+		// git commit count in the branch
+		tmp, err := execCmdOutputErr("git", "rev-list", "HEAD", "--count")
+		if err == nil {
+			count = tmp
+		}
+	}
+	return lastTag, count, hash
 }
 
-func gitHash(length string) string {
-	if len(length) > 0 {
-		return execCmdOutput("git", "rev-parse", "--short="+length, "HEAD")
+func gitHash(length int) string {
+	if length > 0 {
+		return execCmdOutput("git", "rev-parse", "--short="+strconv.Itoa(length), "HEAD")
 	}
 	return execCmdOutput("git", "rev-parse", "HEAD")
 }

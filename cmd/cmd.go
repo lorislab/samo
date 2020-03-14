@@ -45,7 +45,7 @@ func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usa
 }
 
 func addGitHashLength(command *cobra.Command, name string) {
-	addFlag(command, name, "l", "12", "The git hash length")
+	addIntFlag(command, name, "l", 12, "The git hash length")
 }
 
 func addViper(command *cobra.Command, name string) {
@@ -72,6 +72,13 @@ func execCmdOutput(name string, arg ...string) string {
 		log.Panic(err)
 	}
 	return string(bytes.TrimRight(out, "\n"))
+}
+
+func execCmdOutputErr(name string, arg ...string) (string, error) {
+	log.Debug(name+" ", strings.Join(arg, " "))
+	out, err := exec.Command(name, arg...).CombinedOutput()
+	log.Debug("Output:\n", string(out))
+	return string(bytes.TrimRight(out, "\n")), err
 }
 
 func execCmdErr(name string, arg ...string) error {

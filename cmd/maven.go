@@ -18,7 +18,7 @@ type mavenFlags struct {
 	DevMsg                      string `mapstructure:"maven-release-message"`
 	PatchTag                    string `mapstructure:"maven-patch-tag"`
 	ReleaseMajor                bool   `mapstructure:"maven-release-major"`
-	HashLength                  string `mapstructure:"maven-hash-length"`
+	HashLength                  int    `mapstructure:"maven-hash-length"`
 	Dockerfile                  string `mapstructure:"maven-dockerfile"`
 	Context                     string `mapstructure:"maven-docker-context"`
 	Branch                      bool   `mapstructure:"maven-docker-branch"`
@@ -357,7 +357,7 @@ func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semve
 }
 
 // x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash
-func updatePrereleaseToHashVersion(ver, length string) string {
+func updatePrereleaseToHashVersion(ver string, length int) string {
 	pre := ver
 	if len(pre) > 0 {
 		hi := strings.LastIndex(pre, ".")
