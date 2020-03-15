@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/mitchellh/go-homedir"
 	"strings"
+
+	"github.com/mitchellh/go-homedir"
 
 	"github.com/lorislab/samo/cmd"
 	log "github.com/sirupsen/logrus"
@@ -37,7 +38,6 @@ var (
 		Run: func(_ *cobra.Command, _ []string) {
 			resp := goVersion.FuncWithOutput(shortened, version, commit, date, output)
 			fmt.Print(resp)
-			return
 		},
 	}
 )
@@ -86,6 +86,8 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		if verbose {
+			log.Infof("Using config file: %s", viper.ConfigFileUsed())
+		}
 	}
 }
