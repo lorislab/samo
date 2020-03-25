@@ -34,6 +34,7 @@ type mavenFlags struct {
 	ReleaseTagMessage           string `mapstructure:"release-tag-message"`
 	BuildNumberPrefix           string `mapstructure:"build-number-prefix"`
 	BuildNumberLength           int    `mapstructure:"build-number-length"`
+	DevTag                      bool   `mapstructure:"maven-docker-dev"`
 }
 
 func init() {
@@ -66,7 +67,7 @@ func init() {
 
 	mvnCmd.AddCommand(mvnCreatePatchCmd)
 	addMavenFlags(mvnCreatePatchCmd)
-	addFlagRequired(mvnCreatePatchCmd, "maven-patch-tag", "t", "", "The tag version for the patch branch")
+	addFlagRequired(mvnCreatePatchCmd, "maven-patch-tag", "t", "", "The tag version of the patch branch")
 	addFlag(mvnCreatePatchCmd, "maven-patch-message", "m", "Create new patch version", "Commit message for new patch version")
 
 	mvnCmd.AddCommand(dockerBuildCmd)
@@ -79,6 +80,13 @@ func init() {
 	addFlag(dockerBuildCmd, "maven-docker-tag", "t", "", "Add the extra tag to the build image")
 	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "k", true, "Tag the docker image with a branch name")
 	addBoolFlag(dockerBuildCmd, "maven-docker-latest", "e", true, "Tag the docker image with a latest")
+	addBoolFlag(dockerBuildCmd, "maven-docker-dev", "", true, "Tag the docker image for local development")
+
+	mvnCmd.AddCommand(dockerBuildDevCmd)
+	addMavenFlags(dockerBuildDevCmd)
+	addDockerImageFlags(dockerBuildDevCmd)
+	addFlag(dockerBuildDevCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "The maven project dockerfile")
+	addFlag(dockerBuildDevCmd, "maven-docker-context", "c", ".", "The docker build context")
 
 	mvnCmd.AddCommand(dockerPushCmd)
 	addMavenFlags(dockerPushCmd)
@@ -230,8 +238,8 @@ var (
 	}
 	dockerBuildCmd = &cobra.Command{
 		Use:   "docker-build",
-		Short: "Build the docker image for the maven project",
-		Long:  `Build the docker image for the maven project`,
+		Short: "Build the docker image of the maven project",
+		Long:  `Build the docker image of the maven project`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readMavenOptions()
 			project := internal.LoadMavenProject(options.Filename)
@@ -252,6 +260,10 @@ var (
 			if options.Latest {
 				command = append(command, "-t", imageNameWithTag(image, "latest"))
 			}
+			if options.DevTag {
+				tmp := dockerDevImage(project, options)
+				command = append(command, "-t", imageNameWithTag(tmp, "latest"))
+			}
 			if len(options.BuildTag) > 0 {
 				command = append(command, "-t", imageNameWithTag(image, options.BuildTag))
 			}
@@ -264,10 +276,32 @@ var (
 		},
 		TraverseChildren: true,
 	}
+	dockerBuildDevCmd = &cobra.Command{
+		Use:   "docker-build-dev",
+		Short: "Build the docker image of the maven project for local development",
+		Long:  `Build the docker image of the maven project for local development`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options := readMavenOptions()
+			project := internal.LoadMavenProject(options.Filename)
+			image := dockerDevImage(project, options)
+
+			var command []string
+			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
+			command = append(command, "-t", imageNameWithTag(image, "latest"))
+
+			if len(options.Dockerfile) > 0 {
+				command = append(command, "-f", options.Dockerfile)
+			}
+			command = append(command, options.Context)
+
+			execCmd("docker", command...)
+		},
+		TraverseChildren: true,
+	}
 	dockerPushCmd = &cobra.Command{
 		Use:   "docker-push",
-		Short: "Push the docker image for the maven project",
-		Long:  `Push the docker image for the maven project`,
+		Short: "Push the docker image of the maven project",
+		Long:  `Push the docker image of the maven project`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options := readMavenOptions()
 			project := internal.LoadMavenProject(options.Filename)
@@ -322,11 +356,16 @@ var (
 	}
 )
 
-func dockerImage(project *internal.MavenProject, options mavenFlags) string {
+func dockerDevImage(project *internal.MavenProject, options mavenFlags) string {
 	image := options.Image
 	if len(image) == 0 {
 		image = project.ArtifactID()
 	}
+	return image
+}
+
+func dockerImage(project *internal.MavenProject, options mavenFlags) string {
+	image := dockerDevImage(project, options)
 	if len(options.Repository) > 0 {
 		image = options.Repository + "/" + image
 	}
