@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/spf13/pflag"
+
 	"github.com/Masterminds/semver"
 
 	log "github.com/sirupsen/logrus"
@@ -21,38 +23,45 @@ func Main(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(dockerCmd)
 }
 
-func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) {
-	addFlag(command, name, shorthand, value, usage)
+func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
+	f := addFlag(command, name, shorthand, value, usage)
 	err := command.MarkFlagRequired(name)
 	if err != nil {
 		log.Panic(err)
 	}
+	return f
 }
 
-func addFlag(command *cobra.Command, name, shorthand string, value string, usage string) {
+func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
+	command.Flags().AddFlag(flag)
+}
+
+func addFlag(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
 	command.Flags().StringP(name, shorthand, value, usage)
-	addViper(command, name)
+	return addViper(command, name)
 }
 
-func addIntFlag(command *cobra.Command, name, shorthand string, value int, usage string) {
+func addIntFlag(command *cobra.Command, name, shorthand string, value int, usage string) *pflag.Flag {
 	command.Flags().IntP(name, shorthand, value, usage)
-	addViper(command, name)
+	return addViper(command, name)
 }
 
-func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usage string) {
+func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usage string) *pflag.Flag {
 	command.Flags().BoolP(name, shorthand, value, usage)
-	addViper(command, name)
+	return addViper(command, name)
 }
 
-func addGitHashLength(command *cobra.Command, name string) {
-	addIntFlag(command, name, "l", 12, "The git hash length")
+func addGitHashLength(command *cobra.Command, name, shorthand string) *pflag.Flag {
+	return addIntFlag(command, name, shorthand, 12, "The git hash length")
 }
 
-func addViper(command *cobra.Command, name string) {
-	err := viper.BindPFlag(name, command.Flags().Lookup(name))
+func addViper(command *cobra.Command, name string) *pflag.Flag {
+	f := command.Flags().Lookup(name)
+	err := viper.BindPFlag(name, f)
 	if err != nil {
 		panic(err)
 	}
+	return f
 }
 
 func execCmd(name string, arg ...string) {
@@ -60,6 +69,7 @@ func execCmd(name string, arg ...string) {
 	out, err := exec.Command(name, arg...).CombinedOutput()
 	log.Debug("Output:\n", string(out))
 	if err != nil {
+		log.Error(string(out))
 		log.Panic(err)
 	}
 }
@@ -69,6 +79,7 @@ func execCmdOutput(name string, arg ...string) string {
 	out, err := exec.Command(name, arg...).CombinedOutput()
 	log.Debug("Output:\n", string(out))
 	if err != nil {
+		log.Error(string(out))
 		log.Panic(err)
 	}
 	return string(bytes.TrimRight(out, "\n"))

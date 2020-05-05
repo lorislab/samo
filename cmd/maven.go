@@ -31,86 +31,78 @@ type mavenFlags struct {
 	MavenSettingsServerID       string `mapstructure:"maven-settings-server-id"`
 	MavenSettingsServerUsername string `mapstructure:"maven-settings-server-username"`
 	MavenSettingsServerPassword string `mapstructure:"maven-settings-server-password"`
-	ReleaseTagMessage           string `mapstructure:"release-tag-message"`
-	BuildNumberPrefix           string `mapstructure:"build-number-prefix"`
-	BuildNumberLength           int    `mapstructure:"build-number-length"`
+	ReleaseTagMessage           string `mapstructure:"maven-release-tag-message"`
+	BuildNumberPrefix           string `mapstructure:"maven-build-number-prefix"`
+	BuildNumberLength           int    `mapstructure:"maven-build-number-length"`
 	DevTag                      bool   `mapstructure:"maven-docker-dev"`
 }
 
 func init() {
 	mvnCmd.AddCommand(mvnVersionCmd)
-	addMavenFlags(mvnVersionCmd)
+	mavenFile := addFlag(mvnVersionCmd, "maven-file", "f", "pom.xml", "The maven project file")
 
 	mvnCmd.AddCommand(mvnSetReleaseVersionCmd)
-	addMavenFlags(mvnSetReleaseVersionCmd)
+	addFlagRef(mvnSetReleaseVersionCmd, mavenFile)
 
 	mvnCmd.AddCommand(mvnReleaseVersionCmd)
-	addMavenFlags(mvnReleaseVersionCmd)
+	addFlagRef(mvnReleaseVersionCmd, mavenFile)
 
 	mvnCmd.AddCommand(mvnSetBuildVersionCmd)
-	addMavenFlags(mvnSetBuildVersionCmd)
-	addFlag(mvnSetBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
-	addIntFlag(mvnSetBuildVersionCmd, "build-number-length", "e", 3, "The build number length")
-	addGitHashLength(mvnSetBuildVersionCmd, "maven-hash-length")
+	addFlagRef(mvnSetBuildVersionCmd, mavenFile)
+	buildNumberPrefix := addFlag(mvnSetBuildVersionCmd, "maven-build-number-prefix", "b", "rc", "The build number prefix")
+	buildNumberLength := addIntFlag(mvnSetBuildVersionCmd, "maven-build-number-length", "e", 3, "The build number length")
+	mavenHashLength := addGitHashLength(mvnSetBuildVersionCmd, "maven-hash-length", "")
 
 	mvnCmd.AddCommand(mvnBuildVersionCmd)
-	addMavenFlags(mvnBuildVersionCmd)
-	addFlag(mvnBuildVersionCmd, "build-number-prefix", "b", "rc", "The build number prefix")
-	addIntFlag(mvnBuildVersionCmd, "build-number-length", "e", 3, "The build number length")
-	addGitHashLength(mvnBuildVersionCmd, "maven-hash-length")
+	addFlagRef(mvnBuildVersionCmd, mavenFile)
+	addFlagRef(mvnBuildVersionCmd, buildNumberPrefix)
+	addFlagRef(mvnBuildVersionCmd, buildNumberLength)
+	addFlagRef(mvnBuildVersionCmd, mavenHashLength)
 
 	mvnCmd.AddCommand(mvnCreateReleaseCmd)
-	addMavenFlags(mvnCreateReleaseCmd)
-	addFlag(mvnCreateReleaseCmd, "maven-release-message", "m", "Create new development version", "Commit message for new development version")
-	addBoolFlag(mvnCreateReleaseCmd, "maven-release-major", "a", false, "Create a major release")
-	addFlag(mvnCreateReleaseCmd, "release-tag-message", "s", "", "The release tag message")
+	addFlagRef(mvnCreateReleaseCmd, mavenFile)
+	addFlag(mvnCreateReleaseCmd, "maven-release-message", "", "Create new development version", "Commit message for new development version")
+	addBoolFlag(mvnCreateReleaseCmd, "maven-release-major", "", false, "Create a major release")
+	addFlag(mvnCreateReleaseCmd, "maven-release-tag-message", "", "", "The release tag message")
 
 	mvnCmd.AddCommand(mvnCreatePatchCmd)
-	addMavenFlags(mvnCreatePatchCmd)
-	addFlagRequired(mvnCreatePatchCmd, "maven-patch-tag", "t", "", "The tag version of the patch branch")
-	addFlag(mvnCreatePatchCmd, "maven-patch-message", "m", "Create new patch version", "Commit message for new patch version")
+	addFlagRef(mvnCreatePatchCmd, mavenFile)
+	addFlagRequired(mvnCreatePatchCmd, "maven-patch-tag", "", "", "The tag version of the patch branch")
+	addFlag(mvnCreatePatchCmd, "maven-patch-message", "", "Create new patch version", "Commit message for new patch version")
 
 	mvnCmd.AddCommand(dockerBuildCmd)
-	addMavenFlags(dockerBuildCmd)
-	addDockerImageFlags(dockerBuildCmd)
-	addGitHashLength(dockerBuildCmd, "maven-hash-length")
-	addFlag(dockerBuildCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "The maven project dockerfile")
-	addFlag(dockerBuildCmd, "maven-docker-repo", "r", "", "The docker repository")
-	addFlag(dockerBuildCmd, "maven-docker-context", "c", ".", "The docker build context")
-	addFlag(dockerBuildCmd, "maven-docker-tag", "t", "", "Add the extra tag to the build image")
-	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "k", true, "Tag the docker image with a branch name")
-	addBoolFlag(dockerBuildCmd, "maven-docker-latest", "e", true, "Tag the docker image with a latest")
+	addFlagRef(dockerBuildCmd, mavenFile)
+	mavenDockerImage := addFlag(dockerBuildCmd, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
+	addFlagRef(dockerBuildCmd, mavenHashLength)
+	mavenDockerFile := addFlag(dockerBuildCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "The maven project dockerfile")
+	addFlag(dockerBuildCmd, "maven-docker-repo", "", "", "The docker repository")
+	mavenDockerContext := addFlag(dockerBuildCmd, "maven-docker-context", "", ".", "The docker build context")
+	addFlag(dockerBuildCmd, "maven-docker-tag", "", "", "Add the extra tag to the build image")
+	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "", true, "Tag the docker image with a branch name")
+	addBoolFlag(dockerBuildCmd, "maven-docker-latest", "", true, "Tag the docker image with a latest")
 	addBoolFlag(dockerBuildCmd, "maven-docker-dev", "", true, "Tag the docker image for local development")
 
 	mvnCmd.AddCommand(dockerBuildDevCmd)
-	addMavenFlags(dockerBuildDevCmd)
-	addDockerImageFlags(dockerBuildDevCmd)
-	addFlag(dockerBuildDevCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "The maven project dockerfile")
-	addFlag(dockerBuildDevCmd, "maven-docker-context", "c", ".", "The docker build context")
+	addFlagRef(dockerBuildDevCmd, mavenFile)
+	addFlagRef(dockerBuildDevCmd, mavenDockerImage)
+	addFlagRef(dockerBuildDevCmd, mavenDockerFile)
+	addFlagRef(dockerBuildDevCmd, mavenDockerContext)
 
 	mvnCmd.AddCommand(dockerPushCmd)
-	addMavenFlags(dockerPushCmd)
-	addDockerImageFlags(dockerPushCmd)
-	addBoolFlag(dockerPushCmd, "maven-docker-ignore-latest", "p", true, "Ignore push latest tag to repository")
+	addFlagRef(dockerPushCmd, mavenFile)
+	addFlagRef(dockerPushCmd, mavenDockerImage)
+	addBoolFlag(dockerPushCmd, "maven-docker-ignore-latest", "", true, "Ignore push latest tag to repository")
 
 	mvnCmd.AddCommand(dockerReleaseCmd)
-	addMavenFlags(dockerReleaseCmd)
-	addGitHashLength(dockerReleaseCmd, "maven-hash-length")
-	addDockerImageFlags(dockerReleaseCmd)
+	addFlagRef(dockerReleaseCmd, mavenFile)
+	addFlagRef(dockerReleaseCmd, mavenHashLength)
+	addFlagRef(dockerReleaseCmd, mavenDockerImage)
 
 	mvnCmd.AddCommand(settingsAddServer)
 	addFlag(settingsAddServer, "maven-settings-file", "s", ".m2/settings.xml", "The maven settings.xml file")
 	addFlag(settingsAddServer, "maven-settings-server-id", "", "github", "The maven repository server id")
 	addFlag(settingsAddServer, "maven-settings-server-username", "", "x-access-token", "The maven repository server username")
 	addFlag(settingsAddServer, "maven-settings-server-password", "", "${env.GITHUB_TOKEN}", "The maven repository server password")
-}
-
-func addDockerImageFlags(command *cobra.Command) {
-	addFlag(command, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
-}
-
-func addMavenFlags(command *cobra.Command) {
-	addFlag(command, "maven-file", "f", "pom.xml", "The maven project file")
 }
 
 var (
@@ -382,6 +374,7 @@ func readMavenOptions() mavenFlags {
 	if err != nil {
 		panic(err)
 	}
+	log.Debug(mavenOptions)
 	return mavenOptions
 }
 

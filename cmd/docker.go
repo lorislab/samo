@@ -12,8 +12,8 @@ const dockerConfigGithub string = "/home/runner/.docker/config.json"
 
 func init() {
 	dockerCmd.AddCommand(dockerConfigCmd)
-	addFlag(dockerConfigCmd, "docker-config", "e", "", "The docker configuration value")
-	addFlag(dockerConfigCmd, "docker-config-file", "j", dockerConfigDefault, "Docker client configuration file.\n Github default: '"+dockerConfigGithub+"'\n")
+	addFlag(dockerConfigCmd, "docker-config", "i", "", "The docker configuration value")
+	addFlag(dockerConfigCmd, "docker-config-file", "o", dockerConfigDefault, "Docker client configuration file.\n Github default: '"+dockerConfigGithub+"'\n")
 }
 
 type dockerFlags struct {
