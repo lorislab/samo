@@ -89,7 +89,7 @@ func (r MavenProject) SetParentVersion(version string) {
 // LoadMavenProject load maven project
 func LoadMavenProject(filename string) *MavenProject {
 	items := []string{projectVersion, projectGroupID, projectArtifactID, parentProjectArtifactID, parentProjectGroupID, parentProjectVersion}
-	result := FindXPathInFile(filename, items)
+	result := xmlPathInFile(filename, items)
 	if result.IsEmpty() {
 		log.Warnf("The file '%s' does not have maven structure.\n", filename)
 		return nil
@@ -116,7 +116,7 @@ func CreateMavenSettingsServer(filename, id, username, password string) {
 
 		// search for xml path
 		items := []string{mavenSettings, mavenSettingsServers}
-		xpath := FindXPathInFile(filename, items)
+		xpath := xmlPathInFile(filename, items)
 		if xpath.IsEmpty() {
 			log.Warnf("The file '%s' does not have maven settings structure.\n", filename)
 			return

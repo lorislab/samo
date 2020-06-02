@@ -364,10 +364,6 @@ func dockerImage(project *internal.MavenProject, options mavenFlags) string {
 	return image
 }
 
-func imageNameWithTag(name, tag string) string {
-	return name + ":" + tag
-}
-
 func readMavenOptions() mavenFlags {
 	mavenOptions := mavenFlags{}
 	err := viper.Unmarshal(&mavenOptions)
@@ -385,27 +381,5 @@ func versionWithoutSnapshot(project *internal.MavenProject) *semver.Version {
 func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semver.Version {
 	cr := versionWithoutSnapshot(project)
 	_, count, hash := gitCommit(options.HashLength)
-	return createMavenBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
-}
-
-// x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash
-func updatePrereleaseToHashVersion(ver string, length int) string {
-	pre := ver
-	if len(pre) > 0 {
-		hi := strings.LastIndex(pre, ".")
-		if hi != -1 {
-			pre = pre[0:hi]
-			ri := strings.LastIndex(pre, ".")
-			if ri != -1 {
-				pre = pre[0:ri]
-			} else {
-				pre = ""
-			}
-		}
-	}
-	_, _, hash := gitCommit(length)
-	if len(pre) > 0 {
-		pre = pre + "."
-	}
-	return pre + hash
+	return createProjectBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
 }

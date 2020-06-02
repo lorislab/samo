@@ -33,7 +33,7 @@ func (r XPathResult) IsEmpty() bool {
 }
 
 // FindXPathInFile find the xpath items in the file
-func FindXPathInFile(filename string, items []string) *XPathResult {
+func xmlPathInFile(filename string, items []string) *XPathResult {
 	file, err := os.Open(filename)
 	if file != nil {
 		defer func() {

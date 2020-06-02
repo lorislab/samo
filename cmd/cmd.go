@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bufio"
 	"bytes"
 	"os"
 	"os/exec"
@@ -21,6 +22,7 @@ func Main(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(mvnCmd)
 	rootCmd.AddCommand(gitCmd)
 	rootCmd.AddCommand(dockerCmd)
+	rootCmd.AddCommand(npmCmd)
 }
 
 func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
@@ -66,11 +68,44 @@ func addViper(command *cobra.Command, name string) *pflag.Flag {
 
 func execCmd(name string, arg ...string) {
 	log.Info(name+" ", strings.Join(arg, " "))
-	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output:\n", string(out))
+	cmd := exec.Command(name, arg...)
+
+	// enable always error log for the command
+	errorReader, err := cmd.StderrPipe()
 	if err != nil {
-		log.Error(string(out))
-		log.Panic(err)
+		panic(err)
+	}
+	scannerError := bufio.NewScanner(errorReader)
+	go func() {
+		for scannerError.Scan() {
+			log.Error(scannerError.Text())
+		}
+	}()
+
+	// enable info log for the command
+	if log.GetLevel() == log.DebugLevel {
+		// create a pipe for the output of the script
+		cmdReader, err := cmd.StdoutPipe()
+		if err != nil {
+			panic(err)
+		}
+
+		scanner := bufio.NewScanner(cmdReader)
+		go func() {
+			for scanner.Scan() {
+				log.Debug(scanner.Text())
+			}
+		}()
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		panic(err)
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -137,7 +172,7 @@ func createPatchBranchName(ver *semver.Version) string {
 }
 
 // <VERSION>-<BUILD>-<HASH> - do not increment the version
-func createMavenBuildVersion(ver, count, hash, prefix string, length int) semver.Version {
+func createProjectBuildVersion(ver, count, hash, prefix string, length int) semver.Version {
 	tmp := createVersion(ver)
 	return addBuildInfo(*tmp, count, hash, prefix, length)
 }
@@ -224,4 +259,30 @@ func lpad(data, pad string, length int) string {
 		data = pad + data
 	}
 	return data
+}
+
+// x.x.x-<pre>.rc0.hash -> x.x.x-<pre>.hash
+func updatePrereleaseToHashVersion(ver string, length int) string {
+	pre := ver
+	if len(pre) > 0 {
+		hi := strings.LastIndex(pre, ".")
+		if hi != -1 {
+			pre = pre[0:hi]
+			ri := strings.LastIndex(pre, ".")
+			if ri != -1 {
+				pre = pre[0:ri]
+			} else {
+				pre = ""
+			}
+		}
+	}
+	_, _, hash := gitCommit(length)
+	if len(pre) > 0 {
+		pre = pre + "."
+	}
+	return pre + hash
+}
+
+func imageNameWithTag(name, tag string) string {
+	return name + ":" + tag
 }
