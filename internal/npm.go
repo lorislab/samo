@@ -9,13 +9,13 @@ const (
 	npmName    string = "/name"
 )
 
-// MavenProject maven project
+// NpmProject maven project
 type NpmProject struct {
 	filename      string
 	name, version *XPathItem
 }
 
-// Version the npm project name
+// Name the npm project name
 func (r NpmProject) Name() string {
 	return r.name.value
 }
