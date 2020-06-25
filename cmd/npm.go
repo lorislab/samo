@@ -36,7 +36,7 @@ type npmFlags struct {
 
 func init() {
 	npmCmd.AddCommand(npmVersionCmd)
-	npmFile := addFlag(npmVersionCmd, "npm-file", "", "package.json", "The npm project file")
+	npmFile := addFlag(npmVersionCmd, "npm-file", "", "package.json", "npm project file")
 
 	npmCmd.AddCommand(npmSetReleaseVersionCmd)
 	addFlagRef(npmSetReleaseVersionCmd, npmFile)
@@ -46,8 +46,8 @@ func init() {
 
 	npmCmd.AddCommand(npmSetBuildVersionCmd)
 	addFlagRef(npmSetBuildVersionCmd, npmFile)
-	buildNumberPrefix := addFlag(npmSetBuildVersionCmd, "npm-build-number-prefix", "", "rc", "The build number prefix")
-	buildNumberLength := addIntFlag(npmSetBuildVersionCmd, "npm-build-number-length", "", 3, "The build number length")
+	buildNumberPrefix := addFlag(npmSetBuildVersionCmd, "npm-build-number-prefix", "", "rc", "the build number prefix")
+	buildNumberLength := addIntFlag(npmSetBuildVersionCmd, "npm-build-number-length", "", 3, "the build number length")
 	npmHashLength := addGitHashLength(npmSetBuildVersionCmd, "npm-hash-length", "")
 
 	npmCmd.AddCommand(npmBuildVersionCmd)
@@ -60,13 +60,13 @@ func init() {
 	addFlagRef(npmDockerBuildCmd, npmFile)
 	npmDockerImage := addFlag(npmDockerBuildCmd, "npm-docker-image", "", "", "the docker image. Default value maven project name.")
 	addFlagRef(npmDockerBuildCmd, npmHashLength)
-	npmDockerFile := addFlag(npmDockerBuildCmd, "npm-dockerfile", "", "Dockerfile", "The maven project dockerfile")
-	addFlag(npmDockerBuildCmd, "npm-docker-repo", "", "", "The docker repository")
-	npmDockerContext := addFlag(npmDockerBuildCmd, "npm-docker-context", "", ".", "The docker build context")
-	addFlag(npmDockerBuildCmd, "npm-docker-tag", "", "", "Add the extra tag to the build image")
-	addBoolFlag(npmDockerBuildCmd, "npm-docker-branch", "", true, "Tag the docker image with a branch name")
-	addBoolFlag(npmDockerBuildCmd, "npm-docker-latest", "", true, "Tag the docker image with a latest")
-	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "Tag the docker image for local development")
+	npmDockerFile := addFlag(npmDockerBuildCmd, "npm-dockerfile", "", "Dockerfile", "the maven project dockerfile")
+	addFlag(npmDockerBuildCmd, "npm-docker-repo", "", "", "the docker repository")
+	npmDockerContext := addFlag(npmDockerBuildCmd, "npm-docker-context", "", ".", "the docker build context")
+	addFlag(npmDockerBuildCmd, "npm-docker-tag", "", "", "add the extra tag to the build image")
+	addBoolFlag(npmDockerBuildCmd, "npm-docker-branch", "", true, "tag the docker image with a branch name")
+	addBoolFlag(npmDockerBuildCmd, "npm-docker-latest", "", true, "tag the docker image with a latest")
+	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "tag the docker image for local development")
 
 	npmCmd.AddCommand(npmDockerBuildDevCmd)
 	addFlagRef(npmDockerBuildDevCmd, npmFile)
@@ -77,18 +77,18 @@ func init() {
 	npmCmd.AddCommand(npmDockerPushCmd)
 	addFlagRef(npmDockerPushCmd, npmFile)
 	addFlagRef(npmDockerPushCmd, npmDockerImage)
-	addBoolFlag(npmDockerPushCmd, "npm-docker-ignore-latest", "", true, "Ignore push latest tag to repository")
+	addBoolFlag(npmDockerPushCmd, "npm-docker-ignore-latest", "", true, "ignore push latest tag to repository")
 
 	npmCmd.AddCommand(npmCreateReleaseCmd)
 	addFlagRef(npmCreateReleaseCmd, npmFile)
-	addFlag(npmCreateReleaseCmd, "npm-release-message", "", "Create new development version", "Commit message for new development version")
-	addBoolFlag(npmCreateReleaseCmd, "npm-release-major", "", false, "Create a major release")
-	addFlag(npmCreateReleaseCmd, "npm-release-tag-message", "", "", "The release tag message")
+	addFlag(npmCreateReleaseCmd, "npm-release-message", "", "Create new development version", "commit message for new development version")
+	addBoolFlag(npmCreateReleaseCmd, "npm-release-major", "", false, "create a major release")
+	addFlag(npmCreateReleaseCmd, "npm-release-tag-message", "", "", "the release tag message")
 
 	npmCmd.AddCommand(npmCreatePatchCmd)
 	addFlagRef(npmCreatePatchCmd, npmFile)
-	addFlagRequired(npmCreatePatchCmd, "npm-patch-tag", "", "", "The tag version of the patch branch")
-	addFlag(npmCreatePatchCmd, "npm-patch-message", "", "Create new patch version", "Commit message for new patch version")
+	addFlagRequired(npmCreatePatchCmd, "npm-patch-tag", "", "", "the tag version of the patch branch")
+	addFlag(npmCreatePatchCmd, "npm-patch-message", "", "Create new patch version", "commit message for new patch version")
 
 	npmCmd.AddCommand(npmDockerReleaseCmd)
 	addFlagRef(npmDockerReleaseCmd, npmFile)

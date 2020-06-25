@@ -21,24 +21,24 @@ func init() {
 
 	gitCmd.AddCommand(gitBranchCmd)
 	gitCmd.AddCommand(gitBuildVersionCmd)
-	addFlag(gitBuildVersionCmd, "build-number-prefix", "", "rc", "The build number prefix")
-	addIntFlag(gitBuildVersionCmd, "build-number-length", "", 3, "The build number length")
+	addFlag(gitBuildVersionCmd, "build-number-prefix", "", "rc", "the build number prefix")
+	addIntFlag(gitBuildVersionCmd, "build-number-length", "", 3, "the build number length")
 	hashLength := addGitHashLength(gitBuildVersionCmd, "hash-length", "l")
 
 	gitCmd.AddCommand(gitHashCmd)
 	addFlagRef(gitHashCmd, hashLength)
 
 	gitCmd.AddCommand(gitCreateReleaseCmd)
-	addBoolFlag(gitCreateReleaseCmd, "release-major", "a", false, "Create a major release")
-	addFlag(gitCreateReleaseCmd, "release-tag", "t", "", "The tag release version")
-	addFlag(gitCreateReleaseCmd, "release-tag-message", "m", "", "The release tag message")
+	addBoolFlag(gitCreateReleaseCmd, "release-major", "a", false, "create a major release")
+	addFlag(gitCreateReleaseCmd, "release-tag", "t", "", "the tag release version")
+	addFlag(gitCreateReleaseCmd, "release-tag-message", "m", "", "the release tag message")
 	addFlagRef(gitCreateReleaseCmd, hashLength)
 
 	gitCmd.AddCommand(gitReleaseVersionCmd)
 	addFlagRef(gitReleaseVersionCmd, hashLength)
 
 	gitCmd.AddCommand(gitCreatePatchCmd)
-	addFlagRequired(gitCreatePatchCmd, "patch-tag", "t", "", "The tag version for the patch branch")
+	addFlagRequired(gitCreatePatchCmd, "patch-tag", "t", "", "the tag version for the patch branch")
 }
 
 type gitFlags struct {

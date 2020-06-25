@@ -54,7 +54,7 @@ func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usa
 }
 
 func addGitHashLength(command *cobra.Command, name, shorthand string) *pflag.Flag {
-	return addIntFlag(command, name, shorthand, 12, "The git hash length")
+	return addIntFlag(command, name, shorthand, 12, "the git hash length")
 }
 
 func addViper(command *cobra.Command, name string) *pflag.Flag {
