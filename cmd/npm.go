@@ -69,31 +69,31 @@ func init() {
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "Tag the docker image for local development")
 
 	npmCmd.AddCommand(npmDockerBuildDevCmd)
-	addFlagRef(dockerBuildDevCmd, npmFile)
-	addFlagRef(dockerBuildDevCmd, npmDockerImage)
-	addFlagRef(dockerBuildDevCmd, npmDockerFile)
-	addFlagRef(dockerBuildDevCmd, npmDockerContext)
+	addFlagRef(npmDockerBuildDevCmd, npmFile)
+	addFlagRef(npmDockerBuildDevCmd, npmDockerImage)
+	addFlagRef(npmDockerBuildDevCmd, npmDockerFile)
+	addFlagRef(npmDockerBuildDevCmd, npmDockerContext)
 
 	npmCmd.AddCommand(npmDockerPushCmd)
-	addFlagRef(dockerPushCmd, npmFile)
-	addFlagRef(dockerPushCmd, npmDockerImage)
-	addBoolFlag(dockerPushCmd, "npm-docker-ignore-latest", "", true, "Ignore push latest tag to repository")
+	addFlagRef(npmDockerPushCmd, npmFile)
+	addFlagRef(npmDockerPushCmd, npmDockerImage)
+	addBoolFlag(npmDockerPushCmd, "npm-docker-ignore-latest", "", true, "Ignore push latest tag to repository")
 
 	npmCmd.AddCommand(npmCreateReleaseCmd)
-	addFlagRef(mvnCreateReleaseCmd, npmFile)
-	addFlag(mvnCreateReleaseCmd, "npm-release-message", "", "Create new development version", "Commit message for new development version")
-	addBoolFlag(mvnCreateReleaseCmd, "npm-release-major", "", false, "Create a major release")
-	addFlag(mvnCreateReleaseCmd, "npm-release-tag-message", "", "", "The release tag message")
+	addFlagRef(npmCreateReleaseCmd, npmFile)
+	addFlag(npmCreateReleaseCmd, "npm-release-message", "", "Create new development version", "Commit message for new development version")
+	addBoolFlag(npmCreateReleaseCmd, "npm-release-major", "", false, "Create a major release")
+	addFlag(npmCreateReleaseCmd, "npm-release-tag-message", "", "", "The release tag message")
 
 	npmCmd.AddCommand(npmCreatePatchCmd)
-	addFlagRef(mvnCreatePatchCmd, npmFile)
-	addFlagRequired(mvnCreatePatchCmd, "npm-patch-tag", "", "", "The tag version of the patch branch")
-	addFlag(mvnCreatePatchCmd, "npm-patch-message", "", "Create new patch version", "Commit message for new patch version")
+	addFlagRef(npmCreatePatchCmd, npmFile)
+	addFlagRequired(npmCreatePatchCmd, "npm-patch-tag", "", "", "The tag version of the patch branch")
+	addFlag(npmCreatePatchCmd, "npm-patch-message", "", "Create new patch version", "Commit message for new patch version")
 
 	npmCmd.AddCommand(npmDockerReleaseCmd)
-	addFlagRef(dockerReleaseCmd, npmFile)
-	addFlagRef(dockerReleaseCmd, npmHashLength)
-	addFlagRef(dockerReleaseCmd, npmDockerImage)
+	addFlagRef(npmDockerReleaseCmd, npmFile)
+	addFlagRef(npmDockerReleaseCmd, npmHashLength)
+	addFlagRef(npmDockerReleaseCmd, npmDockerImage)
 }
 
 var (
