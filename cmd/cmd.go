@@ -167,8 +167,8 @@ func setPrerelease(ver semver.Version, prerelease string) semver.Version {
 }
 
 // Create patch branch name from the version
-func createPatchBranchName(ver *semver.Version) string {
-	return strconv.FormatInt(ver.Major(), 10) + "." + strconv.FormatInt(ver.Minor(), 10)
+func createPatchBranchName(ver *semver.Version, prefix string) string {
+	return prefix + strconv.FormatInt(ver.Major(), 10) + "." + strconv.FormatInt(ver.Minor(), 10)
 }
 
 // <VERSION>-<BUILD>-<HASH> - do not increment the version

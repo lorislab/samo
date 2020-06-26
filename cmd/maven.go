@@ -14,7 +14,10 @@ import (
 
 type mavenFlags struct {
 	Filename                    string `mapstructure:"maven-file"`
+	PatchBranchPrefix           string `mapstructure:"maven-patch-branch-prefix"`
+	PatchSkipPush               bool   `mapstructure:"maven-patch-skip-push"`
 	PatchMsg                    string `mapstructure:"maven-patch-message"`
+	ReleaseSkipPush             bool   `mapstructure:"maven-release-skip-push"`
 	DevMsg                      string `mapstructure:"maven-release-message"`
 	PatchTag                    string `mapstructure:"maven-patch-tag"`
 	ReleaseMajor                bool   `mapstructure:"maven-release-major"`
@@ -64,11 +67,14 @@ func init() {
 	addFlag(mvnCreateReleaseCmd, "maven-release-message", "", "Create new development version", "commit message for new development version")
 	addBoolFlag(mvnCreateReleaseCmd, "maven-release-major", "", false, "create a major release")
 	addFlag(mvnCreateReleaseCmd, "maven-release-tag-message", "", "", "the release tag message")
+	addBoolFlag(mvnCreateReleaseCmd, "maven-release-skip-push", "", false, "skip git push release")
 
 	mvnCmd.AddCommand(mvnCreatePatchCmd)
 	addFlagRef(mvnCreatePatchCmd, mavenFile)
 	addFlagRequired(mvnCreatePatchCmd, "maven-patch-tag", "", "", "the tag version of the patch branch")
 	addFlag(mvnCreatePatchCmd, "maven-patch-message", "", "Create new patch version", "commit message for new patch version")
+	addFlag(mvnCreatePatchCmd, "maven-patch-branch-prefix", "", "", "patch branch prefix")
+	addBoolFlag(mvnCreatePatchCmd, "maven-patch-skip-push", "", false, "skip git push patch branch.")
 
 	mvnCmd.AddCommand(dockerBuildCmd)
 	addFlagRef(dockerBuildCmd, mavenFile)
@@ -194,7 +200,11 @@ var (
 
 			execGitCmd("git", "add", ".")
 			execGitCmd("git", "commit", "-m", options.DevMsg+" ["+newVersion.String()+"]")
-			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+			if !options.ReleaseSkipPush {
+				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+			} else {
+				log.Info("Skip git push for release: " + releaseVersion)
+			}
 		},
 		TraverseChildren: true,
 	}
@@ -209,7 +219,7 @@ var (
 				log.Panic(e)
 			}
 
-			branchName := createPatchBranchName(tagVer)
+			branchName := createPatchBranchName(tagVer, options.PatchBranchPrefix)
 			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
 
 			// remove the prerelease
@@ -223,8 +233,11 @@ var (
 
 			execGitCmd("git", "add", ".")
 			execGitCmd("git", "commit", "-m", options.PatchMsg+" ["+ver.String()+"]")
-			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-
+			if !options.PatchSkipPush {
+				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+			} else {
+				log.Info("Skip git push for patch branch: " + branchName)
+			}
 		},
 		TraverseChildren: true,
 	}

@@ -33,12 +33,16 @@ func init() {
 	addFlag(gitCreateReleaseCmd, "release-tag", "t", "", "the tag release version")
 	addFlag(gitCreateReleaseCmd, "release-tag-message", "m", "", "the release tag message")
 	addFlagRef(gitCreateReleaseCmd, hashLength)
+	addBoolFlag(gitCreateReleaseCmd, "release-skip-push", "", false, "skip git push release")
 
 	gitCmd.AddCommand(gitReleaseVersionCmd)
 	addFlagRef(gitReleaseVersionCmd, hashLength)
 
 	gitCmd.AddCommand(gitCreatePatchCmd)
 	addFlagRequired(gitCreatePatchCmd, "patch-tag", "t", "", "the tag version for the patch branch")
+	addFlag(gitCreatePatchCmd, "patch-branch-prefix", "", "", "patch branch prefix")
+	addBoolFlag(gitCreatePatchCmd, "patch-skip-push", "", false, "skip git push patch branch")
+
 }
 
 type gitFlags struct {
@@ -49,6 +53,9 @@ type gitFlags struct {
 	BuildNumberPrefix string `mapstructure:"build-number-prefix"`
 	BuildNumberLength int    `mapstructure:"build-number-length"`
 	ReleaseTagMessage string `mapstructure:"release-tag-message"`
+	PatchBranchPrefix string `mapstructure:"patch-branch-prefix"`
+	PatchSkipPush     bool   `mapstructure:"patch-skip-push"`
+	ReleaseSkipPush   bool   `mapstructure:"release-skip-push"`
 }
 
 var (
@@ -101,7 +108,11 @@ var (
 				msg = ver
 			}
 			execGitCmd("git", "tag", "-a", ver, "-m", msg)
-			execGitCmd("git", "push", "--tag")
+			if !options.ReleaseSkipPush {
+				execGitCmd("git", "push", "--tag")
+			} else {
+				log.Info("Skip git push for release: " + ver)
+			}
 			log.Infof("New release [%s] created.", ver)
 		},
 		TraverseChildren: true,
@@ -131,9 +142,13 @@ var (
 				log.Errorf("Can not created patch branch from the patch version  [%s]!", tagVer.Original())
 				os.Exit(0)
 			}
-			branchName := createPatchBranchName(tagVer)
+			branchName := createPatchBranchName(tagVer, options.PatchBranchPrefix)
 			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
-			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+			if !options.PatchSkipPush {
+				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+			} else {
+				log.Info("Skip git push for patch branch: " + branchName)
+			}
 			log.Infof("New patch branch for version [%s] created.", branchName)
 
 		},
