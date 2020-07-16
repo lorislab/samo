@@ -2,7 +2,9 @@ package internal
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver"
 	"os"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -64,6 +66,26 @@ func (r MavenProject) ID() string {
 	return r.projectID.ID()
 }
 
+// Filename the maven project filename
+func (r MavenProject) Filename() string {
+	return r.filename
+}
+
+// ReleaseSemVersion the release version
+func (r MavenProject) ReleaseSemVersion() *semver.Version {
+	return createVersion(strings.TrimSuffix(r.Version(), "-SNAPSHOT"))
+}
+
+// ReleaseVersion the release version
+func (r MavenProject) ReleaseVersion() string {
+	return r.ReleaseSemVersion().String()
+}
+
+// Name the maven project name
+func (r MavenProject) Name() string {
+	return r.projectID.ArtifactID()
+}
+
 // ArtifactID the maven project artifact id
 func (r MavenProject) ArtifactID() string {
 	return r.projectID.ArtifactID()
@@ -77,7 +99,6 @@ func (r MavenProject) Version() string {
 // SetVersion set project version
 func (r MavenProject) SetVersion(version string) {
 	ReplaceTextInFile(r.filename, version, r.projectID.version.begin(), r.projectID.version.end())
-	log.Infof("Update project '%s' version from [%s] to [%s]\n", r.filename, r.projectID.version.value, version)
 }
 
 // SetParentVersion set project parent version

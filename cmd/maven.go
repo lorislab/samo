@@ -1,12 +1,8 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/spf13/viper"
 
-	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/internal"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -23,13 +19,15 @@ type mavenFlags struct {
 	ReleaseMajor                bool   `mapstructure:"maven-release-major"`
 	HashLength                  int    `mapstructure:"maven-hash-length"`
 	Dockerfile                  string `mapstructure:"maven-dockerfile"`
-	Context                     string `mapstructure:"maven-docker-context"`
-	Branch                      bool   `mapstructure:"maven-docker-branch"`
-	Latest                      bool   `mapstructure:"maven-docker-latest"`
-	Repository                  string `mapstructure:"maven-docker-repo"`
-	Image                       string `mapstructure:"maven-docker-image"`
-	BuildTag                    string `mapstructure:"maven-docker-tag"`
-	IgnoreLatestTag             bool   `mapstructure:"maven-docker-ignore-latest"`
+	DockerContext               string `mapstructure:"maven-docker-context"`
+	DockerBranch                bool   `mapstructure:"maven-docker-branch"`
+	DockerLatest                bool   `mapstructure:"maven-docker-latest"`
+	DockerRepository            string `mapstructure:"maven-docker-repo"`
+	DockerLib                   string `mapstructure:"maven-docker-lib"`
+	DockerImage                 string `mapstructure:"maven-docker-image"`
+	DockerBuildTag              string `mapstructure:"maven-docker-tag"`
+	DockerIgnoreLatest          bool   `mapstructure:"maven-docker-ignore-latest"`
+	DockerSkipPush              bool   `mapstructure:"maven-docker-skip-push"`
 	MavenSettingsFile           string `mapstructure:"maven-settings-file"`
 	MavenSettingsServerID       string `mapstructure:"maven-settings-server-id"`
 	MavenSettingsServerUsername string `mapstructure:"maven-settings-server-username"`
@@ -37,7 +35,11 @@ type mavenFlags struct {
 	ReleaseTagMessage           string `mapstructure:"maven-release-tag-message"`
 	BuildNumberPrefix           string `mapstructure:"maven-build-number-prefix"`
 	BuildNumberLength           int    `mapstructure:"maven-build-number-length"`
-	DevTag                      bool   `mapstructure:"maven-docker-dev"`
+	DockerDevTag                bool   `mapstructure:"maven-docker-dev"`
+	DockerReleaseRepository     string `mapstructure:"maven-docker-release-repo"`
+	DockerReleaseLib            string `mapstructure:"maven-docker-release-lib"`
+	DockerReleaseImage          string `mapstructure:"maven-docker-release-image"`
+	DockerReleaseSkipPush       bool   `mapstructure:"maven-docker-release-skip-push"`
 }
 
 func init() {
@@ -78,10 +80,11 @@ func init() {
 
 	mvnCmd.AddCommand(dockerBuildCmd)
 	addFlagRef(dockerBuildCmd, mavenFile)
-	mavenDockerImage := addFlag(dockerBuildCmd, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
 	addFlagRef(dockerBuildCmd, mavenHashLength)
 	mavenDockerFile := addFlag(dockerBuildCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "maven project dockerfile")
-	addFlag(dockerBuildCmd, "maven-docker-repo", "", "", "the docker repository")
+	mavenDockerRepository := addFlag(dockerBuildCmd, "maven-docker-repo", "", "", "the docker repository")
+	mavenDockerLib := addFlag(dockerBuildCmd, "maven-docker-lib", "", "", "the docker repository library")
+	mavenDockerImage := addFlag(dockerBuildCmd, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
 	mavenDockerContext := addFlag(dockerBuildCmd, "maven-docker-context", "", ".", "the docker build context")
 	addFlag(dockerBuildCmd, "maven-docker-tag", "", "", "add the extra tag to the build image")
 	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "", true, "tag the docker image with a branch name")
@@ -96,13 +99,22 @@ func init() {
 
 	mvnCmd.AddCommand(dockerPushCmd)
 	addFlagRef(dockerPushCmd, mavenFile)
+	addFlagRef(dockerPushCmd, mavenDockerRepository)
+	addFlagRef(dockerPushCmd, mavenDockerLib)
 	addFlagRef(dockerPushCmd, mavenDockerImage)
 	addBoolFlag(dockerPushCmd, "maven-docker-ignore-latest", "", true, "ignore push latest tag to repository")
+	addBoolFlag(dockerPushCmd, "maven-docker-skip-push", "", false, "skip docker push")
 
 	mvnCmd.AddCommand(dockerReleaseCmd)
 	addFlagRef(dockerReleaseCmd, mavenFile)
 	addFlagRef(dockerReleaseCmd, mavenHashLength)
+	addFlagRef(dockerReleaseCmd, mavenDockerRepository)
 	addFlagRef(dockerReleaseCmd, mavenDockerImage)
+	addFlagRef(dockerReleaseCmd, mavenDockerLib)
+	addFlag(dockerReleaseCmd, "maven-docker-release-repo", "", "", "the docker release repository")
+	addFlag(dockerReleaseCmd, "maven-docker-release-lib", "", "", "the docker release repository library")
+	addFlag(dockerReleaseCmd, "maven-docker-release-image", "", "", "the docker release image. Default value maven project artifactId.")
+	addBoolFlag(dockerReleaseCmd, "maven-docker-release-skip-push", "", false, "skip docker push of release image")
 
 	mvnCmd.AddCommand(settingsAddServer)
 	addFlag(settingsAddServer, "maven-settings-file", "s", ".m2/settings.xml", "the maven settings.xml file")
@@ -125,9 +137,8 @@ var (
 		Short: "Show the maven project version",
 		Long:  `Tasks to show the maven project version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			fmt.Printf("%s\n", project.Version())
+			_, project := readMavenOptions()
+			projectVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -136,10 +147,8 @@ var (
 		Short: "Set the maven project version to build version",
 		Long:  `Set the maven project version to build version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			ver := mavenBuildVersion(project, options)
-			project.SetVersion(ver.String())
+			options, project := readMavenOptions()
+			projectSetBuildVersion(project, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
 		},
 		TraverseChildren: true,
 	}
@@ -148,10 +157,8 @@ var (
 		Short: "Show the maven project version to build version",
 		Long:  `Show the maven project version to build version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			ver := mavenBuildVersion(project, options)
-			fmt.Printf("%s\n", ver.String())
+			options, project := readMavenOptions()
+			projectBuildVersion(project, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
 		},
 		TraverseChildren: true,
 	}
@@ -160,10 +167,8 @@ var (
 		Short: "Set the maven project version to release",
 		Long:  `Set the maven project version to release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			ver := versionWithoutSnapshot(project)
-			project.SetVersion(ver.String())
+			_, project := readMavenOptions()
+			projectSetReleaseVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -172,10 +177,8 @@ var (
 		Short: "Show the maven project version to release",
 		Long:  `Show the maven project version to release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			ver := versionWithoutSnapshot(project)
-			fmt.Printf("%s\n", ver.String())
+			_, project := readMavenOptions()
+			projectReleaseVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -184,27 +187,8 @@ var (
 		Short: "Create release of the current project and state",
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			ver := versionWithoutSnapshot(project)
-
-			releaseVersion := ver.String()
-			msg := options.ReleaseTagMessage
-			if len(msg) == 0 {
-				msg = releaseVersion
-			}
-			execGitCmd("git", "tag", "-a", releaseVersion, "-m", msg)
-
-			newVersion := addPrerelease(nextReleaseVersion(ver, options.ReleaseMajor), "SNAPSHOT")
-			project.SetVersion(newVersion.String())
-
-			execGitCmd("git", "add", ".")
-			execGitCmd("git", "commit", "-m", options.DevMsg+" ["+newVersion.String()+"]")
-			if !options.ReleaseSkipPush {
-				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
-			} else {
-				log.Info("Skip git push for release: " + releaseVersion)
-			}
+			options, project := readMavenOptions()
+			projectCreateRelease(project, options.ReleaseTagMessage, options.DevMsg, options.ReleaseMajor, options.ReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
@@ -213,31 +197,8 @@ var (
 		Short: "Create patch of the release",
 		Long:  `Create patch of the release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			tagVer, e := semver.NewVersion(options.PatchTag)
-			if e != nil {
-				log.Panic(e)
-			}
-
-			branchName := createPatchBranchName(tagVer, options.PatchBranchPrefix)
-			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
-
-			// remove the prerelease
-			ver := *tagVer
-			if len(ver.Prerelease()) > 0 {
-				ver = setPrerelease(ver, "")
-			}
-			ver = addPrerelease(ver.IncPatch(), "SNAPSHOT")
-			project := internal.LoadMavenProject(options.Filename)
-			project.SetVersion(ver.String())
-
-			execGitCmd("git", "add", ".")
-			execGitCmd("git", "commit", "-m", options.PatchMsg+" ["+ver.String()+"]")
-			if !options.PatchSkipPush {
-				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-			} else {
-				log.Info("Skip git push for patch branch: " + branchName)
-			}
+			options, project := readMavenOptions()
+			projectCreatePatch(project, options.PatchMsg, options.PatchTag, options.PatchBranchPrefix, options.PatchSkipPush)
 		},
 		TraverseChildren: true,
 	}
@@ -246,38 +207,19 @@ var (
 		Short: "Build the docker image of the maven project",
 		Long:  `Build the docker image of the maven project`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			image := dockerImage(project, options)
-			ver := versionWithoutSnapshot(project)
-
-			pre := updatePrereleaseToHashVersion(ver.Prerelease(), options.HashLength)
-			gitHashVer := setPrerelease(*ver, pre)
-
-			var command []string
-			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
-
-			command = append(command, "-t", imageNameWithTag(image, gitHashVer.String()))
-			if options.Branch {
-				branch := gitBranch()
-				command = append(command, "-t", imageNameWithTag(image, branch))
-			}
-			if options.Latest {
-				command = append(command, "-t", imageNameWithTag(image, "latest"))
-			}
-			if options.DevTag {
-				tmp := dockerDevImage(project, options)
-				command = append(command, "-t", imageNameWithTag(tmp, "latest"))
-			}
-			if len(options.BuildTag) > 0 {
-				command = append(command, "-t", imageNameWithTag(image, options.BuildTag))
-			}
-			if len(options.Dockerfile) > 0 {
-				command = append(command, "-f", options.Dockerfile)
-			}
-			command = append(command, options.Context)
-
-			execCmd("docker", command...)
+			options, project := readMavenOptions()
+			projectDockerBuild(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.HashLength,
+				options.DockerBranch,
+				options.DockerLatest,
+				options.DockerDevTag,
+				options.DockerBuildTag,
+				options.Dockerfile,
+				options.DockerContext)
 		},
 		TraverseChildren: true,
 	}
@@ -286,20 +228,8 @@ var (
 		Short: "Build the docker image of the maven project for local development",
 		Long:  `Build the docker image of the maven project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			image := dockerDevImage(project, options)
-
-			var command []string
-			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
-			command = append(command, "-t", imageNameWithTag(image, "latest"))
-
-			if len(options.Dockerfile) > 0 {
-				command = append(command, "-f", options.Dockerfile)
-			}
-			command = append(command, options.Context)
-
-			execCmd("docker", command...)
+			options, project := readMavenOptions()
+			projectDockerBuildDev(project, options.DockerImage, options.Dockerfile, options.DockerContext)
 		},
 		TraverseChildren: true,
 	}
@@ -308,18 +238,14 @@ var (
 		Short: "Push the docker image of the maven project",
 		Long:  `Push the docker image of the maven project`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-			project := internal.LoadMavenProject(options.Filename)
-			image := dockerImage(project, options)
-
-			if options.IgnoreLatestTag {
-				tag := imageNameWithTag(image, "latest")
-				output := execCmdOutput("docker", "images", "-q", tag)
-				if len(output) > 0 {
-					execCmd("docker", "rmi", tag)
-				}
-			}
-			execCmd("docker", "push", image)
+			options, project := readMavenOptions()
+			projectDockerPush(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.DockerIgnoreLatest,
+				options.DockerSkipPush)
 		},
 		TraverseChildren: true,
 	}
@@ -328,24 +254,17 @@ var (
 		Short: "Release the docker image",
 		Long:  `Release the docker image`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
-
-			// x.x.x
-			project := internal.LoadMavenProject(options.Filename)
-			releaseVersion := versionWithoutSnapshot(project)
-
-			// x.x.x-hash
-			_, _, hash := gitCommit(options.HashLength)
-			ver := versionWithoutSnapshot(project)
-			pullVersion := addPrerelease(*ver, hash)
-
-			image := dockerImage(project, options)
-			imagePull := imageNameWithTag(image, pullVersion.String())
-			execCmd("docker", "pull", imagePull)
-
-			imageRelease := imageNameWithTag(image, releaseVersion.String())
-			execCmd("docker", "tag", imagePull, imageRelease)
-			execCmd("docker", "push", imageRelease)
+			options, project := readMavenOptions()
+			projectDockerRelease(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.HashLength,
+				options.DockerReleaseRepository,
+				options.DockerReleaseLib,
+				options.DockerReleaseImage,
+				options.DockerReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
@@ -354,45 +273,19 @@ var (
 		Short: "Add the maven repository server to the settings",
 		Long:  `Add the maven repository server configuration to the maven settings file`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readMavenOptions()
+			options, _ := readMavenOptions()
 			internal.CreateMavenSettingsServer(options.MavenSettingsFile, options.MavenSettingsServerID, options.MavenSettingsServerUsername, options.MavenSettingsServerPassword)
 		},
 		TraverseChildren: true,
 	}
 )
 
-func dockerDevImage(project *internal.MavenProject, options mavenFlags) string {
-	image := options.Image
-	if len(image) == 0 {
-		image = project.ArtifactID()
-	}
-	return image
-}
-
-func dockerImage(project *internal.MavenProject, options mavenFlags) string {
-	image := dockerDevImage(project, options)
-	if len(options.Repository) > 0 {
-		image = options.Repository + "/" + image
-	}
-	return image
-}
-
-func readMavenOptions() mavenFlags {
-	mavenOptions := mavenFlags{}
-	err := viper.Unmarshal(&mavenOptions)
+func readMavenOptions() (mavenFlags, *internal.MavenProject) {
+	options := mavenFlags{}
+	err := viper.Unmarshal(&options)
 	if err != nil {
 		panic(err)
 	}
-	log.Debug(mavenOptions)
-	return mavenOptions
-}
-
-func versionWithoutSnapshot(project *internal.MavenProject) *semver.Version {
-	return createVersion(strings.TrimSuffix(project.Version(), "-SNAPSHOT"))
-}
-
-func mavenBuildVersion(project *internal.MavenProject, options mavenFlags) semver.Version {
-	cr := versionWithoutSnapshot(project)
-	_, count, hash := gitCommit(options.HashLength)
-	return createProjectBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
+	log.Debug(options)
+	return options, internal.LoadMavenProject(options.Filename)
 }

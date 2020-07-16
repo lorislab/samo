@@ -1,40 +1,41 @@
 package cmd
 
 import (
-	"fmt"
-	"strings"
-
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
-
-	"github.com/Masterminds/semver"
 
 	"github.com/lorislab/samo/internal"
 	"github.com/spf13/cobra"
 )
 
 type npmFlags struct {
-	Filename          string `mapstructure:"npm-file"`
-	BuildNumberPrefix string `mapstructure:"npm-build-number-prefix"`
-	BuildNumberLength int    `mapstructure:"npm-build-number-length"`
-	HashLength        int    `mapstructure:"npm-hash-length"`
-	Image             string `mapstructure:"npm-docker-image"`
-	Dockerfile        string `mapstructure:"npm-dockerfile"`
-	Context           string `mapstructure:"npm-docker-context"`
-	Repository        string `mapstructure:"npm-docker-repo"`
-	Branch            bool   `mapstructure:"npm-docker-branch"`
-	Latest            bool   `mapstructure:"npm-docker-latest"`
-	BuildTag          string `mapstructure:"npm-docker-tag"`
-	IgnoreLatestTag   bool   `mapstructure:"npm-docker-ignore-latest"`
-	DevTag            bool   `mapstructure:"npm-docker-dev"`
-	ReleaseSkipPush   bool   `mapstructure:"npm-release-skip-push"`
-	ReleaseTagMessage string `mapstructure:"npm-release-tag-message"`
-	DevMsg            string `mapstructure:"npm-release-message"`
-	ReleaseMajor      bool   `mapstructure:"npm-release-major"`
-	PatchMsg          string `mapstructure:"npm-patch-message"`
-	PatchBranchPrefix string `mapstructure:"npm-patch-branch-prefix"`
-	PatchSkipPush     bool   `mapstructure:"npm-patch-skip-push"`
-	PatchTag          string `mapstructure:"npm-patch-tag"`
+	Filename                string `mapstructure:"npm-file"`
+	BuildNumberPrefix       string `mapstructure:"npm-build-number-prefix"`
+	BuildNumberLength       int    `mapstructure:"npm-build-number-length"`
+	HashLength              int    `mapstructure:"npm-hash-length"`
+	DockerImage             string `mapstructure:"npm-docker-image"`
+	Dockerfile              string `mapstructure:"npm-dockerfile"`
+	DockerContext           string `mapstructure:"npm-docker-context"`
+	DockerRepository        string `mapstructure:"npm-docker-repo"`
+	DockerBranch            bool   `mapstructure:"npm-docker-branch"`
+	DockerLatest            bool   `mapstructure:"npm-docker-latest"`
+	DockerBuildTag          string `mapstructure:"npm-docker-tag"`
+	DockerIgnoreLatest      bool   `mapstructure:"npm-docker-ignore-latest"`
+	DockerSkipPush          bool   `mapstructure:"npm-docker-skip-push"`
+	DockerDevTag            bool   `mapstructure:"npm-docker-dev"`
+	DockerLib               string `mapstructure:"npm-docker-lib"`
+	ReleaseSkipPush         bool   `mapstructure:"npm-release-skip-push"`
+	ReleaseTagMessage       string `mapstructure:"npm-release-tag-message"`
+	DevMsg                  string `mapstructure:"npm-release-message"`
+	ReleaseMajor            bool   `mapstructure:"npm-release-major"`
+	PatchMsg                string `mapstructure:"npm-patch-message"`
+	PatchBranchPrefix       string `mapstructure:"npm-patch-branch-prefix"`
+	PatchSkipPush           bool   `mapstructure:"npm-patch-skip-push"`
+	PatchTag                string `mapstructure:"npm-patch-tag"`
+	DockerReleaseRepository string `mapstructure:"npm-docker-release-repo"`
+	DockerReleaseLib        string `mapstructure:"npm-docker-release-lib"`
+	DockerReleaseImage      string `mapstructure:"npm-docker-release-image"`
+	DockerReleaseSkipPush   bool   `mapstructure:"npm-docker-release-skip-push"`
 }
 
 func init() {
@@ -64,12 +65,13 @@ func init() {
 	npmDockerImage := addFlag(npmDockerBuildCmd, "npm-docker-image", "", "", "the docker image. Default value maven project name.")
 	addFlagRef(npmDockerBuildCmd, npmHashLength)
 	npmDockerFile := addFlag(npmDockerBuildCmd, "npm-dockerfile", "", "Dockerfile", "the maven project dockerfile")
-	addFlag(npmDockerBuildCmd, "npm-docker-repo", "", "", "the docker repository")
+	npmDockerRepository := addFlag(npmDockerBuildCmd, "npm-docker-repo", "", "", "the docker repository")
 	npmDockerContext := addFlag(npmDockerBuildCmd, "npm-docker-context", "", ".", "the docker build context")
 	addFlag(npmDockerBuildCmd, "npm-docker-tag", "", "", "add the extra tag to the build image")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-branch", "", true, "tag the docker image with a branch name")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-latest", "", true, "tag the docker image with a latest")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "tag the docker image for local development")
+	npmDockerLib := addFlag(npmDockerBuildCmd, "npm-docker-lib", "", "", "the docker repository library")
 
 	npmCmd.AddCommand(npmDockerBuildDevCmd)
 	addFlagRef(npmDockerBuildDevCmd, npmFile)
@@ -79,8 +81,11 @@ func init() {
 
 	npmCmd.AddCommand(npmDockerPushCmd)
 	addFlagRef(npmDockerPushCmd, npmFile)
+	addFlagRef(npmDockerPushCmd, npmDockerRepository)
+	addFlagRef(npmDockerPushCmd, npmDockerLib)
 	addFlagRef(npmDockerPushCmd, npmDockerImage)
 	addBoolFlag(npmDockerPushCmd, "npm-docker-ignore-latest", "", true, "ignore push latest tag to repository")
+	addBoolFlag(npmDockerPushCmd, "npm-docker-skip-push", "", false, "skip docker push")
 
 	npmCmd.AddCommand(npmCreateReleaseCmd)
 	addFlagRef(npmCreateReleaseCmd, npmFile)
@@ -99,7 +104,13 @@ func init() {
 	npmCmd.AddCommand(npmDockerReleaseCmd)
 	addFlagRef(npmDockerReleaseCmd, npmFile)
 	addFlagRef(npmDockerReleaseCmd, npmHashLength)
+	addFlagRef(npmDockerReleaseCmd, npmDockerRepository)
+	addFlagRef(npmDockerReleaseCmd, npmDockerLib)
 	addFlagRef(npmDockerReleaseCmd, npmDockerImage)
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-repo", "", "", "the docker release repository")
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-lib", "", "", "the docker release repository library")
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-image", "", "", "the docker release image. Default value maven project artifactId.")
+	addBoolFlag(npmDockerReleaseCmd, "npm-docker-release-skip-push", "", false, "skip docker push of release image")
 }
 
 var (
@@ -115,9 +126,8 @@ var (
 		Short: "Show the npm project version",
 		Long:  `Tasks to show the npm project version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			fmt.Printf("%s\n", project.Version())
+			_, project := readNpmOptions()
+			projectVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -126,10 +136,8 @@ var (
 		Short: "Set the npm project version to build version",
 		Long:  `Set the npm project version to build version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			ver := npmBuildVersion(project, options)
-			project.SetVersion(ver.String())
+			options, project := readNpmOptions()
+			projectSetBuildVersion(project, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
 		},
 		TraverseChildren: true,
 	}
@@ -138,10 +146,8 @@ var (
 		Short: "Show the npm project version to build version",
 		Long:  `Show the npm project version to build version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			ver := npmBuildVersion(project, options)
-			fmt.Printf("%s\n", ver.String())
+			options, project := readNpmOptions()
+			projectBuildVersion(project, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
 		},
 		TraverseChildren: true,
 	}
@@ -150,10 +156,8 @@ var (
 		Short: "Set the npm project version to release",
 		Long:  `Set the npm project version to release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			ver := npmVersionWithoutSnapshot(project)
-			project.SetVersion(ver.String())
+			_, project := readNpmOptions()
+			projectSetReleaseVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -162,92 +166,8 @@ var (
 		Short: "Show the npm project version to release",
 		Long:  `Show the npm project version to release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			ver := npmVersionWithoutSnapshot(project)
-			fmt.Printf("%s\n", ver.String())
-		},
-		TraverseChildren: true,
-	}
-	npmDockerBuildCmd = &cobra.Command{
-		Use:   "docker-build",
-		Short: "Build the docker image of the maven project",
-		Long:  `Build the docker image of the maven project`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			image := npmDockerImage(project, options)
-			ver := npmVersionWithoutSnapshot(project)
-
-			pre := updatePrereleaseToHashVersion(ver.Prerelease(), options.HashLength)
-			gitHashVer := setPrerelease(*ver, pre)
-
-			var command []string
-			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
-
-			command = append(command, "-t", imageNameWithTag(image, gitHashVer.String()))
-			if options.Branch {
-				branch := gitBranch()
-				command = append(command, "-t", imageNameWithTag(image, branch))
-			}
-			if options.Latest {
-				command = append(command, "-t", imageNameWithTag(image, "latest"))
-			}
-			if options.DevTag {
-				tmp := npmDockerDevImage(project, options)
-				command = append(command, "-t", imageNameWithTag(tmp, "latest"))
-			}
-			if len(options.BuildTag) > 0 {
-				command = append(command, "-t", imageNameWithTag(image, options.BuildTag))
-			}
-			if len(options.Dockerfile) > 0 {
-				command = append(command, "-f", options.Dockerfile)
-			}
-			command = append(command, options.Context)
-
-			execCmd("docker", command...)
-		},
-		TraverseChildren: true,
-	}
-	npmDockerBuildDevCmd = &cobra.Command{
-		Use:   "docker-build-dev",
-		Short: "Build the docker image of the npm project for local development",
-		Long:  `Build the docker image of the npm project for local development`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			image := npmDockerDevImage(project, options)
-
-			var command []string
-			command = append(command, "build", "-t", imageNameWithTag(image, project.Version()))
-			command = append(command, "-t", imageNameWithTag(image, "latest"))
-
-			if len(options.Dockerfile) > 0 {
-				command = append(command, "-f", options.Dockerfile)
-			}
-			command = append(command, options.Context)
-
-			execCmd("docker", command...)
-		},
-		TraverseChildren: true,
-	}
-	npmDockerPushCmd = &cobra.Command{
-		Use:   "docker-push",
-		Short: "Push the docker image of the npm project",
-		Long:  `Push the docker image of the npm project`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			image := npmDockerImage(project, options)
-
-			if options.IgnoreLatestTag {
-				tag := imageNameWithTag(image, "latest")
-				output := execCmdOutput("docker", "images", "-q", tag)
-				if len(output) > 0 {
-					execCmd("docker", "rmi", tag)
-				}
-			}
-			execCmd("docker", "push", image)
+			_, project := readNpmOptions()
+			projectReleaseVersion(project)
 		},
 		TraverseChildren: true,
 	}
@@ -256,27 +176,8 @@ var (
 		Short: "Create release of the current project and state",
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			project := internal.LoadNpmProject(options.Filename)
-			ver := npmVersionWithoutSnapshot(project)
-
-			releaseVersion := ver.String()
-			msg := options.ReleaseTagMessage
-			if len(msg) == 0 {
-				msg = releaseVersion
-			}
-			execGitCmd("git", "tag", "-a", releaseVersion, "-m", msg)
-
-			newVersion := addPrerelease(nextReleaseVersion(ver, options.ReleaseMajor), "")
-			project.SetVersion(newVersion.String())
-
-			execGitCmd("git", "add", ".")
-			execGitCmd("git", "commit", "-m", options.DevMsg+" ["+newVersion.String()+"]")
-			if !options.ReleaseSkipPush {
-				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
-			} else {
-				log.Info("Skip git push for release: " + releaseVersion)
-			}
+			options, project := readNpmOptions()
+			projectCreateRelease(project, options.ReleaseTagMessage, options.DevMsg, options.ReleaseMajor, options.ReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
@@ -285,102 +186,86 @@ var (
 		Short: "Create patch of the release",
 		Long:  `Create patch of the release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-			tagVer, e := semver.NewVersion(options.PatchTag)
-			if e != nil {
-				log.Panic(e)
-			}
-
-			branchName := createPatchBranchName(tagVer, options.PatchBranchPrefix)
-			execGitCmd("git", "checkout", "-b", branchName, options.PatchTag)
-
-			// remove the prerelease
-			ver := *tagVer
-			if len(ver.Prerelease()) > 0 {
-				ver = setPrerelease(ver, "")
-			}
-			ver = addPrerelease(ver.IncPatch(), "")
-			project := internal.LoadNpmProject(options.Filename)
-			project.SetVersion(ver.String())
-
-			execGitCmd("git", "add", ".")
-			execGitCmd("git", "commit", "-m", options.PatchMsg+" ["+ver.String()+"]")
-			execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-
-			if !options.PatchSkipPush {
-				execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-			} else {
-				log.Info("Skip git push for patch branch: " + branchName)
-			}
-
+			options, project := readNpmOptions()
+			projectCreatePatch(project, options.PatchMsg, options.PatchTag, options.PatchBranchPrefix, options.PatchSkipPush)
 		},
 		TraverseChildren: true,
 	}
+	npmDockerBuildCmd = &cobra.Command{
+		Use:   "docker-build",
+		Short: "Build the docker image of the maven project",
+		Long:  `Build the docker image of the maven project`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, project := readNpmOptions()
+			projectDockerBuild(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.HashLength,
+				options.DockerBranch,
+				options.DockerLatest,
+				options.DockerDevTag,
+				options.DockerBuildTag,
+				options.Dockerfile,
+				options.DockerContext)
+		},
+		TraverseChildren: true,
+	}
+	npmDockerBuildDevCmd = &cobra.Command{
+		Use:   "docker-build-dev",
+		Short: "Build the docker image of the npm project for local development",
+		Long:  `Build the docker image of the npm project for local development`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, project := readNpmOptions()
+			projectDockerBuildDev(project, options.DockerImage, options.Dockerfile, options.DockerContext)
+		},
+		TraverseChildren: true,
+	}
+	npmDockerPushCmd = &cobra.Command{
+		Use:   "docker-push",
+		Short: "Push the docker image of the npm project",
+		Long:  `Push the docker image of the npm project`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, project := readNpmOptions()
+			projectDockerPush(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.DockerIgnoreLatest,
+				options.DockerSkipPush)
+		},
+		TraverseChildren: true,
+	}
+
 	npmDockerReleaseCmd = &cobra.Command{
 		Use:   "docker-release",
 		Short: "Release the docker image",
 		Long:  `Release the docker image`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options := readNpmOptions()
-
-			// x.x.x
-			project := internal.LoadNpmProject(options.Filename)
-			releaseVersion := npmVersionWithoutSnapshot(project)
-
-			// x.x.x-hash
-			_, _, hash := gitCommit(options.HashLength)
-			ver := npmVersionWithoutSnapshot(project)
-			pullVersion := addPrerelease(*ver, hash)
-
-			image := npmDockerImage(project, options)
-			imagePull := imageNameWithTag(image, pullVersion.String())
-			execCmd("docker", "pull", imagePull)
-
-			imageRelease := imageNameWithTag(image, releaseVersion.String())
-			execCmd("docker", "tag", imagePull, imageRelease)
-			execCmd("docker", "push", imageRelease)
+			options, project := readNpmOptions()
+			projectDockerRelease(
+				project,
+				options.DockerRepository,
+				options.DockerLib,
+				options.DockerImage,
+				options.HashLength,
+				options.DockerReleaseRepository,
+				options.DockerReleaseLib,
+				options.DockerReleaseImage,
+				options.DockerReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
 )
 
-func npmDockerImage(project *internal.NpmProject, options npmFlags) string {
-	image := npmDockerDevImage(project, options)
-	if len(options.Repository) > 0 {
-		image = options.Repository + "/" + image
-	}
-	return image
-}
-
-func npmDockerDevImage(project *internal.NpmProject, options npmFlags) string {
-	image := options.Image
-	if len(image) == 0 {
-		image = project.Name()
-	}
-	return image
-}
-
-func readNpmOptions() npmFlags {
-	npmOptions := npmFlags{}
-	err := viper.Unmarshal(&npmOptions)
+func readNpmOptions() (npmFlags, *internal.NpmProject) {
+	options := npmFlags{}
+	err := viper.Unmarshal(&options)
 	if err != nil {
 		panic(err)
 	}
-	log.Debug(npmOptions)
-	return npmOptions
-}
-
-func npmVersionWithoutSnapshot(project *internal.NpmProject) *semver.Version {
-	tmp := project.Version()
-	index := strings.Index(tmp, "-")
-	if index != -1 {
-		tmp = tmp[0:index]
-	}
-	return createVersion(tmp)
-}
-
-func npmBuildVersion(project *internal.NpmProject, options npmFlags) semver.Version {
-	cr := npmVersionWithoutSnapshot(project)
-	_, count, hash := gitCommit(options.HashLength)
-	return createProjectBuildVersion(cr.String(), count, hash, options.BuildNumberPrefix, options.BuildNumberLength)
+	log.Debug(options)
+	return options, internal.LoadNpmProject(options.Filename)
 }

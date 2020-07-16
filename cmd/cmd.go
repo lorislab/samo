@@ -3,6 +3,8 @@ package cmd
 import (
 	"bufio"
 	"bytes"
+	"fmt"
+	"github.com/lorislab/samo/internal"
 	"os"
 	"os/exec"
 	"strconv"
@@ -65,6 +67,221 @@ func addViper(command *cobra.Command, name string) *pflag.Flag {
 	}
 	return f
 }
+
+// Commands execution
+
+func projectVersion(project internal.Project) {
+	fmt.Printf("%s\n", project.Version())
+}
+
+func projectSetBuildVersion(project internal.Project, hashLength, length int, prefix string) {
+	buildVersion := buildVersion(project, hashLength, length, prefix)
+	version := project.Version()
+	project.SetVersion(buildVersion)
+	log.Infof("Set project '%s' build version from [%s] to [%s]\n", project.Filename(), version, buildVersion)
+}
+
+func projectBuildVersion(project internal.Project, hashLength, length int, prefix string) {
+	buildVersion := buildVersion(project, hashLength, length, prefix)
+	fmt.Printf("%s\n", buildVersion)
+}
+
+func buildVersion(project internal.Project, hashLength, length int, prefix string) string {
+	releaseVersion := project.ReleaseSemVersion().String()
+	_, count, hash := gitCommit(hashLength)
+	ver := createProjectBuildVersion(releaseVersion, count, hash, prefix, length)
+	return ver.String()
+}
+
+func projectReleaseVersion(project internal.Project) {
+	releaseVersion := project.ReleaseSemVersion().String()
+	fmt.Printf("%s\n", releaseVersion)
+}
+
+func projectSetReleaseVersion(project internal.Project) {
+	releaseVersion := project.ReleaseSemVersion().String()
+	version := project.Version()
+	project.SetVersion(releaseVersion)
+	log.Infof("Set project '%s' build version from [%s] to [%s]\n", project.Filename(), version, releaseVersion)
+}
+
+func projectCreateRelease(project internal.Project, commitMessage, tagMessage string, major, skipPush bool) {
+	releaseVersion := project.ReleaseSemVersion()
+	tag := releaseVersion.String()
+	if len(tagMessage) == 0 {
+		tagMessage = tag
+	}
+	execGitCmd("git", "tag", "-a", tag, "-m", tagMessage)
+
+	ver := addPrerelease(nextReleaseVersion(releaseVersion, major), "SNAPSHOT")
+	devVersion := ver.String()
+	project.SetVersion(devVersion)
+
+	execGitCmd("git", "add", ".")
+	execGitCmd("git", "commit", "-m", commitMessage+" ["+devVersion+"]")
+	if !skipPush {
+		execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+	} else {
+		log.Info("Skip git push for project release version: " + tag)
+	}
+}
+
+func projectCreatePatch(project internal.Project, commitMessage, patchTag, branchPrefix string, skipPush bool) {
+	tagVer, e := semver.NewVersion(patchTag)
+	if e != nil {
+		log.Errorf("The patch tag is not valid version. Value: " + patchTag)
+		log.Panic(e)
+	}
+	if tagVer.Patch() != 0 || len(tagVer.Prerelease()) > 0 {
+		log.Errorf("Can not created patch branch from the patch version  [%s]!", tagVer.Original())
+		os.Exit(0)
+	}
+
+	branchName := createPatchBranchName(tagVer, branchPrefix)
+	execGitCmd("git", "checkout", "-b", branchName, patchTag)
+	log.Debugf("Branch  '%s' created", branchName)
+
+	// remove the prerelease
+	ver := tagVer.IncPatch()
+	patchVersion := ver.String()
+	project.SetVersion(patchVersion)
+
+	execGitCmd("git", "add", ".")
+	execGitCmd("git", "commit", "-m", commitMessage+" ["+patchVersion+"]")
+	execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+
+	if !skipPush {
+		execGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+	} else {
+		log.Info("Skip git push for project patch version: " + patchVersion)
+	}
+}
+
+func dockerProjectImage(project internal.Project, image string) string {
+	if len(image) == 0 {
+		return project.Name()
+	}
+	return image
+}
+
+func dockerProjectRepositoryImage(project internal.Project, repository, lib, image string) string {
+	tmp := dockerProjectImage(project, image)
+	if len(lib) > 0 {
+		tmp = lib + "/" + tmp
+	}
+	if len(repository) > 0 {
+		tmp = repository + "/" + tmp
+	}
+	return tmp
+}
+
+func dockerImageTag(name, tag string) string {
+	return name + ":" + tag
+}
+
+func projectDockerBuild(project internal.Project, repository, lib, image string, hashLength int,
+	branch, latest, devTag bool, buildTag, dockerfile, context string) {
+	dockerImage := dockerProjectRepositoryImage(project, repository, lib, image)
+	ver := project.ReleaseSemVersion()
+
+	pre := updatePrereleaseToHashVersion(ver.Prerelease(), hashLength)
+	gitHashVer := setPrerelease(*ver, pre)
+
+	var command []string
+	command = append(command, "build", "-t", dockerImageTag(dockerImage, project.Version()))
+
+	command = append(command, "-t", dockerImageTag(dockerImage, gitHashVer.String()))
+	if branch {
+		branch := gitBranch()
+		command = append(command, "-t", dockerImageTag(dockerImage, branch))
+	}
+	if latest {
+		command = append(command, "-t", dockerImageTag(dockerImage, "latest"))
+	}
+	if devTag {
+		tmp := dockerProjectImage(project, image)
+		command = append(command, "-t", dockerImageTag(tmp, "latest"))
+	}
+	if len(buildTag) > 0 {
+		command = append(command, "-t", dockerImageTag(dockerImage, buildTag))
+	}
+	if len(dockerfile) > 0 {
+		command = append(command, "-f", dockerfile)
+	}
+	command = append(command, context)
+
+	execCmd("docker", command...)
+}
+
+func projectDockerBuildDev(project internal.Project, image, dockerfile, context string) {
+	dockerImage := dockerProjectImage(project, image)
+
+	var command []string
+	command = append(command, "build", "-t", dockerImageTag(dockerImage, project.Version()))
+	command = append(command, "-t", dockerImageTag(dockerImage, "latest"))
+
+	if len(dockerfile) > 0 {
+		command = append(command, "-f", dockerfile)
+	}
+	command = append(command, context)
+
+	execCmd("docker", command...)
+}
+
+func projectDockerPush(project internal.Project, repository, lib, image string, ignoreLatest, skipPush bool) {
+	dockerImage := dockerProjectRepositoryImage(project, repository, lib, image)
+	if ignoreLatest {
+		tag := dockerImageTag(dockerImage, "latest")
+		output := execCmdOutput("docker", "images", "-q", tag)
+		if len(output) > 0 {
+			execCmd("docker", "rmi", tag)
+		}
+	}
+	tags := execCmdOutput("docker", "images", "-f", "'reference="+dockerImage+"'", "--format", "'{{.Repository}}: {{.Tag}}'")
+	fmt.Printf("%s\n", tags)
+
+	if !skipPush {
+		execCmd("docker", "push", dockerImage)
+	} else {
+		log.Info("Skip docker push for docker image: " + dockerImage)
+	}
+}
+
+func projectDockerRelease(project internal.Project, repository, lib, image string, hashLength int,
+	releaseRepository, releaseLib, releaseImage string,
+	skipPush bool) {
+
+	// x.x.x-hash
+	_, _, hash := gitCommit(hashLength)
+	version := project.ReleaseSemVersion()
+	pullVersion := addPrerelease(*version, hash)
+	imagePull := dockerImageTag(dockerProjectRepositoryImage(project, repository, lib, image), pullVersion.String())
+	execCmd("docker", "pull", imagePull)
+
+	// check the release configuration
+	if len(releaseRepository) == 0 {
+		releaseRepository = repository
+	}
+	if len(releaseLib) == 0 {
+		releaseLib = lib
+	}
+	if len(releaseImage) == 0 {
+		releaseImage = image
+	}
+
+	// x.x.x
+	releaseVersion := project.ReleaseSemVersion()
+	imageRelease := dockerImageTag(dockerProjectRepositoryImage(project, releaseRepository, releaseLib, releaseImage), releaseVersion.String())
+	execCmd("docker", "tag", imagePull, imageRelease)
+
+	if !skipPush {
+		execCmd("docker", "push", imageRelease)
+	} else {
+		log.Info("Skip docker push for docker release image: " + imageRelease)
+	}
+}
+
+//////////////////////
 
 func execCmd(name string, arg ...string) {
 	log.Info(name+" ", strings.Join(arg, " "))
@@ -161,6 +378,7 @@ func addPrerelease(ver semver.Version, prerelease string) semver.Version {
 func setPrerelease(ver semver.Version, prerelease string) semver.Version {
 	result, err := ver.SetPrerelease(prerelease)
 	if err != nil {
+		log.Errorf("Error set pre-release %s version %s", prerelease, ver.String())
 		log.Panic(err)
 	}
 	return result
@@ -281,8 +499,4 @@ func updatePrereleaseToHashVersion(ver string, length int) string {
 		pre = pre + "."
 	}
 	return pre + hash
-}
-
-func imageNameWithTag(name, tag string) string {
-	return name + ":" + tag
 }

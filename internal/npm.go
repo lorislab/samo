@@ -1,7 +1,9 @@
 package internal
 
 import (
+	"github.com/Masterminds/semver"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 const (
@@ -15,6 +17,21 @@ type NpmProject struct {
 	name, version *XPathItem
 }
 
+// ReleaseSemVersion the release version
+func (r NpmProject) ReleaseSemVersion() *semver.Version {
+	tmp := r.Version()
+	index := strings.Index(tmp, "-")
+	if index != -1 {
+		tmp = tmp[0:index]
+	}
+	return createVersion(tmp)
+}
+
+// ReleaseVersion the npm project release version
+func (r NpmProject) ReleaseVersion() string {
+	return r.ReleaseSemVersion().String()
+}
+
 // Name the npm project name
 func (r NpmProject) Name() string {
 	return r.name.value
@@ -25,10 +42,14 @@ func (r NpmProject) Version() string {
 	return r.version.value
 }
 
+// Filename the project filename
+func (r NpmProject) Filename() string {
+	return r.filename
+}
+
 // SetVersion set project version
 func (r NpmProject) SetVersion(version string) {
 	ReplaceTextInFile(r.filename, version, r.version.begin(), r.version.end())
-	log.Infof("Update project '%s' version from [%s] to [%s]\n", r.filename, r.version.value, version)
 }
 
 // LoadNpmProject load maven project
