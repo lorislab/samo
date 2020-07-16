@@ -11,7 +11,7 @@ const (
 	npmName    string = "/name"
 )
 
-// NpmProject maven project
+// NpmProject npm project
 type NpmProject struct {
 	filename      string
 	name, version *XPathItem
@@ -24,12 +24,7 @@ func (r NpmProject) ReleaseSemVersion() *semver.Version {
 	if index != -1 {
 		tmp = tmp[0:index]
 	}
-	return createVersion(tmp)
-}
-
-// ReleaseVersion the npm project release version
-func (r NpmProject) ReleaseVersion() string {
-	return r.ReleaseSemVersion().String()
+	return CreateVersion(tmp)
 }
 
 // Name the npm project name
@@ -51,6 +46,12 @@ func (r NpmProject) Filename() string {
 func (r NpmProject) SetVersion(version string) {
 	ReplaceTextInFile(r.filename, version, r.version.begin(), r.version.end())
 }
+
+// NextReleaseSuffix next release suffix
+func (r NpmProject) NextReleaseSuffix() string {
+	return ""
+}
+
 
 // LoadNpmProject load maven project
 func LoadNpmProject(filename string) *NpmProject {

@@ -71,14 +71,14 @@ func (r MavenProject) Filename() string {
 	return r.filename
 }
 
-// ReleaseSemVersion the release version
-func (r MavenProject) ReleaseSemVersion() *semver.Version {
-	return createVersion(strings.TrimSuffix(r.Version(), "-SNAPSHOT"))
+// NextReleaseSuffix next release suffix
+func (r MavenProject) NextReleaseSuffix() string {
+	return "SNAPSHOT"
 }
 
-// ReleaseVersion the release version
-func (r MavenProject) ReleaseVersion() string {
-	return r.ReleaseSemVersion().String()
+// ReleaseSemVersion the release version
+func (r MavenProject) ReleaseSemVersion() *semver.Version {
+	return CreateVersion(strings.TrimSuffix(r.Version(), "-SNAPSHOT"))
 }
 
 // Name the maven project name
