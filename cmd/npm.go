@@ -13,17 +13,17 @@ type npmFlags struct {
 	BuildNumberPrefix       string `mapstructure:"npm-build-number-prefix"`
 	BuildNumberLength       int    `mapstructure:"npm-build-number-length"`
 	HashLength              int    `mapstructure:"npm-hash-length"`
-	DockerImage             string `mapstructure:"npm-docker-image"`
+	DockerRepository        string `mapstructure:"npm-docker-repository"`
 	Dockerfile              string `mapstructure:"npm-dockerfile"`
 	DockerContext           string `mapstructure:"npm-docker-context"`
-	DockerRepository        string `mapstructure:"npm-docker-repo"`
+	DockerRegistry          string `mapstructure:"npm-docker-registry"`
 	DockerBranch            bool   `mapstructure:"npm-docker-branch"`
 	DockerLatest            bool   `mapstructure:"npm-docker-latest"`
 	DockerBuildTag          string `mapstructure:"npm-docker-tag"`
 	DockerIgnoreLatest      bool   `mapstructure:"npm-docker-ignore-latest"`
 	DockerSkipPush          bool   `mapstructure:"npm-docker-skip-push"`
 	DockerDevTag            bool   `mapstructure:"npm-docker-dev"`
-	DockerLib               string `mapstructure:"npm-docker-lib"`
+	DockerRepoPrefix        string `mapstructure:"npm-docker-repo-prefix"`
 	ReleaseSkipPush         bool   `mapstructure:"npm-release-skip-push"`
 	ReleaseTagMessage       string `mapstructure:"npm-release-tag-message"`
 	DevMsg                  string `mapstructure:"npm-release-message"`
@@ -32,9 +32,9 @@ type npmFlags struct {
 	PatchBranchPrefix       string `mapstructure:"npm-patch-branch-prefix"`
 	PatchSkipPush           bool   `mapstructure:"npm-patch-skip-push"`
 	PatchTag                string `mapstructure:"npm-patch-tag"`
-	DockerReleaseRepository string `mapstructure:"npm-docker-release-repo"`
-	DockerReleaseLib        string `mapstructure:"npm-docker-release-lib"`
-	DockerReleaseImage      string `mapstructure:"npm-docker-release-image"`
+	DockerReleaseRegistry   string `mapstructure:"npm-docker-release-registry"`
+	DockerReleaseRepoPrefix string `mapstructure:"npm-docker-release-repo-prefix"`
+	DockerReleaseRepository string `mapstructure:"npm-docker-release-repository"`
 	DockerReleaseSkipPush   bool   `mapstructure:"npm-docker-release-skip-push"`
 }
 
@@ -62,16 +62,16 @@ func init() {
 
 	npmCmd.AddCommand(npmDockerBuildCmd)
 	addFlagRef(npmDockerBuildCmd, npmFile)
-	npmDockerImage := addFlag(npmDockerBuildCmd, "npm-docker-image", "", "", "the docker image. Default value maven project name.")
+	npmDockerImage := addFlag(npmDockerBuildCmd, "npm-docker-repository", "", "", "the docker repository. Default value maven project name.")
 	addFlagRef(npmDockerBuildCmd, npmHashLength)
 	npmDockerFile := addFlag(npmDockerBuildCmd, "npm-dockerfile", "", "Dockerfile", "the maven project dockerfile")
-	npmDockerRepository := addFlag(npmDockerBuildCmd, "npm-docker-repo", "", "", "the docker repository")
+	npmDockerRepository := addFlag(npmDockerBuildCmd, "npm-docker-registry", "", "", "the docker registry")
 	npmDockerContext := addFlag(npmDockerBuildCmd, "npm-docker-context", "", ".", "the docker build context")
 	addFlag(npmDockerBuildCmd, "npm-docker-tag", "", "", "add the extra tag to the build image")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-branch", "", true, "tag the docker image with a branch name")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-latest", "", true, "tag the docker image with a latest")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "tag the docker image for local development")
-	npmDockerLib := addFlag(npmDockerBuildCmd, "npm-docker-lib", "", "", "the docker repository library")
+	npmDockerLib := addFlag(npmDockerBuildCmd, "npm-docker-repo-prefix", "", "", "the docker repository prefix")
 
 	npmCmd.AddCommand(npmDockerBuildDevCmd)
 	addFlagRef(npmDockerBuildDevCmd, npmFile)
@@ -107,10 +107,10 @@ func init() {
 	addFlagRef(npmDockerReleaseCmd, npmDockerRepository)
 	addFlagRef(npmDockerReleaseCmd, npmDockerLib)
 	addFlagRef(npmDockerReleaseCmd, npmDockerImage)
-	addFlag(npmDockerReleaseCmd, "npm-docker-release-repo", "", "", "the docker release repository")
-	addFlag(npmDockerReleaseCmd, "npm-docker-release-lib", "", "", "the docker release repository library")
-	addFlag(npmDockerReleaseCmd, "npm-docker-release-image", "", "", "the docker release image. Default value maven project artifactId.")
-	addBoolFlag(npmDockerReleaseCmd, "npm-docker-release-skip-push", "", false, "skip docker push of release image")
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-registry", "", "", "the docker release registry")
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-repo-prefix", "", "", "the docker release repository prefix")
+	addFlag(npmDockerReleaseCmd, "npm-docker-release-repository", "", "", "the docker release repository. Default value maven project artifactId.")
+	addBoolFlag(npmDockerReleaseCmd, "npm-docker-release-skip-push", "", false, "skip docker push of release image to registry")
 }
 
 var (
@@ -199,9 +199,9 @@ var (
 			options, project := readNpmOptions()
 			projectDockerBuild(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.HashLength,
 				options.DockerBranch,
 				options.DockerLatest,
@@ -218,7 +218,7 @@ var (
 		Long:  `Build the docker image of the npm project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readNpmOptions()
-			projectDockerBuildDev(project, options.DockerImage, options.Dockerfile, options.DockerContext)
+			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext)
 		},
 		TraverseChildren: true,
 	}
@@ -230,9 +230,9 @@ var (
 			options, project := readNpmOptions()
 			projectDockerPush(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.DockerIgnoreLatest,
 				options.DockerSkipPush)
 		},
@@ -241,19 +241,19 @@ var (
 
 	npmDockerReleaseCmd = &cobra.Command{
 		Use:   "docker-release",
-		Short: "Release the docker image",
-		Long:  `Release the docker image`,
+		Short: "Release the docker image and push to release registry",
+		Long:  `Release the docker image and push to release registry`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readNpmOptions()
 			projectDockerRelease(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.HashLength,
+				options.DockerReleaseRegistry,
+				options.DockerReleaseRepoPrefix,
 				options.DockerReleaseRepository,
-				options.DockerReleaseLib,
-				options.DockerReleaseImage,
 				options.DockerReleaseSkipPush)
 		},
 		TraverseChildren: true,

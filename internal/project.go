@@ -102,7 +102,7 @@ func nextPrerelease(data string) (bool, string) {
 func ExecCmdOutput(name string, arg ...string) string {
 	log.Debug(name+" ", strings.Join(arg, " "))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output:\n", string(out))
+	log.Debug("Output: ", string(out))
 	if err != nil {
 		log.Error(string(out))
 		log.Panic(err)
@@ -113,14 +113,14 @@ func ExecCmdOutput(name string, arg ...string) string {
 func execCmdOutputErr(name string, arg ...string) (string, error) {
 	log.Debug(name+" ", strings.Join(arg, " "))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output:\n", string(out))
+	log.Debug("Output: ", string(out))
 	return string(bytes.TrimRight(out, "\n")), err
 }
 
 func execCmdErr(name string, arg ...string) error {
 	log.Debug(name+" ", strings.Join(arg, " "))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output:\n", string(out))
+	log.Debug("Output: ", string(out))
 	if err != nil {
 		log.Error(err)
 	}

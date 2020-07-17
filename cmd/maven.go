@@ -22,9 +22,9 @@ type mavenFlags struct {
 	DockerContext               string `mapstructure:"maven-docker-context"`
 	DockerBranch                bool   `mapstructure:"maven-docker-branch"`
 	DockerLatest                bool   `mapstructure:"maven-docker-latest"`
-	DockerRepository            string `mapstructure:"maven-docker-repo"`
-	DockerLib                   string `mapstructure:"maven-docker-lib"`
-	DockerImage                 string `mapstructure:"maven-docker-image"`
+	DockerRegistry              string `mapstructure:"maven-docker-registry"`
+	DockerRepoPrefix            string `mapstructure:"maven-docker-repo-prefix"`
+	DockerRepository            string `mapstructure:"maven-docker-repository"`
 	DockerBuildTag              string `mapstructure:"maven-docker-tag"`
 	DockerIgnoreLatest          bool   `mapstructure:"maven-docker-ignore-latest"`
 	DockerSkipPush              bool   `mapstructure:"maven-docker-skip-push"`
@@ -36,9 +36,9 @@ type mavenFlags struct {
 	BuildNumberPrefix           string `mapstructure:"maven-build-number-prefix"`
 	BuildNumberLength           int    `mapstructure:"maven-build-number-length"`
 	DockerDevTag                bool   `mapstructure:"maven-docker-dev"`
-	DockerReleaseRepository     string `mapstructure:"maven-docker-release-repo"`
-	DockerReleaseLib            string `mapstructure:"maven-docker-release-lib"`
-	DockerReleaseImage          string `mapstructure:"maven-docker-release-image"`
+	DockerReleaseRegistry       string `mapstructure:"maven-docker-release-registry"`
+	DockerReleaseRepoPrefix     string `mapstructure:"maven-docker-release-repo-prefix"`
+	DockerReleaseRepository     string `mapstructure:"maven-docker-release-repository"`
 	DockerReleaseSkipPush       bool   `mapstructure:"maven-docker-release-skip-push"`
 }
 
@@ -82,9 +82,9 @@ func init() {
 	addFlagRef(dockerBuildCmd, mavenFile)
 	addFlagRef(dockerBuildCmd, mavenHashLength)
 	mavenDockerFile := addFlag(dockerBuildCmd, "maven-dockerfile", "d", "src/main/docker/Dockerfile", "maven project dockerfile")
-	mavenDockerRepository := addFlag(dockerBuildCmd, "maven-docker-repo", "", "", "the docker repository")
-	mavenDockerLib := addFlag(dockerBuildCmd, "maven-docker-lib", "", "", "the docker repository library")
-	mavenDockerImage := addFlag(dockerBuildCmd, "maven-docker-image", "i", "", "the docker image. Default value maven project artifactId.")
+	mavenDockerRepository := addFlag(dockerBuildCmd, "maven-docker-registry", "", "", "the docker registry")
+	mavenDockerLib := addFlag(dockerBuildCmd, "maven-docker-repo-prefix", "", "", "the docker repository prefix")
+	mavenDockerImage := addFlag(dockerBuildCmd, "maven-docker-repository", "i", "", "the docker repository. Default value maven project artifactId.")
 	mavenDockerContext := addFlag(dockerBuildCmd, "maven-docker-context", "", ".", "the docker build context")
 	addFlag(dockerBuildCmd, "maven-docker-tag", "", "", "add the extra tag to the build image")
 	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "", true, "tag the docker image with a branch name")
@@ -111,10 +111,10 @@ func init() {
 	addFlagRef(dockerReleaseCmd, mavenDockerRepository)
 	addFlagRef(dockerReleaseCmd, mavenDockerImage)
 	addFlagRef(dockerReleaseCmd, mavenDockerLib)
-	addFlag(dockerReleaseCmd, "maven-docker-release-repo", "", "", "the docker release repository")
-	addFlag(dockerReleaseCmd, "maven-docker-release-lib", "", "", "the docker release repository library")
-	addFlag(dockerReleaseCmd, "maven-docker-release-image", "", "", "the docker release image. Default value maven project artifactId.")
-	addBoolFlag(dockerReleaseCmd, "maven-docker-release-skip-push", "", false, "skip docker push of release image")
+	addFlag(dockerReleaseCmd, "maven-docker-release-registry", "", "", "the docker release registry")
+	addFlag(dockerReleaseCmd, "maven-docker-release-repo-prefix", "", "", "the docker release repository prefix")
+	addFlag(dockerReleaseCmd, "maven-docker-release-repository", "", "", "the docker release repository. Default value maven project artifactId.")
+	addBoolFlag(dockerReleaseCmd, "maven-docker-release-skip-push", "", false, "skip docker push of release image to registry")
 
 	mvnCmd.AddCommand(settingsAddServer)
 	addFlag(settingsAddServer, "maven-settings-file", "s", ".m2/settings.xml", "the maven settings.xml file")
@@ -210,9 +210,9 @@ var (
 			options, project := readMavenOptions()
 			projectDockerBuild(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.HashLength,
 				options.DockerBranch,
 				options.DockerLatest,
@@ -229,7 +229,7 @@ var (
 		Long:  `Build the docker image of the maven project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readMavenOptions()
-			projectDockerBuildDev(project, options.DockerImage, options.Dockerfile, options.DockerContext)
+			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext)
 		},
 		TraverseChildren: true,
 	}
@@ -241,9 +241,9 @@ var (
 			options, project := readMavenOptions()
 			projectDockerPush(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.DockerIgnoreLatest,
 				options.DockerSkipPush)
 		},
@@ -251,19 +251,19 @@ var (
 	}
 	dockerReleaseCmd = &cobra.Command{
 		Use:   "docker-release",
-		Short: "Release the docker image",
-		Long:  `Release the docker image`,
+		Short: "Release the docker image and push to release registry",
+		Long:  `Release the docker image and push to release registry`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readMavenOptions()
 			projectDockerRelease(
 				project,
+				options.DockerRegistry,
+				options.DockerRepoPrefix,
 				options.DockerRepository,
-				options.DockerLib,
-				options.DockerImage,
 				options.HashLength,
+				options.DockerReleaseRegistry,
+				options.DockerReleaseRepoPrefix,
 				options.DockerReleaseRepository,
-				options.DockerReleaseLib,
-				options.DockerReleaseImage,
 				options.DockerReleaseSkipPush)
 		},
 		TraverseChildren: true,

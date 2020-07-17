@@ -161,20 +161,20 @@ func projectCreatePatch(project internal.Project, commitMessage, patchTag, branc
 	}
 }
 
-func dockerProjectImage(project internal.Project, image string) string {
-	if len(image) == 0 {
+func dockerProjectImage(project internal.Project, repository string) string {
+	if len(repository) == 0 {
 		return project.Name()
 	}
-	return image
+	return repository
 }
 
-func dockerProjectRepositoryImage(project internal.Project, repository, lib, image string) string {
-	tmp := dockerProjectImage(project, image)
-	if len(lib) > 0 {
-		tmp = lib + "/" + tmp
+func dockerProjectRepositoryImage(project internal.Project, registry, repositoryPrefix, repository string) string {
+	tmp := dockerProjectImage(project, repository)
+	if len(repositoryPrefix) > 0 {
+		tmp = repositoryPrefix + tmp
 	}
-	if len(repository) > 0 {
-		tmp = repository + "/" + tmp
+	if len(registry) > 0 {
+		tmp = registry + "/" + tmp
 	}
 	return tmp
 }
@@ -183,9 +183,9 @@ func dockerImageTag(name, tag string) string {
 	return name + ":" + tag
 }
 
-func projectDockerBuild(project internal.Project, repository, lib, image string, hashLength int,
+func projectDockerBuild(project internal.Project, registry, repositoryPrefix, repository string, hashLength int,
 	branch, latest, devTag bool, buildTag, dockerfile, context string) {
-	dockerImage := dockerProjectRepositoryImage(project, repository, lib, image)
+	dockerImage := dockerProjectRepositoryImage(project, registry, repositoryPrefix, repository)
 	ver := project.ReleaseSemVersion()
 
 	pre := internal.UpdatePrereleaseToHashVersion(ver.Prerelease(), hashLength)
@@ -203,7 +203,7 @@ func projectDockerBuild(project internal.Project, repository, lib, image string,
 		command = append(command, "-t", dockerImageTag(dockerImage, "latest"))
 	}
 	if devTag {
-		tmp := dockerProjectImage(project, image)
+		tmp := dockerProjectImage(project, repository)
 		command = append(command, "-t", dockerImageTag(tmp, "latest"))
 	}
 	if len(buildTag) > 0 {
@@ -232,8 +232,8 @@ func projectDockerBuildDev(project internal.Project, image, dockerfile, context 
 	internal.ExecCmd("docker", command...)
 }
 
-func projectDockerPush(project internal.Project, repository, lib, image string, ignoreLatest, skipPush bool) {
-	dockerImage := dockerProjectRepositoryImage(project, repository, lib, image)
+func projectDockerPush(project internal.Project, registry, repositoryPrefix, repository string, ignoreLatest, skipPush bool) {
+	dockerImage := dockerProjectRepositoryImage(project, registry, repositoryPrefix, repository)
 	if ignoreLatest {
 		tag := dockerImageTag(dockerImage, "latest")
 		output := internal.ExecCmdOutput("docker", "images", "-q", tag)
@@ -253,31 +253,31 @@ func projectDockerPush(project internal.Project, repository, lib, image string, 
 	}
 }
 
-func projectDockerRelease(project internal.Project, repository, lib, image string, hashLength int,
-	releaseRepository, releaseLib, releaseImage string,
+func projectDockerRelease(project internal.Project, registry, repositoryPrefix, repository string, hashLength int,
+	releaseRegistry, releaseRepoPrefix, releaseRepository string,
 	skipPush bool) {
 
 	// x.x.x-hash
 	_, _, hash := internal.GitCommit(hashLength)
 	version := project.ReleaseSemVersion()
 	pullVersion := internal.AddPrerelease(*version, hash)
-	imagePull := dockerImageTag(dockerProjectRepositoryImage(project, repository, lib, image), pullVersion.String())
+	imagePull := dockerImageTag(dockerProjectRepositoryImage(project, registry, repositoryPrefix, repository), pullVersion.String())
 	internal.ExecCmd("docker", "pull", imagePull)
 
 	// check the release configuration
+	if len(releaseRegistry) == 0 {
+		releaseRegistry = registry
+	}
+	if len(releaseRepoPrefix) == 0 {
+		releaseRepoPrefix = repositoryPrefix
+	}
 	if len(releaseRepository) == 0 {
 		releaseRepository = repository
-	}
-	if len(releaseLib) == 0 {
-		releaseLib = lib
-	}
-	if len(releaseImage) == 0 {
-		releaseImage = image
 	}
 
 	// x.x.x
 	releaseVersion := project.ReleaseSemVersion()
-	imageRelease := dockerImageTag(dockerProjectRepositoryImage(project, releaseRepository, releaseLib, releaseImage), releaseVersion.String())
+	imageRelease := dockerImageTag(dockerProjectRepositoryImage(project, releaseRegistry, releaseRepoPrefix, releaseRepository), releaseVersion.String())
 	internal.ExecCmd("docker", "tag", imagePull, imageRelease)
 
 	if !skipPush {
