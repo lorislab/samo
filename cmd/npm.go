@@ -177,7 +177,7 @@ var (
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readNpmOptions()
-			projectCreateRelease(project, options.ReleaseTagMessage, options.DevMsg, options.ReleaseMajor, options.ReleaseSkipPush)
+			projectCreateRelease(project, options.DevMsg, options.ReleaseTagMessage, options.ReleaseMajor, options.ReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
