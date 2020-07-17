@@ -78,7 +78,12 @@ func (r MavenProject) NextReleaseSuffix() string {
 
 // ReleaseSemVersion the release version
 func (r MavenProject) ReleaseSemVersion() *semver.Version {
-	return CreateVersion(strings.TrimSuffix(r.Version(), "-SNAPSHOT"))
+	tmp := r.Version()
+	index := strings.Index(tmp, "-")
+	if index != -1 {
+		tmp = tmp[0:index]
+	}
+	return CreateVersion(tmp)
 }
 
 // Name the maven project name

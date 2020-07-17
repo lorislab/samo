@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/pflag"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 
@@ -240,11 +241,13 @@ func projectDockerPush(project internal.Project, repository, lib, image string, 
 			internal.ExecCmd("docker", "rmi", tag)
 		}
 	}
-	tags := internal.ExecCmdOutput("docker", "images", "-f", "'reference="+dockerImage+"'", "--format", "'{{.Repository}}: {{.Tag}}'")
-	fmt.Printf("%s\n", tags)
+	reference := strings.TrimPrefix(dockerImage, "docker.io/")
+	tags := internal.ExecCmdOutput("docker", "images", "-f", "reference="+reference+"", "--format", "{{.Tag}}")
+	log.Infof("Push docker image %s tags:\n%s\n", reference, tags)
 
 	if !skipPush {
 		internal.ExecCmd("docker", "push", dockerImage)
+		log.Infof("Push docker image %s done!", reference)
 	} else {
 		log.Info("Skip docker push for docker image: " + dockerImage)
 	}
