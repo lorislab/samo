@@ -96,5 +96,7 @@ func GitCommit(length int) (string, string, string) {
 			count = tmp
 		}
 	}
+	// git describe add 'g' prefix for the commit hash
+	hash = "g" + hash
 	return lastTag, count, hash
 }
