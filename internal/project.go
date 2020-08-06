@@ -131,7 +131,7 @@ func execCmdErr(name string, arg ...string) error {
 func ExecGitCmd(name string, arg ...string) {
 	err := execCmdErr(name, arg...)
 	if err != nil {
-		ExecCmd("rm", "-f", "o.git/index.lock")
+		ExecCmd("rm", "-f", ".git/index.lock")
 	}
 }
 
@@ -229,7 +229,6 @@ func UpdatePrereleaseToHashVersion(ver string, length int) string {
 	}
 	return pre + hash
 }
-
 
 func lpad(data, pad string, length int) string {
 	for i := len(data); i < length; i++ {
