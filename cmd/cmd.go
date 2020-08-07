@@ -120,7 +120,9 @@ func projectCreateRelease(project internal.Project, commitMessage, tagMessage st
 	}
 
 	if !skipPush {
-		internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+		//internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*", "refs/tags/*:refs/tags/*")
+		internal.ExecGitCmd("git", "push")
+		internal.ExecGitCmd("git", "push", "--tags")
 	} else {
 		log.Info("Skip git push for project release version: " + tag)
 	}
@@ -151,11 +153,14 @@ func projectCreatePatch(project internal.Project, commitMessage, patchTag, branc
 
 		internal.ExecGitCmd("git", "add", ".")
 		internal.ExecGitCmd("git", "commit", "-m", commitMessage+" ["+patchVersion+"]")
-		internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
 	}
 
 	if !skipPush {
-		internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+		//internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
+		if len(project.Filename()) > 0 {
+			internal.ExecGitCmd("git", "push")
+		}
+		internal.ExecGitCmd("git", "push", "-u", "origin", branchName)
 	} else {
 		log.Info("Skip git push for project patch version: " + branchName)
 	}
@@ -298,5 +303,3 @@ func isGitLab() bool {
 	tmp, exists := os.LookupEnv("GITLAB_CI")
 	return exists && len(tmp) > 0
 }
-
-
