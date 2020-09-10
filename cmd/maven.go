@@ -28,6 +28,7 @@ type mavenFlags struct {
 	DockerBuildTag              string `mapstructure:"maven-docker-tag"`
 	DockerIgnoreLatest          bool   `mapstructure:"maven-docker-ignore-latest"`
 	DockerSkipPush              bool   `mapstructure:"maven-docker-skip-push"`
+	DockerSkipPull              bool   `mapstructure:"maven-docker-skip-pull"`
 	MavenSettingsFile           string `mapstructure:"maven-settings-file"`
 	MavenSettingsServerID       string `mapstructure:"maven-settings-server-id"`
 	MavenSettingsServerUsername string `mapstructure:"maven-settings-server-username"`
@@ -90,12 +91,14 @@ func init() {
 	addBoolFlag(dockerBuildCmd, "maven-docker-branch", "", true, "tag the docker image with a branch name")
 	addBoolFlag(dockerBuildCmd, "maven-docker-latest", "", true, "tag the docker image with a latest")
 	addBoolFlag(dockerBuildCmd, "maven-docker-dev", "", true, "tag the docker image for local development")
+	mavenDockerSkipPull := addBoolFlag(dockerBuildCmd, "maven-docker-skip-pull", "", false, "skip docker pull for the build")
 
 	mvnCmd.AddCommand(dockerBuildDevCmd)
 	addFlagRef(dockerBuildDevCmd, mavenFile)
 	addFlagRef(dockerBuildDevCmd, mavenDockerImage)
 	addFlagRef(dockerBuildDevCmd, mavenDockerFile)
 	addFlagRef(dockerBuildDevCmd, mavenDockerContext)
+	addFlagRef(dockerBuildDevCmd, mavenDockerSkipPull)
 
 	mvnCmd.AddCommand(dockerPushCmd)
 	addFlagRef(dockerPushCmd, mavenFile)
@@ -219,7 +222,8 @@ var (
 				options.DockerDevTag,
 				options.DockerBuildTag,
 				options.Dockerfile,
-				options.DockerContext)
+				options.DockerContext,
+				options.DockerSkipPull)
 		},
 		TraverseChildren: true,
 	}
@@ -229,7 +233,7 @@ var (
 		Long:  `Build the docker image of the maven project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readMavenOptions()
-			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext)
+			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext, options.DockerSkipPull)
 		},
 		TraverseChildren: true,
 	}

@@ -189,7 +189,7 @@ func dockerImageTag(name, tag string) string {
 }
 
 func projectDockerBuild(project internal.Project, registry, repositoryPrefix, repository string, hashLength int,
-	branch, latest, devTag bool, buildTag, dockerfile, context string) {
+	branch, latest, devTag bool, buildTag, dockerfile, context string, skipPull bool) {
 	dockerImage := dockerProjectRepositoryImage(project, registry, repositoryPrefix, repository)
 	ver := project.ReleaseSemVersion()
 
@@ -197,8 +197,11 @@ func projectDockerBuild(project internal.Project, registry, repositoryPrefix, re
 	gitHashVer := internal.SetPrerelease(*ver, pre)
 
 	var command []string
-	command = append(command, "build", "-t", dockerImageTag(dockerImage, project.Version()))
-
+	command = append(command, "build")
+	if !skipPull {
+		command = append(command, "--pull")
+	}
+	command = append(command, "-t", dockerImageTag(dockerImage, project.Version()))
 	command = append(command, "-t", dockerImageTag(dockerImage, gitHashVer.String()))
 	if branch {
 		branch := gitBranch()
@@ -222,11 +225,15 @@ func projectDockerBuild(project internal.Project, registry, repositoryPrefix, re
 	internal.ExecCmd("docker", command...)
 }
 
-func projectDockerBuildDev(project internal.Project, image, dockerfile, context string) {
+func projectDockerBuildDev(project internal.Project, image, dockerfile, context string, skipPull bool) {
 	dockerImage := dockerProjectImage(project, image)
 
 	var command []string
-	command = append(command, "build", "-t", dockerImageTag(dockerImage, project.Version()))
+	command = append(command, "build")
+	if !skipPull {
+		command = append(command, "--pull")
+	}
+	command = append(command, "-t", dockerImageTag(dockerImage, project.Version()))
 	command = append(command, "-t", dockerImageTag(dockerImage, "latest"))
 
 	if len(dockerfile) > 0 {

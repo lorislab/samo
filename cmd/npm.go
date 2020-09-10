@@ -22,6 +22,7 @@ type npmFlags struct {
 	DockerBuildTag          string `mapstructure:"npm-docker-tag"`
 	DockerIgnoreLatest      bool   `mapstructure:"npm-docker-ignore-latest"`
 	DockerSkipPush          bool   `mapstructure:"npm-docker-skip-push"`
+	DockerSkipPull          bool   `mapstructure:"npm-release-skip-pull"`
 	DockerDevTag            bool   `mapstructure:"npm-docker-dev"`
 	DockerRepoPrefix        string `mapstructure:"npm-docker-repo-prefix"`
 	ReleaseSkipPush         bool   `mapstructure:"npm-release-skip-push"`
@@ -67,17 +68,19 @@ func init() {
 	npmDockerFile := addFlag(npmDockerBuildCmd, "npm-dockerfile", "", "Dockerfile", "the maven project dockerfile")
 	npmDockerRepository := addFlag(npmDockerBuildCmd, "npm-docker-registry", "", "", "the docker registry")
 	npmDockerContext := addFlag(npmDockerBuildCmd, "npm-docker-context", "", ".", "the docker build context")
+	npmDockerLib := addFlag(npmDockerBuildCmd, "npm-docker-repo-prefix", "", "", "the docker repository prefix")
 	addFlag(npmDockerBuildCmd, "npm-docker-tag", "", "", "add the extra tag to the build image")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-branch", "", true, "tag the docker image with a branch name")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-latest", "", true, "tag the docker image with a latest")
 	addBoolFlag(npmDockerBuildCmd, "npm-docker-dev", "", true, "tag the docker image for local development")
-	npmDockerLib := addFlag(npmDockerBuildCmd, "npm-docker-repo-prefix", "", "", "the docker repository prefix")
+	npmDockerSkipPull := addBoolFlag(npmDockerBuildCmd, "npm-docker-skip-pull", "", false, "skip docker pull for the build")
 
 	npmCmd.AddCommand(npmDockerBuildDevCmd)
 	addFlagRef(npmDockerBuildDevCmd, npmFile)
 	addFlagRef(npmDockerBuildDevCmd, npmDockerImage)
 	addFlagRef(npmDockerBuildDevCmd, npmDockerFile)
 	addFlagRef(npmDockerBuildDevCmd, npmDockerContext)
+	addFlagRef(npmDockerBuildDevCmd, npmDockerSkipPull)
 
 	npmCmd.AddCommand(npmDockerPushCmd)
 	addFlagRef(npmDockerPushCmd, npmFile)
@@ -208,7 +211,8 @@ var (
 				options.DockerDevTag,
 				options.DockerBuildTag,
 				options.Dockerfile,
-				options.DockerContext)
+				options.DockerContext,
+				options.DockerSkipPull)
 		},
 		TraverseChildren: true,
 	}
@@ -218,7 +222,7 @@ var (
 		Long:  `Build the docker image of the npm project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readNpmOptions()
-			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext)
+			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext, options.DockerSkipPull)
 		},
 		TraverseChildren: true,
 	}
