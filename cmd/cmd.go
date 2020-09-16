@@ -162,9 +162,6 @@ func projectCreatePatch(project internal.Project, commitMessage, patchTag, branc
 
 	if !skipPush {
 		//internal.ExecGitCmd("git", "push", "origin", "refs/heads/*:refs/heads/*")
-		if len(project.Filename()) > 0 {
-			internal.ExecGitCmd("git", "push")
-		}
 		internal.ExecGitCmd("git", "push", "-u", "origin", branchName)
 	} else {
 		log.Info("Skip git push for project patch version: " + branchName)
