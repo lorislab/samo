@@ -148,6 +148,11 @@ func projectCreatePatch(project internal.Project, commitMessage, patchTag, branc
 	if len(project.Filename()) > 0 {
 		// remove the prerelease
 		ver := tagVer.IncPatch()
+
+		// add suffix (maven = snapshot)
+		ver = internal.AddPrerelease(tagVer.IncPatch(), project.NextReleaseSuffix())
+
+		// set version to project file
 		patchVersion := ver.String()
 		project.SetVersion(patchVersion)
 
