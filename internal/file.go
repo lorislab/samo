@@ -9,6 +9,30 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+// WriteToFile writes the byte array into the file
+func WriteBytesToFile(filename string, data []byte) {
+	dir := filepath.Dir(filename)
+	err := os.MkdirAll(dir, os.ModePerm)
+	if err != nil {
+		panic(err)
+	}
+
+	file, err := os.Create(filename)
+	if err != nil {
+		panic(err)
+	}
+	w := bufio.NewWriter(file)
+
+	_, err = w.Write(data)
+	if err != nil {
+		panic(err)
+	}
+	err = w.Flush()
+	if err != nil {
+		panic(err)
+	}
+}
+
 // WriteToFile writes the data into the file
 func WriteToFile(filename, data string) {
 	dir := filepath.Dir(filename)
@@ -45,4 +69,22 @@ func ReplaceTextInFile(filename, text string, b, e int64) {
 	if err != nil {
 		log.Panic(err)
 	}
+}
+
+func GetAllFilePathsInDirectory(dirpath string) ([]string, error) {
+	var paths []string
+	err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			paths = append(paths, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return paths, nil
 }

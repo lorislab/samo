@@ -2,13 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/internal"
 	"github.com/spf13/pflag"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
-
-	"github.com/Masterminds/semver"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -298,6 +300,49 @@ func projectDockerRelease(project internal.Project, registry, repositoryPrefix, 
 		internal.ExecCmd("docker", "push", imageRelease)
 	} else {
 		log.Info("Skip docker push for docker release image: " + imageRelease)
+	}
+}
+
+func projectHelmFilter(project internal.Project, input, output string, clean bool) {
+
+	// output directory output + project.name
+	outputDir := filepath.FromSlash(output + "/" + project.Name())
+
+	if _, err := os.Stat(output); os.IsNotExist(err) {
+		log.Errorf("Input helm directory '%s' does not exists!", input)
+		os.Exit(1)
+	}
+
+	// clean output directory
+	if clean {
+		if _, err := os.Stat(output); !os.IsNotExist(err) {
+			err := os.RemoveAll(output)
+			if err != nil {
+				log.Panic(err)
+			}
+		}
+	}
+	// get all files from the input directory
+	paths, err := internal.GetAllFilePathsInDirectory(input)
+	if err != nil {
+		panic(err)
+	}
+	for _, path := range paths {
+		// load file
+		buf, err := ioutil.ReadFile(path)
+		if err != nil {
+			log.Panic(err)
+		}
+		// replace project name
+		re := regexp.MustCompile("\\$\\{project\\.name\\}")
+		result := re.ReplaceAll(buf, []byte(project.Name()))
+
+		// replace project version
+		re = regexp.MustCompile("\\$\\{project\\.version\\}")
+		result = re.ReplaceAll(result, []byte(project.Version()))
+
+		// write result to output directory
+		internal.WriteBytesToFile(strings.Replace(path, input, outputDir, -1), result)
 	}
 }
 

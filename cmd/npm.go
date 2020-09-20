@@ -37,6 +37,9 @@ type npmFlags struct {
 	DockerReleaseRepoPrefix string `mapstructure:"npm-docker-release-repo-prefix"`
 	DockerReleaseRepository string `mapstructure:"npm-docker-release-repository"`
 	DockerReleaseSkipPush   bool   `mapstructure:"npm-docker-release-skip-push"`
+	HelmFilterInputDir      string `mapstructure:"npm-helm-filter-input"`
+	HelmFilterOutputDir     string `mapstructure:"npm-helm-filter-output"`
+	HelmFilterClean         bool   `mapstructure:"npm-helm-filter-clean"`
 }
 
 func init() {
@@ -114,6 +117,11 @@ func init() {
 	addFlag(npmDockerReleaseCmd, "npm-docker-release-repo-prefix", "", "", "the docker release repository prefix")
 	addFlag(npmDockerReleaseCmd, "npm-docker-release-repository", "", "", "the docker release repository. Default value maven project artifactId.")
 	addBoolFlag(npmDockerReleaseCmd, "npm-docker-release-skip-push", "", false, "skip docker push of release image to registry")
+
+	npmCmd.AddCommand(npmHelmFilterCmd)
+	addFlag(npmHelmFilterCmd, "npm-helm-filter-input", "", "helm", "filter project helm chart input directory")
+	addFlag(npmHelmFilterCmd, "npm-helm-filter-output", "", "target/helm", "filter project helm chart output directory")
+	addBoolFlag(npmHelmFilterCmd, "npm-helm-filter-clean", "", false, "clean output directory before filter")
 }
 
 var (
@@ -259,6 +267,20 @@ var (
 				options.DockerReleaseRepoPrefix,
 				options.DockerReleaseRepository,
 				options.DockerReleaseSkipPush)
+		},
+		TraverseChildren: true,
+	}
+	npmHelmFilterCmd = &cobra.Command{
+		Use:   "helm-filter",
+		Short: "Filter project helm chart",
+		Long:  `Filter project helm chart`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, project := readNpmOptions()
+			projectHelmFilter(
+				project,
+				options.HelmFilterInputDir,
+				options.HelmFilterOutputDir,
+				options.HelmFilterClean)
 		},
 		TraverseChildren: true,
 	}
