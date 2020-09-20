@@ -9,7 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// WriteToFile writes the byte array into the file
+// WriteBytesToFile writes the byte array into the file
 func WriteBytesToFile(filename string, data []byte) {
 	dir := filepath.Dir(filename)
 	err := os.MkdirAll(dir, os.ModePerm)
@@ -71,9 +71,10 @@ func ReplaceTextInFile(filename, text string, b, e int64) {
 	}
 }
 
-func GetAllFilePathsInDirectory(dirpath string) ([]string, error) {
+// GetAllFilePathsInDirectory get list of all files in the directory
+func GetAllFilePathsInDirectory(dir string) ([]string, error) {
 	var paths []string
-	err := filepath.Walk(dirpath, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
