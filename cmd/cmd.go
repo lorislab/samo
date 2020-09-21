@@ -308,7 +308,7 @@ func projectHelmFilter(project internal.Project, input, output string, clean boo
 	// output directory output + project.name
 	outputDir := filepath.FromSlash(output + "/" + project.Name())
 
-	if _, err := os.Stat(output); os.IsNotExist(err) {
+	if _, err := os.Stat(input); os.IsNotExist(err) {
 		log.Errorf("Input helm directory '%s' does not exists!", input)
 		os.Exit(1)
 	}
