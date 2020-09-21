@@ -47,6 +47,9 @@ func init() {
 	mvnCmd.AddCommand(mvnVersionCmd)
 	mavenFile := addFlag(mvnVersionCmd, "maven-file", "f", "pom.xml", "maven project file")
 
+	mvnCmd.AddCommand(mvnNameCmd)
+	addFlagRef(mvnNameCmd, mavenFile)
+
 	mvnCmd.AddCommand(mvnSetReleaseVersionCmd)
 	addFlagRef(mvnSetReleaseVersionCmd, mavenFile)
 
@@ -142,6 +145,16 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			_, project := readMavenOptions()
 			projectVersion(project)
+		},
+		TraverseChildren: true,
+	}
+	mvnNameCmd = &cobra.Command{
+		Use:   "name",
+		Short: "Show the maven project name",
+		Long:  `Tasks to show the maven project name`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, project := readMavenOptions()
+			projectName(project)
 		},
 		TraverseChildren: true,
 	}

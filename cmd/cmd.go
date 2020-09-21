@@ -68,6 +68,10 @@ func addViper(command *cobra.Command, name string) *pflag.Flag {
 
 // Commands execution
 
+func projectName(project internal.Project) {
+	fmt.Printf("%s\n", project.Name())
+}
+
 func projectVersion(project internal.Project) {
 	fmt.Printf("%s\n", project.Version())
 }

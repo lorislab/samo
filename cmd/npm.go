@@ -46,6 +46,9 @@ func init() {
 	npmCmd.AddCommand(npmVersionCmd)
 	npmFile := addFlag(npmVersionCmd, "npm-file", "", "package.json", "npm project file")
 
+	npmCmd.AddCommand(npmNameCmd)
+	addFlagRef(npmNameCmd, npmFile)
+
 	npmCmd.AddCommand(npmSetReleaseVersionCmd)
 	addFlagRef(npmSetReleaseVersionCmd, npmFile)
 
@@ -139,6 +142,16 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			_, project := readNpmOptions()
 			projectVersion(project)
+		},
+		TraverseChildren: true,
+	}
+	npmNameCmd = &cobra.Command{
+		Use:   "name",
+		Short: "Show the npm project name",
+		Long:  `Tasks to show the npm project name`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, project := readNpmOptions()
+			projectName(project)
 		},
 		TraverseChildren: true,
 	}
