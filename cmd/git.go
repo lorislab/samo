@@ -156,7 +156,7 @@ func gitBranch() string {
 		}
 	}
 	if isGitLab() {
-		tmp, exists := os.LookupEnv("CI_COMMIT_REF_NAME")
+		tmp, exists := os.LookupEnv("CI_COMMIT_REF_SLUG")
 		if exists {
 			return tmp
 		}
