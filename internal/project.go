@@ -3,13 +3,14 @@ package internal
 import (
 	"bufio"
 	"bytes"
-	"github.com/Masterminds/semver"
-	log "github.com/sirupsen/logrus"
 	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 var numberRegex *regexp.Regexp

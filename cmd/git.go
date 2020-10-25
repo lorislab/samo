@@ -2,21 +2,17 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/lorislab/samo/internal"
 	"os"
-	"regexp"
 	"strings"
+
+	"github.com/lorislab/samo/internal"
 
 	"github.com/spf13/viper"
 
 	"github.com/spf13/cobra"
 )
 
-var numberRegex *regexp.Regexp
-
 func init() {
-	numberRegex = regexp.MustCompile("[0-9]+")
-
 	gitCmd.AddCommand(gitBranchCmd)
 
 	gitCmd.AddCommand(gitBuildVersionCmd)
@@ -163,5 +159,3 @@ func gitBranch() string {
 	}
 	return internal.ExecCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
 }
-
-

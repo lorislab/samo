@@ -2,9 +2,10 @@ package internal
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver"
 	"os"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
 
 	log "github.com/sirupsen/logrus"
 )

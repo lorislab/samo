@@ -1,10 +1,11 @@
 package internal
 
 import (
-	"github.com/Masterminds/semver"
-	log "github.com/sirupsen/logrus"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 // GitProject git project

@@ -1,9 +1,10 @@
 package internal
 
 import (
-	"github.com/Masterminds/semver"
-	log "github.com/sirupsen/logrus"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	log "github.com/sirupsen/logrus"
 )
 
 const (
@@ -51,7 +52,6 @@ func (r NpmProject) SetVersion(version string) {
 func (r NpmProject) NextReleaseSuffix() string {
 	return ""
 }
-
 
 // LoadNpmProject load maven project
 func LoadNpmProject(filename string) *NpmProject {

@@ -2,15 +2,16 @@ package cmd
 
 import (
 	"fmt"
-	"github.com/Masterminds/semver"
-	"github.com/lorislab/samo/internal"
-	"github.com/spf13/pflag"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+
+	"github.com/Masterminds/semver/v3"
+	"github.com/lorislab/samo/internal"
+	"github.com/spf13/pflag"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -23,6 +24,7 @@ func Main(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(gitCmd)
 	rootCmd.AddCommand(dockerCmd)
 	rootCmd.AddCommand(npmCmd)
+	rootCmd.AddCommand(clusterCmd)
 }
 
 func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
@@ -40,6 +42,11 @@ func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
 
 func addFlag(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
 	command.Flags().StringP(name, shorthand, value, usage)
+	return addViper(command, name)
+}
+
+func addStringSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {
+	command.Flags().StringSliceP(name, shorthand, value, usage)
 	return addViper(command, name)
 }
 
@@ -146,7 +153,7 @@ func projectCreatePatch(project internal.Project, commitMessage, patchTag, branc
 		os.Exit(0)
 	}
 
-	branchName := branchPrefix + strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+	branchName := branchPrefix + strconv.FormatUint(tagVer.Major(), 10) + "." + strconv.FormatUint(tagVer.Minor(), 10)
 	internal.ExecGitCmd("git", "checkout", "-b", branchName, patchTag)
 	log.Debugf("Branch  '%s' created", branchName)
 
@@ -338,19 +345,17 @@ func projectHelmFilter(project internal.Project, input, output string, clean boo
 			log.Panic(err)
 		}
 		// replace project name
-		re := regexp.MustCompile("\\$\\{project\\.name\\}")
+		re := regexp.MustCompile(`\\$\\{project\\.name\\}`)
 		result := re.ReplaceAll(buf, []byte(project.Name()))
 
 		// replace project version
-		re = regexp.MustCompile("\\$\\{project\\.version\\}")
+		re = regexp.MustCompile(`\\$\\{project\\.version\\}`)
 		result = re.ReplaceAll(result, []byte(project.Version()))
 
 		// write result to output directory
 		internal.WriteBytesToFile(strings.Replace(path, input, outputDir, -1), result)
 	}
 }
-
-//////////////////////
 
 func isGitHub() bool {
 	tmp, exists := os.LookupEnv("GITHUB_REF")
