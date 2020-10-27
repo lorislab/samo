@@ -41,6 +41,7 @@ func init() {
 	addFlagRef(clusterSyncCmd, app)
 	addFlagRef(clusterSyncCmd, tags)
 	addFlagRef(clusterSyncCmd, helmUpdate)
+	addBoolFlag(clusterSyncCmd, "force-upgrade", "", false, "force upgrade for installed application in the cluster")
 
 	clusterCmd.AddCommand(clusterRemoveCmd)
 	addFlagRef(clusterRemoveCmd, configFile)
@@ -53,38 +54,43 @@ type clusterFlags struct {
 	HelmRepoUpdate bool     `mapstructure:"helm-repo-update"`
 	Apps           []string `mapstructure:"app-name"`
 	Tags           []string `mapstructure:"tags"`
+	ForceUpgrade   bool     `mapstructure:"force-upgrade"`
 }
 
-type DeclarationApp struct {
-	Name        string      `yaml:"name"`
+type declarationApp struct {
+	Name      string     `yaml:"name"`
+	Namespace string     `yaml:"namespace"`
+	Tags      []string   `yaml:"tags"`
+	Helm      helmConfig `yaml:"helm"`
+}
+
+type helmConfig struct {
 	Chart       string      `yaml:"chart"`
+	Repo        string      `yaml:"repo"`
 	Version     string      `yaml:"version"`
 	Values      interface{} `yaml:"values"`
 	ValuesFiles []string    `yaml:"files"`
-	Namespace   string      `yaml:"namespace"`
-	Tags        []string    `yaml:"tags"`
 }
-
-type Cluster struct {
-	Helm struct {
-		Alias string `yaml:"alias"`
-	}
+type cluster struct {
 	Cluster struct {
 		Name      string `yaml:"name"`
 		Context   string `yaml:"context"`
 		Namespace string `yaml:"namespace"`
 	} `yaml:"cluster"`
-	Apps []DeclarationApp `yaml:"apps"`
+	Helm struct {
+		Repo string `yaml:"repo"`
+	} `yaml:"helm"`
+	Apps []declarationApp `yaml:"apps"`
 }
 
-type HelmSearchResult struct {
+type helmSearchResult struct {
 	Name        string `yaml:"name"`
 	Description string `yaml:"description"`
 	Version     string `yaml:"version"`
 	AppVersion  string `yaml:"app_version"`
 }
 
-type HelmListResult struct {
+type helmListResult struct {
 	Name       string `yaml:"name"`
 	Status     string `yaml:"status"`
 	Revision   string `yaml:"revision"`
@@ -94,51 +100,54 @@ type HelmListResult struct {
 	Updated    string `yaml:"updated"`
 }
 
-type ClusterAction int
+type clusterAction int
 
 const (
-	NOTHING ClusterAction = iota
-	INSTALL
-	UPGRADE
-	DOWNGRADE
+	nothing clusterAction = iota
+	notfound
+	install
+	upgrade
+	downgrade
 )
 
 var clusterActionStr = []string{
+	"",
 	"",
 	"install",
 	"upgrade",
 	"downgrade",
 }
 
-type Application struct {
+type application struct {
 	Namespace      string
-	Declaration    DeclarationApp
+	Declaration    declarationApp
 	CurrentVersion *semver.Version
 	NextVersion    *semver.Version
-	Action         ClusterAction
+	Action         clusterAction
 	Chart          string
-	Cluster        *HelmListResult
+	RepoChart      string
+	Cluster        *helmListResult
 }
 
-func (a Application) Status() string {
+func (a application) Status() string {
 	if a.Cluster != nil {
 		return a.Cluster.Status
 	}
 	return ""
 }
 
-func (a Application) ActionStr() string {
+func (a application) ActionStr() string {
 	return clusterActionStr[a.Action]
 }
 
-func (a Application) NextVersionStr() string {
+func (a application) NextVersionStr() string {
 	if a.NextVersion == nil {
 		return ""
 	}
 	return a.NextVersion.String()
 }
 
-func (a Application) CurrentVersionStr() string {
+func (a application) CurrentVersionStr() string {
 	if a.CurrentVersion == nil {
 		return ""
 	}
@@ -148,8 +157,8 @@ func (a Application) CurrentVersionStr() string {
 var (
 	clusterCmd = &cobra.Command{
 		Use:              "cluster",
-		Short:            "Cluster operation",
-		Long:             `Cluster operation`,
+		Short:            "cluster operation",
+		Long:             `cluster operation`,
 		TraverseChildren: true,
 	}
 	clusterInfoCmd = &cobra.Command{
@@ -158,14 +167,14 @@ var (
 		Long:  `Info of the cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
-			log.Infof("Cluster %s: %s %s", cmd.Use, options.ConfigFile, cluster)
+			log.Infof("cluster %s: %s %s", cmd.Use, options.ConfigFile, cluster)
 		},
 		TraverseChildren: true,
 	}
 	clusterSyncCmd = &cobra.Command{
 		Use:   "sync",
-		Short: "Sync applications in the cluster",
-		Long:  `Sync applications in the cluster`,
+		Short: "Sync applications in the cluster -install, upgrade or downgrade",
+		Long:  `Sync applications in the cluster - install, upgrade or downgrade`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
 			apps := loadApplications(cluster, options.Tags, options.Apps)
@@ -179,15 +188,20 @@ var (
 				wg.Add(1)
 
 				switch app.Action {
-				case INSTALL:
-					go install(app, &wg)
-				case UPGRADE:
-					go upgrade(app, &wg)
-				case DOWNGRADE:
-					go downgrade(app, &wg)
+				case nothing:
+					if options.ForceUpgrade {
+						go helmUpgrade(app, &wg)
+					}
+				case install:
+					go helmInstall(app, &wg)
+				case upgrade:
+					go helmUpgrade(app, &wg)
+				case downgrade:
+					go helmDowngrade(app, &wg)
 				}
 			}
 			wg.Wait()
+
 			log.Infof("Sync apps finished. Count: %d", count)
 		},
 		TraverseChildren: true,
@@ -207,7 +221,7 @@ var (
 				if app.CurrentVersion != nil {
 					count++
 					wg.Add(1)
-					go uninstall(app, &wg)
+					go helmUninstall(app, &wg)
 				}
 			}
 			wg.Wait()
@@ -233,7 +247,7 @@ var (
 			table.MaxColWidth = 50
 			table.AddRow("NAME", "NAMESPACE", "CHART", "RULE", "CLUSTER", "REPOSITORY", "STATUS", "ACTION")
 			for _, app := range apps {
-				table.AddRow(app.Declaration.Name, app.Namespace, app.Chart, app.Declaration.Version, app.CurrentVersionStr(), app.NextVersionStr(), app.Status(), app.ActionStr())
+				table.AddRow(app.Declaration.Name, app.Namespace, app.Chart, app.Declaration.Helm.Version, app.CurrentVersionStr(), app.NextVersionStr(), app.Status(), app.ActionStr())
 			}
 			fmt.Println(table)
 		},
@@ -241,7 +255,7 @@ var (
 	}
 )
 
-func install(app Application, wg *sync.WaitGroup) {
+func helmInstall(app application, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	var uninstallSteps = []string{"waiting", "installing", "finished"}
@@ -261,10 +275,10 @@ func install(app Application, wg *sync.WaitGroup) {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func downgrade(app Application, wg *sync.WaitGroup) {
+func helmDowngrade(app application, wg *sync.WaitGroup) {
 
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "uninstall", "install", "finished"}
+	var uninstallSteps = []string{"waiting", "helmUninstall", "helmInstall", "finished"}
 	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
 	bar.Width = 50
 	bar.Incr()
@@ -283,10 +297,10 @@ func downgrade(app Application, wg *sync.WaitGroup) {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func upgrade(app Application, wg *sync.WaitGroup) {
+func helmUpgrade(app application, wg *sync.WaitGroup) {
 
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "upgrade", "finished"}
+	var uninstallSteps = []string{"waiting", "helmUpgrade", "finished"}
 	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
 	bar.Width = 50
 	bar.Incr()
@@ -303,7 +317,7 @@ func upgrade(app Application, wg *sync.WaitGroup) {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func uninstall(app Application, wg *sync.WaitGroup) {
+func helmUninstall(app application, wg *sync.WaitGroup) {
 
 	defer wg.Done()
 	var uninstallSteps = []string{"waiting", "uninstalling", "finished"}
@@ -323,7 +337,7 @@ func uninstall(app Application, wg *sync.WaitGroup) {
 	time.Sleep(time.Millisecond * 10)
 }
 
-func loadApplications(cluster Cluster, tags, apps []string) map[string]Application {
+func loadApplications(cluster cluster, tags, apps []string) map[string]application {
 	log.Debugf("Load application info for the cluster filter tags %s apps %s", tags, apps)
 
 	// load all helm releases in the repository
@@ -334,7 +348,7 @@ func loadApplications(cluster Cluster, tags, apps []string) map[string]Applicati
 	log.Infof("Load apps releases from cluster...")
 	clusterReleases := clusterReleases()
 
-	result := make(map[string]Application)
+	result := make(map[string]application)
 
 	type void struct{}
 	var member void
@@ -374,47 +388,52 @@ func loadApplications(cluster Cluster, tags, apps []string) map[string]Applicati
 			namespace = app.Namespace
 		}
 		id := namespace + "-" + app.Name
+
+		chart := app.Name
+		if len(app.Helm.Chart) > 0 {
+			chart = app.Helm.Chart
+		}
+		repoChart := chart
+		if len(app.Helm.Repo) > 0 {
+			repoChart = app.Helm.Repo + "/" + repoChart
+		} else {
+			if len(cluster.Helm.Repo) > 0 {
+				repoChart = cluster.Helm.Repo + "/" + repoChart
+			}
+		}
+
 		var nextVersion *semver.Version
 		var currentVersion *semver.Version
 		clusterVersion, exists := clusterReleases[id]
 		if exists {
-			currentVersion, _ = semver.NewVersion(clusterVersion.AppVersion)
+			currentVersion, _ = semver.NewVersion(strings.TrimPrefix(clusterVersion.Chart, chart+"-"))
 		}
-		chart := app.Chart
-		if !(len(chart) > 0) {
-			if len(cluster.Helm.Alias) > 0 {
-				chart = cluster.Helm.Alias + "/" + chart
-			}
-			chart = chart + app.Name
-		} else {
-			if !strings.Contains(chart, "/") {
-				if len(cluster.Helm.Alias) > 0 {
-					chart = cluster.Helm.Alias + "/" + chart
-				}
-			}
-		}
-		repoVersions, exists := helmSearchResults[chart]
+
+		repoVersions, exists := helmSearchResults[repoChart]
 		if exists {
-			nextVersion = findLatestBaseOnTheRules(repoVersions, app.Version)
+			nextVersion = findLatestBaseOnTheRules(repoVersions, app.Helm.Version)
 		}
-		action := NOTHING
+		action := nothing
 		if nextVersion != nil {
 			if currentVersion == nil {
-				action = INSTALL
+				action = install
 			} else {
 				if currentVersion.LessThan(nextVersion) {
-					action = UPGRADE
+					action = upgrade
 				} else if currentVersion.GreaterThan(nextVersion) {
-					action = DOWNGRADE
+					action = downgrade
 				}
 			}
+		} else {
+			action = notfound
 		}
-		result[app.Name+"-"+namespace] = Application{
+		result[app.Name+"-"+namespace] = application{
 			Namespace:      namespace,
 			Declaration:    app,
 			CurrentVersion: currentVersion,
 			NextVersion:    nextVersion,
 			Action:         action,
+			RepoChart:      repoChart,
 			Chart:          chart,
 			Cluster:        &clusterVersion,
 		}
@@ -422,7 +441,7 @@ func loadApplications(cluster Cluster, tags, apps []string) map[string]Applicati
 	return result
 }
 
-func findLatestBaseOnTheRules(items []HelmSearchResult, rule string) *semver.Version {
+func findLatestBaseOnTheRules(items []helmSearchResult, rule string) *semver.Version {
 	vs := make([]*semver.Version, len(items))
 	for i, r := range items {
 		v, err := semver.NewVersion(r.Version)
@@ -446,11 +465,11 @@ func findLatestBaseOnTheRules(items []HelmSearchResult, rule string) *semver.Ver
 	return nil
 }
 
-func clusterReleases() map[string]HelmListResult {
-	list := make(map[string]HelmListResult)
+func clusterReleases() map[string]helmListResult {
+	list := make(map[string]helmListResult)
 
 	data := internal.ExecCmdOutput("helm", "list", "--output", "yaml", "--all-namespaces")
-	var helmListResult []HelmListResult
+	var helmListResult []helmListResult
 	err := yaml.Unmarshal([]byte(data), &helmListResult)
 	if err != nil {
 		panic(err)
@@ -461,18 +480,18 @@ func clusterReleases() map[string]HelmListResult {
 	return list
 }
 
-func readHelmSearchResult() map[string][]HelmSearchResult {
+func readHelmSearchResult() map[string][]helmSearchResult {
 	data := internal.ExecCmdOutput("helm", "search", "repo", "--devel", "-l", "--output", "yaml")
-	var items []HelmSearchResult
+	var items []helmSearchResult
 	err := yaml.Unmarshal([]byte(data), &items)
 	if err != nil {
 		panic(err)
 	}
-	result := make(map[string][]HelmSearchResult)
+	result := make(map[string][]helmSearchResult)
 	for _, item := range items {
 		i, e := result[item.Name]
 		if !e {
-			i = make([]HelmSearchResult, 0)
+			i = make([]helmSearchResult, 0)
 		}
 		i = append(i, item)
 		result[item.Name] = i
@@ -480,7 +499,7 @@ func readHelmSearchResult() map[string][]HelmSearchResult {
 	return result
 }
 
-func readClusterOptions() (clusterFlags, Cluster) {
+func readClusterOptions() (clusterFlags, cluster) {
 	options := clusterFlags{}
 	err := viper.Unmarshal(&options)
 	if err != nil {
@@ -490,8 +509,8 @@ func readClusterOptions() (clusterFlags, Cluster) {
 	return options, readClusterConfig(options)
 }
 
-func readClusterConfig(options clusterFlags) Cluster {
-	cluster := Cluster{}
+func readClusterConfig(options clusterFlags) cluster {
+	cluster := cluster{}
 	yamlFile, err := ioutil.ReadFile(options.ConfigFile)
 	if err != nil {
 		panic(err)
