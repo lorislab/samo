@@ -2,20 +2,15 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/Masterminds/semver"
 	"io/ioutil"
 	"os"
 	"sort"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/gosuri/uiprogress/util/strutil"
-
-	"github.com/Masterminds/semver"
 
 	"github.com/gosuri/uitable"
 
-	"github.com/gosuri/uiprogress"
 	"github.com/lorislab/samo/internal"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -49,6 +44,10 @@ func init() {
 	addFlagRef(clusterRemoveCmd, tags)
 }
 
+type chart struct {
+	Version string `yaml:"version"`
+}
+
 type clusterFlags struct {
 	ConfigFile     string   `mapstructure:"config-file"`
 	HelmRepoUpdate bool     `mapstructure:"helm-repo-update"`
@@ -62,6 +61,7 @@ type declarationApp struct {
 	Namespace string     `yaml:"namespace"`
 	Tags      []string   `yaml:"tags"`
 	Helm      helmConfig `yaml:"helm"`
+	Priority  int        `yaml:"priority"`
 }
 
 type helmConfig struct {
@@ -77,10 +77,18 @@ type cluster struct {
 		Context   string `yaml:"context"`
 		Namespace string `yaml:"namespace"`
 	} `yaml:"cluster"`
-	Helm struct {
-		Repo string `yaml:"repo"`
-	} `yaml:"helm"`
 	Apps []declarationApp `yaml:"apps"`
+}
+
+func (c cluster) namespace(app declarationApp) string {
+	if len(app.Namespace) > 0 {
+		return app.Namespace
+	}
+	return c.Cluster.Namespace
+}
+
+func (c cluster) id(app declarationApp) string {
+	return id(c.namespace(app), app.Name)
 }
 
 type helmSearchResult struct {
@@ -98,6 +106,14 @@ type helmListResult struct {
 	Chart      string `yaml:"chart"`
 	Namespace  string `yaml:"namespace"`
 	Updated    string `yaml:"updated"`
+}
+
+func (h helmListResult) id() string {
+	return id(h.Namespace, h.Name)
+}
+
+func id(namespace, name string) string {
+	return namespace + "-" + name
 }
 
 type clusterAction int
@@ -125,7 +141,7 @@ type application struct {
 	NextVersion    *semver.Version
 	Action         clusterAction
 	Chart          string
-	RepoChart      string
+	ChartRepo      string
 	Cluster        *helmListResult
 }
 
@@ -180,7 +196,7 @@ var (
 			apps := loadApplications(cluster, options.Tags, options.Apps)
 
 			count := 0
-			uiprogress.Start()
+
 			var wg sync.WaitGroup
 			for _, app := range apps {
 
@@ -215,7 +231,6 @@ var (
 			apps := loadApplications(cluster, options.Tags, options.Apps)
 
 			count := 0
-			uiprogress.Start()
 			var wg sync.WaitGroup
 			for _, app := range apps {
 				if app.CurrentVersion != nil {
@@ -256,85 +271,24 @@ var (
 )
 
 func helmInstall(app application, wg *sync.WaitGroup) {
-
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "installing", "finished"}
-	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
-	bar.Width = 50
-	bar.Incr()
-
-	// prepend the deploy step to the bar
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.Resize(app.Declaration.Name+": "+uninstallSteps[b.Current()-1], 32)
-	})
-
-	bar.Incr()
-	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.Chart, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
-	bar.Incr()
-	// wait to refresh console
-	time.Sleep(time.Millisecond * 10)
+	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
 }
 
 func helmDowngrade(app application, wg *sync.WaitGroup) {
-
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "helmUninstall", "helmInstall", "finished"}
-	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
-	bar.Width = 50
-	bar.Incr()
-
-	// prepend the deploy step to the bar
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.Resize(app.Declaration.Name+": "+uninstallSteps[b.Current()-1], 32)
-	})
-
-	bar.Incr()
 	internal.ExecCmdOutput("helm", "uninstall", app.Declaration.Name, "-n", app.Namespace)
-	bar.Incr()
-	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.Chart, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
-	bar.Incr()
-	// wait to refresh console
-	time.Sleep(time.Millisecond * 10)
+	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
 }
 
 func helmUpgrade(app application, wg *sync.WaitGroup) {
-
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "helmUpgrade", "finished"}
-	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
-	bar.Width = 50
-	bar.Incr()
-
-	// prepend the deploy step to the bar
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.Resize(app.Declaration.Name+": "+uninstallSteps[b.Current()-1], 32)
-	})
-
-	bar.Incr()
-	internal.ExecCmdOutput("helm", "upgrade", app.Declaration.Name, app.Chart, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
-	bar.Incr()
-	// wait to refresh console
-	time.Sleep(time.Millisecond * 10)
+	internal.ExecCmdOutput("helm", "upgrade", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
 }
 
 func helmUninstall(app application, wg *sync.WaitGroup) {
-
 	defer wg.Done()
-	var uninstallSteps = []string{"waiting", "uninstalling", "finished"}
-	bar := uiprogress.AddBar(len(uninstallSteps)).PrependElapsed()
-	bar.Width = 50
-	bar.Incr()
-
-	// prepend the deploy step to the bar
-	bar.PrependFunc(func(b *uiprogress.Bar) string {
-		return strutil.Resize(app.Declaration.Name+": "+uninstallSteps[b.Current()-1], 32)
-	})
-
-	bar.Incr()
 	internal.ExecCmdOutput("helm", "uninstall", app.Declaration.Name, "-n", app.Namespace)
-	bar.Incr()
-	// wait to refresh console
-	time.Sleep(time.Millisecond * 10)
 }
 
 func loadApplications(cluster cluster, tags, apps []string) map[string]application {
@@ -383,23 +337,18 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 				continue
 			}
 		}
-		namespace := cluster.Cluster.Namespace
-		if len(app.Namespace) > 0 {
-			namespace = app.Namespace
-		}
-		id := namespace + "-" + app.Name
 
-		chart := app.Name
-		if len(app.Helm.Chart) > 0 {
-			chart = app.Helm.Chart
-		}
-		repoChart := chart
-		if len(app.Helm.Repo) > 0 {
-			repoChart = app.Helm.Repo + "/" + repoChart
-		} else {
-			if len(cluster.Helm.Repo) > 0 {
-				repoChart = cluster.Helm.Repo + "/" + repoChart
-			}
+		// id of the application
+		id := cluster.id(app)
+
+		chart := app.Helm.Chart
+		chartRepo := chart
+		local := false
+		if strings.HasPrefix(app.Helm.Repo, "alias:") {
+			chartRepo = strings.TrimPrefix(app.Helm.Repo, "alias:") + "/" + chartRepo
+		} else if strings.HasPrefix(app.Helm.Repo, "file://") {
+			chartRepo = strings.TrimPrefix(app.Helm.Repo, "file://")
+			local = true
 		}
 
 		var nextVersion *semver.Version
@@ -409,9 +358,13 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 			currentVersion, _ = semver.NewVersion(strings.TrimPrefix(clusterVersion.Chart, chart+"-"))
 		}
 
-		repoVersions, exists := helmSearchResults[repoChart]
+		repoVersions, exists := helmSearchResults[chartRepo]
 		if exists {
 			nextVersion = findLatestBaseOnTheRules(repoVersions, app.Helm.Version)
+		} else {
+			if local {
+				nextVersion = versionFromLocalChart(chartRepo, app.Helm.Version)
+			}
 		}
 		action := nothing
 		if nextVersion != nil {
@@ -427,18 +380,42 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 		} else {
 			action = notfound
 		}
-		result[app.Name+"-"+namespace] = application{
-			Namespace:      namespace,
+		result[id] = application{
+			Namespace:      cluster.namespace(app),
 			Declaration:    app,
 			CurrentVersion: currentVersion,
 			NextVersion:    nextVersion,
 			Action:         action,
-			RepoChart:      repoChart,
 			Chart:          chart,
+			ChartRepo:      chartRepo,
 			Cluster:        &clusterVersion,
 		}
 	}
 	return result
+}
+
+func versionFromLocalChart(repo string, rule string) *semver.Version {
+	chart := chart{}
+
+	data, err := ioutil.ReadFile(repo + "/Chart.yaml")
+	err = yaml.Unmarshal(data, &chart)
+	if err != nil {
+		panic(err)
+	}
+	ver, err := semver.NewVersion(chart.Version)
+	if err != nil {
+		panic(err)
+	}
+
+	c, err := semver.NewConstraint(rule)
+	if err != nil {
+		panic(err)
+	}
+
+	if c.Check(ver) {
+		return ver
+	}
+	return nil
 }
 
 func findLatestBaseOnTheRules(items []helmSearchResult, rule string) *semver.Version {
@@ -467,15 +444,14 @@ func findLatestBaseOnTheRules(items []helmSearchResult, rule string) *semver.Ver
 
 func clusterReleases() map[string]helmListResult {
 	list := make(map[string]helmListResult)
-
-	data := internal.ExecCmdOutput("helm", "list", "--output", "yaml", "--all-namespaces")
+	data := internal.ExecCmdOutput("helm", "list", "--output", "yaml", "--all-namespaces", "--all")
 	var helmListResult []helmListResult
 	err := yaml.Unmarshal([]byte(data), &helmListResult)
 	if err != nil {
 		panic(err)
 	}
 	for _, item := range helmListResult {
-		list[item.Namespace+"-"+item.Name] = item
+		list[item.id()] = item
 	}
 	return list
 }
