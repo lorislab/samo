@@ -5,6 +5,7 @@ import (
 	"github.com/Masterminds/semver"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -20,10 +21,22 @@ import (
 
 func init() {
 	clusterCmd.AddCommand(clusterInfoCmd)
-	configFile := addFlag(clusterInfoCmd, "config-file", "", "cluster.yaml", "cluster client configuration file.")
+	configFile := addFlag(clusterInfoCmd, "config-file", "", "cluster.yaml", "clusterConfig client configuration file.")
 	app := addStringSliceFlag(clusterInfoCmd, "app-name", "a", []string{}, "application name for the action")
 	tags := addStringSliceFlag(clusterInfoCmd, "tags", "", []string{}, "comma separated list of tags")
 	helmUpdate := addBoolFlag(mvnCreateReleaseCmd, "helm-repo-update", "", false, "helm repo update")
+
+	clusterCmd.AddCommand(clusterCreateCmd)
+	addFlagRef(clusterCreateCmd, configFile)
+
+	clusterCmd.AddCommand(clusterStartCmd)
+	addFlagRef(clusterStartCmd, configFile)
+
+	clusterCmd.AddCommand(clusterStopCmd)
+	addFlagRef(clusterStopCmd, configFile)
+
+	clusterCmd.AddCommand(clusterDeleteCmd)
+	addFlagRef(clusterDeleteCmd, configFile)
 
 	clusterCmd.AddCommand(clusterStatusCmd)
 	addFlagRef(clusterStatusCmd, configFile)
@@ -36,12 +49,12 @@ func init() {
 	addFlagRef(clusterSyncCmd, app)
 	addFlagRef(clusterSyncCmd, tags)
 	addFlagRef(clusterSyncCmd, helmUpdate)
-	addBoolFlag(clusterSyncCmd, "force-upgrade", "", false, "force upgrade for installed application in the cluster")
+	addBoolFlag(clusterSyncCmd, "force-upgrade", "", false, "force upgrade for installed application in the clusterConfig")
 
-	clusterCmd.AddCommand(clusterRemoveCmd)
-	addFlagRef(clusterRemoveCmd, configFile)
-	addFlagRef(clusterRemoveCmd, app)
-	addFlagRef(clusterRemoveCmd, tags)
+	clusterCmd.AddCommand(clusterUninstallCmd)
+	addFlagRef(clusterUninstallCmd, configFile)
+	addFlagRef(clusterUninstallCmd, app)
+	addFlagRef(clusterUninstallCmd, tags)
 }
 
 type chart struct {
@@ -57,7 +70,6 @@ type clusterFlags struct {
 }
 
 type declarationApp struct {
-	Name      string     `yaml:"name"`
 	Namespace string     `yaml:"namespace"`
 	Tags      []string   `yaml:"tags"`
 	Helm      helmConfig `yaml:"helm"`
@@ -71,24 +83,31 @@ type helmConfig struct {
 	Values      interface{} `yaml:"values"`
 	ValuesFiles []string    `yaml:"files"`
 }
-type cluster struct {
+type clusterConfig struct {
 	Cluster struct {
 		Name      string `yaml:"name"`
-		Context   string `yaml:"context"`
 		Namespace string `yaml:"namespace"`
+		K3d       struct {
+			Registry string `yaml:"registry"`
+			Agent    string `yaml:"agent"`
+			Port     string `yaml:"port"`
+		} `yaml:"k3d"`
 	} `yaml:"cluster"`
-	Apps []declarationApp `yaml:"apps"`
+	Apps map[string]declarationApp `yaml:"apps"`
 }
 
-func (c cluster) namespace(app declarationApp) string {
-	if len(app.Namespace) > 0 {
-		return app.Namespace
+func (c clusterConfig) namespace(appName string) string {
+	app, exists := c.Apps[appName]
+	if exists {
+		if len(app.Namespace) > 0 {
+			return app.Namespace
+		}
 	}
 	return c.Cluster.Namespace
 }
 
-func (c cluster) id(app declarationApp) string {
-	return id(c.namespace(app), app.Name)
+func (c clusterConfig) id(appName string) string {
+	return id(c.namespace(appName), appName)
 }
 
 type helmSearchResult struct {
@@ -136,6 +155,7 @@ var clusterActionStr = []string{
 
 type application struct {
 	Namespace      string
+	AppName        string
 	Declaration    declarationApp
 	CurrentVersion *semver.Version
 	NextVersion    *semver.Version
@@ -145,25 +165,25 @@ type application struct {
 	Cluster        *helmListResult
 }
 
-func (a application) Status() string {
+func (a *application) status() string {
 	if a.Cluster != nil {
 		return a.Cluster.Status
 	}
 	return ""
 }
 
-func (a application) ActionStr() string {
+func (a *application) actionStr() string {
 	return clusterActionStr[a.Action]
 }
 
-func (a application) NextVersionStr() string {
+func (a *application) nextVersionStr() string {
 	if a.NextVersion == nil {
 		return ""
 	}
 	return a.NextVersion.String()
 }
 
-func (a application) CurrentVersionStr() string {
+func (a *application) CurrentVersionStr() string {
 	if a.CurrentVersion == nil {
 		return ""
 	}
@@ -182,8 +202,8 @@ var (
 		Short: "Info of the cluster",
 		Long:  `Info of the cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options, cluster := readClusterOptions()
-			log.Infof("cluster %s: %s %s", cmd.Use, options.ConfigFile, cluster)
+			//options, cluster := readClusterOptions()
+			log.Infof("Cluster info!!")
 		},
 		TraverseChildren: true,
 	}
@@ -193,61 +213,67 @@ var (
 		Long:  `Sync applications in the cluster - install, upgrade or downgrade`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
-			apps := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
 
 			count := 0
 
-			var wg sync.WaitGroup
-			for _, app := range apps {
+			for _, key := range keys {
+				var wg sync.WaitGroup
+				for _, app := range apps[key] {
 
-				count++
-				wg.Add(1)
+					count++
+					wg.Add(1)
 
-				switch app.Action {
-				case nothing:
-					if options.ForceUpgrade {
+					switch app.Action {
+					case nothing:
+						if options.ForceUpgrade {
+							go helmUpgrade(app, &wg)
+						}
+					case install:
+						go helmInstall(app, &wg)
+					case upgrade:
 						go helmUpgrade(app, &wg)
+					case downgrade:
+						go helmDowngrade(app, &wg)
 					}
-				case install:
-					go helmInstall(app, &wg)
-				case upgrade:
-					go helmUpgrade(app, &wg)
-				case downgrade:
-					go helmDowngrade(app, &wg)
 				}
+				wg.Wait()
 			}
-			wg.Wait()
-
 			log.Infof("Sync apps finished. Count: %d", count)
 		},
 		TraverseChildren: true,
 	}
-	clusterRemoveCmd = &cobra.Command{
-		Use:   "remove",
-		Short: "Remove applications in the cluster",
-		Long:  `Remove applications in the cluster`,
+	clusterUninstallCmd = &cobra.Command{
+		Use:   "uninstall",
+		Short: "Uninstall applications in the cluster",
+		Long:  `Uninstall applications in the cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
-			apps := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
+			sort.Sort(sort.Reverse(sort.IntSlice(keys)))
 
 			count := 0
-			var wg sync.WaitGroup
-			for _, app := range apps {
-				if app.CurrentVersion != nil {
-					count++
-					wg.Add(1)
-					go helmUninstall(app, &wg)
+
+			for _, key := range keys {
+				var wg sync.WaitGroup
+				for _, app := range apps[key] {
+					if app.CurrentVersion != nil {
+						count++
+						wg.Add(1)
+						go helmUninstall(app, &wg)
+					}
 				}
+				wg.Wait()
 			}
-			wg.Wait()
+
 			log.Infof("Uninstall apps finished. Count: %d", count)
 		},
 		TraverseChildren: true,
 	}
 	clusterStatusCmd = &cobra.Command{
 		Use:   "status",
-		Short: "Status of the cluster",
-		Long:  `Status of the cluster`,
+		Short: "Status of the applications in the cluster",
+		Long:  `Status of the applications in the cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
 
@@ -256,56 +282,128 @@ var (
 				internal.ExecCmdOutput("helm", "repo", "update")
 			}
 
-			apps := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
 
 			table := uitable.New()
 			table.MaxColWidth = 50
-			table.AddRow("NAME", "NAMESPACE", "CHART", "RULE", "CLUSTER", "REPOSITORY", "STATUS", "ACTION")
-			for _, app := range apps {
-				table.AddRow(app.Declaration.Name, app.Namespace, app.Chart, app.Declaration.Helm.Version, app.CurrentVersionStr(), app.NextVersionStr(), app.Status(), app.ActionStr())
+			table.AddRow("PRIORITY", "NAME", "NAMESPACE", "CHART", "RULE", "CLUSTER", "REPOSITORY", "STATUS", "ACTION")
+			for _, key := range keys {
+				for _, app := range apps[key] {
+					table.AddRow(key, app.AppName, app.Namespace, app.Chart, app.Declaration.Helm.Version, app.CurrentVersionStr(), app.nextVersionStr(), app.status(), app.actionStr())
+				}
 			}
 			fmt.Println(table)
 		},
 		TraverseChildren: true,
 	}
+	clusterCreateCmd = &cobra.Command{
+		Use:   "create",
+		Short: "Create the cluster instance",
+		Long:  `Create the cluster instance`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, config := readClusterOptions()
+			k3dCreateCluster(config)
+		},
+		TraverseChildren: true,
+	}
+	clusterDeleteCmd = &cobra.Command{
+		Use:   "delete",
+		Short: "Delete the cluster instance",
+		Long:  `Delete the cluster instance`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, config := readClusterOptions()
+			execK3dCmd(config, "delete")
+		},
+		TraverseChildren: true,
+	}
+	clusterStopCmd = &cobra.Command{
+		Use:   "stop",
+		Short: "Stop the cluster instance",
+		Long:  `Stop the cluster instance`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, config := readClusterOptions()
+			execK3dCmd(config, "stop")
+		},
+		TraverseChildren: true,
+	}
+	clusterStartCmd = &cobra.Command{
+		Use:   "start",
+		Short: "Start the cluster instance",
+		Long:  `Start the cluster instance`,
+		Run: func(cmd *cobra.Command, args []string) {
+			_, config := readClusterOptions()
+			execK3dCmd(config, "start")
+		},
+		TraverseChildren: true,
+	}
 )
 
-func helmInstall(app application, wg *sync.WaitGroup) {
-	defer wg.Done()
-	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
+func k3dCreateCluster(config clusterConfig) {
+	var command []string
+	command = append(command, "cluster", "create", config.Cluster.Name)
+	if len(config.Cluster.K3d.Port) > 0 {
+		command = append(command, "-p", config.Cluster.K3d.Port+":80@loadbalancer")
+	}
+	if len(config.Cluster.K3d.Registry) > 0 {
+		registryFile, err := filepath.Abs(config.Cluster.K3d.Registry)
+		if err != nil {
+			panic(err)
+		}
+		command = append(command, "--volume", registryFile+":/etc/rancher/k3s/registries.yaml")
+	}
+	agents := "2"
+	if len(config.Cluster.K3d.Agent) > 0 {
+		agents = config.Cluster.K3d.Agent
+	}
+	command = append(command, "--agents", agents)
+	internal.ExecCmd("k3d", command...)
 }
 
-func helmDowngrade(app application, wg *sync.WaitGroup) {
-	defer wg.Done()
-	internal.ExecCmdOutput("helm", "uninstall", app.Declaration.Name, "-n", app.Namespace)
-	internal.ExecCmdOutput("helm", "install", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
+func execK3dCmd(config clusterConfig, cmd string) {
+	internal.ExecCmd("k3d", "cluster", cmd, config.Cluster.Name)
 }
 
-func helmUpgrade(app application, wg *sync.WaitGroup) {
+func helmInstall(app *application, wg *sync.WaitGroup) {
 	defer wg.Done()
-	internal.ExecCmdOutput("helm", "upgrade", app.Declaration.Name, app.ChartRepo, "--version", app.NextVersionStr(), "--wait", "-n", app.Namespace)
+	var command []string
+	command = append(command, "install", app.AppName, app.ChartRepo, "--version", app.nextVersionStr(), "--wait", "-n", app.Namespace)
+	command = append(command, "--create-namespace")
+	internal.ExecCmdOutput("helm", command...)
 }
 
-func helmUninstall(app application, wg *sync.WaitGroup) {
+func helmDowngrade(app *application, wg *sync.WaitGroup) {
 	defer wg.Done()
-	internal.ExecCmdOutput("helm", "uninstall", app.Declaration.Name, "-n", app.Namespace)
+	internal.ExecCmdOutput("helm", "uninstall", app.AppName, "-n", app.Namespace)
+	internal.ExecCmdOutput("helm", "install", app.AppName, app.ChartRepo, "--version", app.nextVersionStr(), "--wait", "-n", app.Namespace)
 }
 
-func loadApplications(cluster cluster, tags, apps []string) map[string]application {
-	log.Debugf("Load application info for the cluster filter tags %s apps %s", tags, apps)
+func helmUpgrade(app *application, wg *sync.WaitGroup) {
+	defer wg.Done()
+	internal.ExecCmdOutput("helm", "upgrade", app.AppName, app.ChartRepo, "--version", app.nextVersionStr(), "--wait", "-n", app.Namespace)
+}
+
+func helmUninstall(app *application, wg *sync.WaitGroup) {
+	defer wg.Done()
+	internal.ExecCmdOutput("helm", "uninstall", app.AppName, "-n", app.Namespace)
+}
+
+func loadApplications(cluster clusterConfig, tags, apps []string) (map[int][]*application, []int) {
+	log.Debugf("Load application info for the clusterConfig filter tags %s apps %s", tags, apps)
 
 	// load all helm releases in the repository
 	log.Infof("Load apps releases from helm repo...")
 	helmSearchResults := readHelmSearchResult()
 
-	// load all helm releases in the cluster
-	log.Infof("Load apps releases from cluster...")
+	// load all helm releases in the clusterConfig
+	log.Infof("Load apps releases from clusterConfig...")
 	clusterReleases := clusterReleases()
 
-	result := make(map[string]application)
+	result := make(map[int][]*application)
 
 	type void struct{}
 	var member void
+
+	index := make(map[int]void)
 	mTags := make(map[string]void)
 	if len(tags) > 0 {
 		for _, t := range tags {
@@ -320,9 +418,9 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 	}
 
 	// loop over all apps and check the status
-	for _, app := range cluster.Apps {
+	for appName, app := range cluster.Apps {
 		if len(mApps) > 0 {
-			_, exists := mApps[app.Name]
+			_, exists := mApps[appName]
 			if !exists {
 				continue
 			}
@@ -339,7 +437,7 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 		}
 
 		// id of the application
-		id := cluster.id(app)
+		id := cluster.id(appName)
 
 		chart := app.Helm.Chart
 		chartRepo := chart
@@ -380,8 +478,10 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 		} else {
 			action = notfound
 		}
-		result[id] = application{
-			Namespace:      cluster.namespace(app),
+
+		tmp := &application{
+			AppName:        appName,
+			Namespace:      cluster.namespace(appName),
 			Declaration:    app,
 			CurrentVersion: currentVersion,
 			NextVersion:    nextVersion,
@@ -390,14 +490,30 @@ func loadApplications(cluster cluster, tags, apps []string) map[string]applicati
 			ChartRepo:      chartRepo,
 			Cluster:        &clusterVersion,
 		}
+		list, exists := result[app.Priority]
+		if !exists {
+			var a []*application
+			list = a
+		}
+		list = append(list, tmp)
+		result[app.Priority] = list
+		index[app.Priority] = void{}
 	}
-	return result
+	keys := make([]int, 0, len(index))
+	for key := range index {
+		keys = append(keys, key)
+	}
+	sort.Ints(keys)
+	return result, keys
 }
 
 func versionFromLocalChart(repo string, rule string) *semver.Version {
 	chart := chart{}
 
 	data, err := ioutil.ReadFile(repo + "/Chart.yaml")
+	if err != nil {
+		panic(err)
+	}
 	err = yaml.Unmarshal(data, &chart)
 	if err != nil {
 		panic(err)
@@ -475,7 +591,7 @@ func readHelmSearchResult() map[string][]helmSearchResult {
 	return result
 }
 
-func readClusterOptions() (clusterFlags, cluster) {
+func readClusterOptions() (clusterFlags, clusterConfig) {
 	options := clusterFlags{}
 	err := viper.Unmarshal(&options)
 	if err != nil {
@@ -485,8 +601,8 @@ func readClusterOptions() (clusterFlags, cluster) {
 	return options, readClusterConfig(options)
 }
 
-func readClusterConfig(options clusterFlags) cluster {
-	cluster := cluster{}
+func readClusterConfig(options clusterFlags) clusterConfig {
+	clusterConfig := clusterConfig{}
 	yamlFile, err := ioutil.ReadFile(options.ConfigFile)
 	if err != nil {
 		panic(err)
@@ -502,9 +618,9 @@ func readClusterConfig(options clusterFlags) cluster {
 			}
 		}()
 	}
-	err = yaml.Unmarshal(yamlFile, &cluster)
+	err = yaml.Unmarshal(yamlFile, &clusterConfig)
 	if err != nil {
 		panic(err)
 	}
-	return cluster
+	return clusterConfig
 }
