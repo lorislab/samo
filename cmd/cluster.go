@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -24,6 +25,7 @@ func init() {
 	configFile := addFlag(clusterInfoCmd, "config-file", "", "cluster.yaml", "clusterConfig client configuration file.")
 	app := addStringSliceFlag(clusterInfoCmd, "app-name", "a", []string{}, "application name for the action")
 	tags := addStringSliceFlag(clusterInfoCmd, "tags", "", []string{}, "comma separated list of tags")
+	priorities := addStringSliceFlag(clusterInfoCmd, "priorities", "", []string{}, "comma separated list of priorities")
 	helmUpdate := addBoolFlag(mvnCreateReleaseCmd, "helm-repo-update", "", false, "helm repo update")
 
 	clusterCmd.AddCommand(clusterCreateCmd)
@@ -48,6 +50,7 @@ func init() {
 	addFlagRef(clusterSyncCmd, configFile)
 	addFlagRef(clusterSyncCmd, app)
 	addFlagRef(clusterSyncCmd, tags)
+	addFlagRef(clusterSyncCmd, priorities)
 	addFlagRef(clusterSyncCmd, helmUpdate)
 	addBoolFlag(clusterSyncCmd, "force-appUpgrade", "", false, "force appUpgrade for installed application in the clusterConfig")
 	addBoolFlag(mvnCreateReleaseCmd, "no-wait", "", false, "helm repo update")
@@ -56,6 +59,7 @@ func init() {
 	addFlagRef(clusterUninstallCmd, configFile)
 	addFlagRef(clusterUninstallCmd, app)
 	addFlagRef(clusterUninstallCmd, tags)
+	addFlagRef(clusterUninstallCmd, priorities)
 }
 
 type chart struct {
@@ -67,6 +71,7 @@ type clusterFlags struct {
 	HelmRepoUpdate bool     `mapstructure:"helm-repo-update"`
 	Apps           []string `mapstructure:"app-name"`
 	Tags           []string `mapstructure:"tags"`
+	Priorities     []string `mapstructure:"priorities"`
 	ForceUpgrade   bool     `mapstructure:"force-appUpgrade"`
 	NoWait         bool     `mapstructure:"no-wait"`
 }
@@ -237,7 +242,7 @@ var (
 		Long:  `Sync applications in the cluster - appInstall, appUpgrade or appDowngrade`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
-			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps, options.Priorities)
 
 			count := 0
 			sum := 0
@@ -265,7 +270,7 @@ var (
 		Long:  `Uninstall applications in the cluster`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, cluster := readClusterOptions()
-			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps, options.Priorities)
 			sort.Sort(sort.Reverse(sort.IntSlice(keys)))
 
 			count := 0
@@ -299,7 +304,7 @@ var (
 				internal.ExecCmdOutput("helm", "repo", "update")
 			}
 
-			apps, keys := loadApplications(cluster, options.Tags, options.Apps)
+			apps, keys := loadApplications(cluster, options.Tags, options.Apps, options.Priorities)
 
 			table := uitable.New()
 			table.MaxColWidth = 50
@@ -402,11 +407,6 @@ func helmCmd(options clusterFlags, app *application, wg *sync.WaitGroup, cmd str
 		// appInstall appInstall old version
 		log.Infof("[%s] execute helm command `%s`....", app.AppName, helmActionStr[install])
 		helmExecuteCmd(options, app, install)
-
-		if app.Declaration.Ingress.Enabled {
-			// execute kubectl and apply ingress for k3d
-
-		}
 	case appUninstall:
 		// uninstall new version
 		log.Infof("[%s] execute helm command %s....", app.AppName, helmActionStr[uninstall])
@@ -461,7 +461,7 @@ func helmExecuteSimpleCmd(app *application, action helmAction) {
 	internal.ExecCmdOutput("helm", helmActionStr[action], app.AppName, "-n", app.Namespace)
 }
 
-func loadApplications(cluster clusterConfig, tags, apps []string) (map[int][]*application, []int) {
+func loadApplications(cluster clusterConfig, tags, apps, priorities []string) (map[int][]*application, []int) {
 	log.Debugf("Load application info for the clusterConfig filter tags %s apps %s", tags, apps)
 
 	// load all helm releases in the repository
@@ -490,15 +490,29 @@ func loadApplications(cluster clusterConfig, tags, apps []string) (map[int][]*ap
 			mApps[t] = member
 		}
 	}
+	mPriorities := make(map[int]void)
+	if len(priorities) > 0 {
+		for _, p := range priorities {
+			i, err := strconv.Atoi(p)
+			if err != nil {
+				panic(err)
+			}
+			mPriorities[i] = member
+		}
+	}
 
 	// loop over all apps and check the status
 	for appName, app := range cluster.Apps {
+
+		// filter app names
 		if len(mApps) > 0 {
 			_, exists := mApps[appName]
 			if !exists {
 				continue
 			}
 		}
+
+		// filter tags
 		if len(mTags) > 0 {
 			contains := false
 			for i := 0; i < len(app.Tags) && !contains; i++ {
@@ -506,6 +520,14 @@ func loadApplications(cluster clusterConfig, tags, apps []string) (map[int][]*ap
 				contains = contains || exists
 			}
 			if !contains {
+				continue
+			}
+		}
+
+		// filter priorities
+		if len(mPriorities) > 0 {
+			_, exists := mPriorities[app.Priority]
+			if !exists {
 				continue
 			}
 		}
