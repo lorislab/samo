@@ -41,6 +41,8 @@ type mavenFlags struct {
 	DockerReleaseRepoPrefix     string `mapstructure:"maven-docker-release-repo-prefix"`
 	DockerReleaseRepository     string `mapstructure:"maven-docker-release-repository"`
 	DockerReleaseSkipPush       bool   `mapstructure:"maven-docker-release-skip-push"`
+	DockerLocalRegistry         string `mapstructure:"maven-docker-local-registry"`
+	DockerLocalRegistrySkipPush bool   `mapstructure:"maven-docker-local-registry-skip-push"`
 }
 
 func init() {
@@ -102,6 +104,8 @@ func init() {
 	addFlagRef(dockerBuildDevCmd, mavenDockerFile)
 	addFlagRef(dockerBuildDevCmd, mavenDockerContext)
 	addFlagRef(dockerBuildDevCmd, mavenDockerSkipPull)
+	addFlag(dockerBuildDevCmd, "maven-docker-local-registry", "", "", "local registry for development")
+	addBoolFlag(dockerBuildDevCmd, "maven-docker-local-registry-skip-pull", "", false, "skip docker push to local registry")
 
 	mvnCmd.AddCommand(dockerPushCmd)
 	addFlagRef(dockerPushCmd, mavenFile)
@@ -246,7 +250,14 @@ var (
 		Long:  `Build the docker image of the maven project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readMavenOptions()
-			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext, options.DockerSkipPull)
+			projectDockerBuildDev(
+				project,
+				options.DockerRepository,
+				options.Dockerfile,
+				options.DockerContext,
+				options.DockerSkipPull,
+				options.DockerLocalRegistry,
+				options.DockerLocalRegistrySkipPush)
 		},
 		TraverseChildren: true,
 	}

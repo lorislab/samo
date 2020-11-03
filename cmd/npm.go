@@ -9,37 +9,39 @@ import (
 )
 
 type npmFlags struct {
-	Filename                string `mapstructure:"npm-file"`
-	BuildNumberPrefix       string `mapstructure:"npm-build-number-prefix"`
-	BuildNumberLength       int    `mapstructure:"npm-build-number-length"`
-	HashLength              int    `mapstructure:"npm-hash-length"`
-	DockerRepository        string `mapstructure:"npm-docker-repository"`
-	Dockerfile              string `mapstructure:"npm-dockerfile"`
-	DockerContext           string `mapstructure:"npm-docker-context"`
-	DockerRegistry          string `mapstructure:"npm-docker-registry"`
-	DockerBranch            bool   `mapstructure:"npm-docker-branch"`
-	DockerLatest            bool   `mapstructure:"npm-docker-latest"`
-	DockerBuildTag          string `mapstructure:"npm-docker-tag"`
-	DockerIgnoreLatest      bool   `mapstructure:"npm-docker-ignore-latest"`
-	DockerSkipPush          bool   `mapstructure:"npm-docker-skip-push"`
-	DockerSkipPull          bool   `mapstructure:"npm-release-skip-pull"`
-	DockerDevTag            bool   `mapstructure:"npm-docker-dev"`
-	DockerRepoPrefix        string `mapstructure:"npm-docker-repo-prefix"`
-	ReleaseSkipPush         bool   `mapstructure:"npm-release-skip-push"`
-	ReleaseTagMessage       string `mapstructure:"npm-release-tag-message"`
-	DevMsg                  string `mapstructure:"npm-release-message"`
-	ReleaseMajor            bool   `mapstructure:"npm-release-major"`
-	PatchMsg                string `mapstructure:"npm-patch-message"`
-	PatchBranchPrefix       string `mapstructure:"npm-patch-branch-prefix"`
-	PatchSkipPush           bool   `mapstructure:"npm-patch-skip-push"`
-	PatchTag                string `mapstructure:"npm-patch-tag"`
-	DockerReleaseRegistry   string `mapstructure:"npm-docker-release-registry"`
-	DockerReleaseRepoPrefix string `mapstructure:"npm-docker-release-repo-prefix"`
-	DockerReleaseRepository string `mapstructure:"npm-docker-release-repository"`
-	DockerReleaseSkipPush   bool   `mapstructure:"npm-docker-release-skip-push"`
-	HelmFilterInputDir      string `mapstructure:"npm-helm-filter-input"`
-	HelmFilterOutputDir     string `mapstructure:"npm-helm-filter-output"`
-	HelmFilterClean         bool   `mapstructure:"npm-helm-filter-clean"`
+	Filename                    string `mapstructure:"npm-file"`
+	BuildNumberPrefix           string `mapstructure:"npm-build-number-prefix"`
+	BuildNumberLength           int    `mapstructure:"npm-build-number-length"`
+	HashLength                  int    `mapstructure:"npm-hash-length"`
+	DockerRepository            string `mapstructure:"npm-docker-repository"`
+	Dockerfile                  string `mapstructure:"npm-dockerfile"`
+	DockerContext               string `mapstructure:"npm-docker-context"`
+	DockerRegistry              string `mapstructure:"npm-docker-registry"`
+	DockerBranch                bool   `mapstructure:"npm-docker-branch"`
+	DockerLatest                bool   `mapstructure:"npm-docker-latest"`
+	DockerBuildTag              string `mapstructure:"npm-docker-tag"`
+	DockerIgnoreLatest          bool   `mapstructure:"npm-docker-ignore-latest"`
+	DockerSkipPush              bool   `mapstructure:"npm-docker-skip-push"`
+	DockerSkipPull              bool   `mapstructure:"npm-release-skip-pull"`
+	DockerDevTag                bool   `mapstructure:"npm-docker-dev"`
+	DockerRepoPrefix            string `mapstructure:"npm-docker-repo-prefix"`
+	ReleaseSkipPush             bool   `mapstructure:"npm-release-skip-push"`
+	ReleaseTagMessage           string `mapstructure:"npm-release-tag-message"`
+	DevMsg                      string `mapstructure:"npm-release-message"`
+	ReleaseMajor                bool   `mapstructure:"npm-release-major"`
+	PatchMsg                    string `mapstructure:"npm-patch-message"`
+	PatchBranchPrefix           string `mapstructure:"npm-patch-branch-prefix"`
+	PatchSkipPush               bool   `mapstructure:"npm-patch-skip-push"`
+	PatchTag                    string `mapstructure:"npm-patch-tag"`
+	DockerReleaseRegistry       string `mapstructure:"npm-docker-release-registry"`
+	DockerReleaseRepoPrefix     string `mapstructure:"npm-docker-release-repo-prefix"`
+	DockerReleaseRepository     string `mapstructure:"npm-docker-release-repository"`
+	DockerReleaseSkipPush       bool   `mapstructure:"npm-docker-release-skip-push"`
+	HelmFilterInputDir          string `mapstructure:"npm-helm-filter-input"`
+	HelmFilterOutputDir         string `mapstructure:"npm-helm-filter-output"`
+	HelmFilterClean             bool   `mapstructure:"npm-helm-filter-clean"`
+	DockerLocalRegistry         string `mapstructure:"npm-docker-local-registry"`
+	DockerLocalRegistrySkipPush bool   `mapstructure:"npm-docker-local-registry-skip-push"`
 }
 
 func init() {
@@ -87,6 +89,8 @@ func init() {
 	addFlagRef(npmDockerBuildDevCmd, npmDockerFile)
 	addFlagRef(npmDockerBuildDevCmd, npmDockerContext)
 	addFlagRef(npmDockerBuildDevCmd, npmDockerSkipPull)
+	addFlag(npmDockerBuildDevCmd, "npm-docker-local-registry", "", "", "local registry for development")
+	addBoolFlag(npmDockerBuildDevCmd, "npm-docker-local-registry-skip-pull", "", false, "skip docker push to local registry")
 
 	npmCmd.AddCommand(npmDockerPushCmd)
 	addFlagRef(npmDockerPushCmd, npmFile)
@@ -243,7 +247,14 @@ var (
 		Long:  `Build the docker image of the npm project for local development`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, project := readNpmOptions()
-			projectDockerBuildDev(project, options.DockerRepository, options.Dockerfile, options.DockerContext, options.DockerSkipPull)
+			projectDockerBuildDev(
+				project,
+				options.DockerRepository,
+				options.Dockerfile,
+				options.DockerContext,
+				options.DockerSkipPull,
+				options.DockerLocalRegistry,
+				options.DockerLocalRegistrySkipPush)
 		},
 		TraverseChildren: true,
 	}
