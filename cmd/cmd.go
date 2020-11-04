@@ -253,7 +253,8 @@ func projectDockerBuildDev(project internal.Project, image, dockerfile, context 
 
 	var localRegistryImage string
 	if len(localRegistry) > 0 {
-		localRegistryImage := dockerProjectImage(project, localRegistry)
+		//localRegistryImage := dockerProjectImage(project, localRegistry)
+		localRegistryImage = dockerProjectRepositoryImage(project, localRegistry, "", image)
 		command = append(command, "-t", dockerImageTag(localRegistryImage, project.Version()))
 		command = append(command, "-t", dockerImageTag(localRegistryImage, "latest"))
 	}
@@ -261,11 +262,11 @@ func projectDockerBuildDev(project internal.Project, image, dockerfile, context 
 		command = append(command, "-f", dockerfile)
 	}
 	command = append(command, context)
-	log.Infof("Build image for local development ...", localRegistryImage)
+	log.Infof("Build image '%s' for local development local registry '%s' ...", localRegistryImage, localRegistry)
 	internal.ExecCmd("docker", command...)
 
 	if !skipPushLocalRegistry && len(localRegistry) > 0 {
-		log.Infof("Push built image '%s' to local registry '%s'", localRegistryImage, localRegistryImage)
+		log.Infof("Push built image '%s' to local registry '%s'", localRegistryImage, localRegistry)
 		internal.ExecCmd("docker", "push", localRegistryImage)
 	}
 }
