@@ -3,70 +3,20 @@
 Samo is a tool to help with a project release.
 
 [![License](https://img.shields.io/github/license/lorislab/semver-release-maven-plugin?style=for-the-badge&logo=apache)](https://www.apache.org/licenses/LICENSE-2.0)
-[![GitHub tag (latest SemVer)](https://img.shields.io/github/v/tag/lorislab/samo?logo=github&style=for-the-badge)](https://github.com/lorislab/samo/releases/latest)
+[![GitHub Workflow Status (branch)](https://img.shields.io/github/workflow/status/lorislab/samo/build/master?logo=github&style=for-the-badge)](https://github.com/lorislab/samo/actions?query=workflow%3Abuild)
+[![GitHub release (latest SemVer)](https://img.shields.io/github/v/release/lorislab/samo?sort=semver&logo=github&style=for-the-badge)](https://github.com/lorislab/samo/releases/latest)
+
 
 ## Commands
-```shell script
-Samo is semantic version release utility for maven, git, docker and helm chart
 
-Usage:
-  samo [command]
-
-Available Commands:
-  docker      Docker operation
-  git         Git operation
-  help        Help about any command
-  maven       Maven operation
-  version     Version will output the current build information
-
-Flags:
-      --config string   config file (default is $HOME/.samo.yaml)
-  -h, --help            help for samo
-  -v, --verbose         verbose output
-
-Use "samo [command] --help" for more information about a command.
+```shell
+samo help
 ```
 
-## Maven project commands
-
-```shell script
-Tasks for the maven project
-
-Usage:
-  samo maven [command]
-
-Available Commands:
-  build-version       Show the maven project version to build version
-  create-patch        Create patch of the release
-  create-release      Create release of the current project and state
-  docker-build        Build the docker image of the maven project
-  docker-build-dev    Build the docker image of the maven project for local development
-  docker-push         Push the docker image of the maven project
-  docker-release      Release the docker image
-  release-version     Show the maven project version to release
-  set-build-version   Set the maven project version to build version
-  set-release-version Set the maven project version to release
-  settings-add-server Add the maven repository server to the settings
-  version             Show the maven project version
-
-Flags:
-  -h, --help   help for maven
-
-Global Flags:
-      --config string   config file (default is $HOME/.samo.yaml)
-  -v, --verbose         verbose output
-
-Use "samo maven [command] --help" for more information about a command.
-```
-
-### Release process of project
-
-Create new release run
-```bash
-samo git create-release
-```
-
-Create new patch branch run
-```bash
-samo git create-patch v0.1.0
+For example to build docker image of the project only with a build-version tag:
+```shell
+❯ samo project docker-build --docker-build-tags build-version
+INFO Build docker image                     image= tags="[release-notes:3.1.0-rc001.g2a5d0e7c5fcb]"
+INFO docker build --pull -t release-notes:3.1.0-rc001.g2a5d0e7c5fcb -f src/main/docker/Dockerfile . 
+INFO Docker build done!                     image=release-notes
 ```

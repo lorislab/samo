@@ -1,12 +1,12 @@
-package main
+package cmd
 
 import (
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
-	"github.com/mitchellh/go-homedir"
-
-	"github.com/lorislab/samo/cmd"
+	homedir "github.com/mitchellh/go-homedir"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -14,21 +14,21 @@ import (
 )
 
 var (
+	// Used for flags.
 	shortened = false
-	version   = "dev"
-	commit    = "none"
-	date      = "unknown"
 	output    = "json"
-	verbose   bool
+	bv        BuildVersion
 	cfgFile   string
+	v         string
 	rootCmd   = &cobra.Command{
 		Use:   "samo",
-		Short: "samo release utility",
-		Long:  "Samo is semantic version release utility for maven, git, docker and helm chart",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-			if verbose {
-				log.SetLevel(log.DebugLevel)
+		Short: "samo build and release tool",
+		Long:  `Samo is semantic version release utility for maven, git, docker and helm chart.`,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if err := setUpLogs(os.Stdout, v); err != nil {
+				return err
 			}
+			return nil
 		},
 	}
 	versionCmd = &cobra.Command{
@@ -36,20 +36,28 @@ var (
 		Short: "Version will output the current build information",
 		Long:  ``,
 		Run: func(_ *cobra.Command, _ []string) {
-			resp := goVersion.FuncWithOutput(shortened, version, commit, date, output)
+			resp := goVersion.FuncWithOutput(shortened, bv.Version, bv.Commit, bv.Date, output)
 			fmt.Print(resp)
 		},
 	}
 )
 
+type BuildVersion struct {
+	Version string
+	Commit  string
+	Date    string
+}
+
 // Execute executes the root command.
-func main() {
+func Execute(version BuildVersion) {
+	bv = version
+
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: true,
 	})
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Panic(err)
+		log.Fatal(err)
 	}
 }
 
@@ -57,11 +65,11 @@ func init() {
 	versionCmd.Flags().BoolVarP(&shortened, "short", "s", false, "Print just the version number.")
 	versionCmd.Flags().StringVarP(&output, "output", "o", "json", "Output format. One of 'yaml' or 'json'.")
 	rootCmd.AddCommand(versionCmd)
-	cmd.Main(rootCmd)
 
 	cobra.OnInitialize(initConfig)
+
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
-	rootCmd.PersistentFlags().BoolVarP(&verbose, "verbose", "v", false, "verbose output")
+	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
 }
 
 func initConfig() {
@@ -69,14 +77,13 @@ func initConfig() {
 		// Use config file from the flag.
 		viper.SetConfigFile(cfgFile)
 	} else {
-		viper.AddConfigPath(".")
-
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			log.Panic(err)
+			log.Fatal(err)
 		}
 
+		// Search config in home directory with name ".cobra" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".samo")
 	}
@@ -86,8 +93,16 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		if verbose {
-			log.Infof("Using config file: %s", viper.ConfigFileUsed())
-		}
+		log.WithField("file", viper.ConfigFileUsed()).Debug("Using config")
 	}
+}
+
+func setUpLogs(out io.Writer, level string) error {
+	log.SetOutput(out)
+	lvl, err := log.ParseLevel(level)
+	if err != nil {
+		return err
+	}
+	log.SetLevel(lvl)
+	return nil
 }
