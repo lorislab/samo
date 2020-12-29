@@ -1,4 +1,4 @@
-package internal
+package json
 
 import (
 	"encoding/json"
@@ -7,10 +7,12 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lorislab/samo/xml"
 	log "github.com/sirupsen/logrus"
 )
 
-func jsonPathInFile(filename string, items []string) *XPathResult {
+// PathInFile find path in the file
+func PathInFile(filename string, items []string) *xml.XPathResult {
 	file, err := os.Open(filename)
 	if file != nil {
 		defer func() {
@@ -32,7 +34,7 @@ func jsonPathInFile(filename string, items []string) *XPathResult {
 		data[x] = true
 	}
 
-	result := &XPathResult{items: map[string]*XPathItem{}}
+	result := &xml.XPathResult{Items: map[string]*xml.XPathItem{}}
 
 	path := ""
 	value := ""
@@ -71,13 +73,13 @@ func jsonPathInFile(filename string, items []string) *XPathResult {
 				key = false
 			} else {
 				if data[item] {
-					result.items[item] = &XPathItem{value: value, index: decoder.InputOffset() - 1}
+					result.Items[item] = &xml.XPathItem{Value: value, Index: decoder.InputOffset() - 1}
 				}
 				key = true
 			}
 		}
 
-		if len(result.items) >= len(items) {
+		if len(result.Items) >= len(items) {
 			break
 		}
 	}

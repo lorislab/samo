@@ -1,6 +1,4 @@
 name: Build and Test
-
-# This workflow will run on master branch and on any pull requests targeting master
 on:
   push:
     branches:
@@ -8,54 +6,21 @@ on:
     tags-ignore:
       - '**'
   pull_request:
-  
 jobs:
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.14.4
-
-      - name: Check out code
-        uses: actions/checkout@v1
-
-      - name: Lint Go Code
-        run: |
-          export PATH=$PATH:$(go env GOPATH)/bin # temporary fix. See https://github.com/actions/setup-go/issues/14
-          go get -u golang.org/x/lint/golint 
-          make lint
-          
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
-        with:
-          go-version: 1.14.4
-
-      - name: Check out code
-        uses: actions/checkout@v1
-
-      - name: Run Unit tests.
-        run: make test-coverage
-
   build:
-    name: Build
-    runs-on: ubuntu-latest 
-    needs: [lint, test]
+    name: build
+    runs-on: ubuntu-latest
     steps:
-      - name: Set up Go
-        uses: actions/setup-go@v1
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
         with:
-          go-version: 1.14.4
-
-      - name: Check out code
-        uses: actions/checkout@v1
-
+          go-version: 1.15
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.33
       - name: Build
-        run: make build
+        run: go build .
+      - name: Tests.
+        run: go test
 
