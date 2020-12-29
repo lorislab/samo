@@ -16,7 +16,7 @@ samo help
 For example to build docker image of the project only with a build-version tag:
 ```shell
 ❯ samo project docker-build --docker-build-tags build-version
-INFO Build docker image                            image= tags="[release-notes:3.1.0-rc001.g2a5d0e7c5fcb]"
+INFO Build docker image                        image= tags="[release-notes:3.1.0-rc001.g2a5d0e7c5fcb]"
 INFO docker build --pull -t release-notes:3.1.0-rc001.g2a5d0e7c5fcb -f src/main/docker/Dockerfile . 
-INFO Docker build done!                            image=release-notes
+INFO Docker build done!                        image=release-notes
 ```
