@@ -179,10 +179,9 @@ var (
 				BuildNumberLength: options.BuildNumberLength,
 				BuildNumberPrefix: options.BuildNumberPrefix,
 			}
-			image, tags := request.DockerBuild(p)
+			image, _ := request.DockerBuild(p)
 			log.WithFields(log.Fields{
 				"image": image,
-				"tags":  tags,
 			}).Info("Docker build done!")
 		},
 		TraverseChildren: true,
@@ -199,10 +198,9 @@ var (
 				Context:    options.DockerContext,
 				SkipPull:   options.DockerSkipPull,
 			}
-			image, tags := request.DockerBuildDev(p)
+			image, _ := request.DockerBuildDev(p)
 			log.WithFields(log.Fields{
 				"image": image,
-				"tags":  tags,
 			}).Info("Docker dev build done!")
 		},
 		TraverseChildren: true,
@@ -222,10 +220,9 @@ var (
 				Tags:       list2Set(options.DockerPushTags),
 				CustomTags: options.DockerPushCustomTags,
 			}
-			image, tags := request.DockerPush(p)
+			image, _ := request.DockerPush(p)
 			log.WithFields(log.Fields{
 				"image": image,
-				"tags":  tags,
 			}).Info("Push docker image done!")
 		},
 		TraverseChildren: true,
