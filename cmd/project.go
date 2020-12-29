@@ -30,6 +30,8 @@ type projectFlags struct {
 	PatchTag                string       `mapstructure:"patch-tag"`
 	DockerBuildTags         []string     `mapstructure:"docker-build-tags"`
 	DockerBuildCustomTags   []string     `mapstructure:"docker-build-custom-tags"`
+	DockerDevTags           []string     `mapstructure:"docker-dev-tags"`
+	DockerDevCustomTags     []string     `mapstructure:"docker-dev-custom-tags"`
 	DockerRegistry          string       `mapstructure:"docker-registry"`
 	DockerRepoPrefix        string       `mapstructure:"docker-repo-prefix"`
 	DockerRepository        string       `mapstructure:"docker-repository"`
@@ -197,6 +199,8 @@ var (
 				Dockerfile: options.Dockerfile,
 				Context:    options.DockerContext,
 				SkipPull:   options.DockerSkipPull,
+				Tags:       list2Set(options.DockerDevTags),
+				CustomTags: options.DockerDevCustomTags,
 			}
 			image, _ := request.DockerBuildDev(p)
 			log.WithFields(log.Fields{
@@ -342,6 +346,8 @@ func init() {
 	addFlagRef(dockerBuildDevCmd, fDockerFile)
 	addFlagRef(dockerBuildDevCmd, fDockerContext)
 	addFlagRef(dockerBuildDevCmd, fockerSkipPull)
+	addSliceFlag(dockerBuildDevCmd, "docker-dev-tags", "", []string{"latest"}, "the list of docker image tags, values:{version,latest}")
+	addSliceFlag(dockerBuildDevCmd, "docker-dev-custom-tags", "", []string{}, "add your custom image tags")
 
 	projectCmd.AddCommand(dockerPushCmd)
 	addFlagRef(dockerPushCmd, fFile)

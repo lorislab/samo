@@ -116,7 +116,17 @@ func (request DockerRequest) DockerBuildDev(p project.Project) (string, []string
 	}
 
 	dockerImage := request.dockerProjectImage(p)
-	tags := []string{dockerImageTag(dockerImage, p.Version()), dockerImageTag(dockerImage, "latest")}
+
+	var tags []string
+	// project version tag
+	if request.Tags["version"] {
+		tags = append(tags, dockerImageTag(dockerImage, p.Version()))
+	}
+	// latest tag
+	if request.Tags["latest"] {
+		tags = append(tags, dockerImageTag(dockerImage, "latest"))
+	}
+
 	request.dockerBuild(tags)
 	return dockerImage, tags
 }

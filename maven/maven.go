@@ -17,8 +17,6 @@ const (
 	parentProjectVersion    string = "/project/parent/version"
 	parentProjectGroupID    string = "/project/parent/groupId"
 	parentProjectArtifactID string = "/project/parent/artifactId"
-	mavenSettings           string = "/settings"
-	mavenSettingsServers    string = "/settings/servers"
 )
 
 // MavenID maven project ID
