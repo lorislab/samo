@@ -8,6 +8,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+type Set map[string]bool
+
+func CreateSet(data []string) map[string]bool {
+	result := Set{}
+	for _, tag := range data {
+		result[tag] = true
+	}
+	return result
+}
+
 type Type string
 
 const (

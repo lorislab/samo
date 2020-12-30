@@ -14,5 +14,5 @@ require (
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.7.1
 	go.hein.dev/go-version v0.1.0
-	golang.org/x/sys v0.0.0-20191206220618-eeba5f6aabab // indirect
+	gopkg.in/yaml.v2 v2.2.8
 )

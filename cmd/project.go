@@ -45,6 +45,11 @@ type projectFlags struct {
 	HelmOutputDir           string       `mapstructure:"helm-output"`
 	HelmClean               bool         `mapstructure:"helm-clean"`
 	HelmFilterTemplate      string       `mapstructure:"helm-filter-template"`
+	HelmUpdateChart         []string     `mapstructure:"helm-update-chart"`
+	HelmUpdateValues        []string     `mapstructure:"helm-update-values"`
+	HelmBuildTags           []string     `mapstructure:"helm-build-tags"`
+	HelmPushTags            []string     `mapstructure:"helm-push-tags"`
+	HelmSkipPush            bool         `mapstructure:"helm-skip-push"`
 	DockerReleaseRegistry   string       `mapstructure:"docker-release-registry"`
 	DockerReleaseRepoPrefix string       `mapstructure:"docker-release-repo-prefix"`
 	DockerReleaseRepository string       `mapstructure:"docker-release-repository"`
@@ -169,11 +174,12 @@ var (
 			options, p := readProjectOptions()
 
 			request := docker.DockerRequest{
+				Project:           p,
 				Registry:          options.DockerRegistry,
 				RepositoryPrefix:  options.DockerRepoPrefix,
 				Repository:        options.DockerRepository,
 				HashLength:        options.HashLength,
-				Tags:              list2Set(options.DockerBuildTags),
+				Tags:              project.CreateSet(options.DockerBuildTags),
 				CustomTags:        options.DockerBuildCustomTags,
 				Dockerfile:        options.Dockerfile,
 				Context:           options.DockerContext,
@@ -181,7 +187,7 @@ var (
 				BuildNumberLength: options.BuildNumberLength,
 				BuildNumberPrefix: options.BuildNumberPrefix,
 			}
-			image, _ := request.DockerBuild(p)
+			image, _ := request.DockerBuild()
 			log.WithFields(log.Fields{
 				"image": image,
 			}).Info("Docker build done!")
@@ -195,14 +201,15 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options, p := readProjectOptions()
 			request := docker.DockerRequest{
+				Project:    p,
 				Registry:   options.DockerRegistry,
 				Dockerfile: options.Dockerfile,
 				Context:    options.DockerContext,
 				SkipPull:   options.DockerSkipPull,
-				Tags:       list2Set(options.DockerDevTags),
+				Tags:       project.CreateSet(options.DockerDevTags),
 				CustomTags: options.DockerDevCustomTags,
 			}
-			image, _ := request.DockerBuildDev(p)
+			image, _ := request.DockerBuildDev()
 			log.WithFields(log.Fields{
 				"image": image,
 			}).Info("Docker dev build done!")
@@ -216,15 +223,16 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options, p := readProjectOptions()
 			request := docker.DockerRequest{
+				Project:    p,
 				Registry:   options.DockerRegistry,
 				Dockerfile: options.Dockerfile,
 				Context:    options.DockerContext,
 				SkipPush:   options.DockerSkipPush,
 				HashLength: options.HashLength,
-				Tags:       list2Set(options.DockerPushTags),
+				Tags:       project.CreateSet(options.DockerPushTags),
 				CustomTags: options.DockerPushCustomTags,
 			}
-			image, _ := request.DockerPush(p)
+			image, _ := request.DockerPush()
 			log.WithFields(log.Fields{
 				"image": image,
 			}).Info("Push docker image done!")
@@ -239,6 +247,7 @@ var (
 			options, p := readProjectOptions()
 
 			request := docker.DockerRequest{
+				Project:                 p,
 				Registry:                options.DockerRegistry,
 				Dockerfile:              options.Dockerfile,
 				Context:                 options.DockerContext,
@@ -250,7 +259,7 @@ var (
 				ReleaseRepository:       options.DockerReleaseRepository,
 				SkipPush:                options.DockerReleaseSkipPush,
 			}
-			image := request.DockerRelease(p)
+			image := request.DockerRelease()
 			log.WithFields(log.Fields{
 				"image": image,
 			}).Info("Release docker image done!")
@@ -264,12 +273,58 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options, p := readProjectOptions()
 			helm := helm.HelmRequest{
+				Project:  p,
 				Input:    options.HelmInputDir,
 				Output:   options.HelmOutputDir,
 				Clean:    options.HelmClean,
 				Template: options.HelmFilterTemplate,
 			}
-			helm.Filter(p)
+			helm.Filter()
+		},
+		TraverseChildren: true,
+	}
+	helmBuildCmd = &cobra.Command{
+		Use:   "helm-build",
+		Short: "Build helm chart",
+		Long:  `Helm build helm chart`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, p := readProjectOptions()
+			helm := helm.HelmRequest{
+				Project:           p,
+				Input:             options.HelmInputDir,
+				Output:            options.HelmOutputDir,
+				Clean:             options.HelmClean,
+				SkipPush:          options.HelmSkipPush,
+				BuildTags:         project.CreateSet(options.HelmBuildTags),
+				PushTags:          project.CreateSet(options.HelmPushTags),
+				Template:          options.HelmFilterTemplate,
+				HashLength:        options.HashLength,
+				BuildNumberLength: options.BuildNumberLength,
+				BuildNumberPrefix: options.BuildNumberPrefix,
+			}
+			helm.Build()
+		},
+		TraverseChildren: true,
+	}
+	helmReleaseCmd = &cobra.Command{
+		Use:   "helm-release",
+		Short: "Release helm chart",
+		Long:  `Download build version of the helm chart and create final version`,
+		Run: func(cmd *cobra.Command, args []string) {
+			options, p := readProjectOptions()
+			helm := helm.HelmRequest{
+				Project:           p,
+				Input:             options.HelmInputDir,
+				Output:            options.HelmOutputDir,
+				Clean:             options.HelmClean,
+				ChartUpdate:       options.HelmUpdateChart,
+				ValuesUpdate:      options.HelmUpdateValues,
+				SkipPush:          options.HelmSkipPush,
+				HashLength:        options.HashLength,
+				BuildNumberLength: options.BuildNumberLength,
+				BuildNumberPrefix: options.BuildNumberPrefix,
+			}
+			helm.Release()
 		},
 		TraverseChildren: true,
 	}
@@ -361,12 +416,6 @@ func init() {
 	addSliceFlag(dockerPushCmd, "docker-push-tags", "", []string{"build-version", "hash"}, "the list of docker image tags to be push, values:{version,build-version,branch,latest,dev,hash}")
 	addSliceFlag(dockerPushCmd, "docker-push-custom-tags", "", []string{}, "add your custom image tags to be push")
 
-	projectCmd.AddCommand(helmFilterCmd)
-	addFlag(helmFilterCmd, "helm-input", "", "helm", "filter project helm chart input directory")
-	addFlag(helmFilterCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")
-	addBoolFlag(helmFilterCmd, "helm-clean", "", false, "clean output directory before filter")
-	addFlagRequired(helmFilterCmd, "helm-filter-template", "", "maven", "Use the maven template for filter")
-
 	projectCmd.AddCommand(dockerReleaseCmd)
 	addFlagRef(dockerReleaseCmd, fFile)
 	addFlagRef(dockerReleaseCmd, fType)
@@ -380,6 +429,29 @@ func init() {
 	addFlag(dockerReleaseCmd, "docker-release-repo-prefix", "", "", "the docker release repository prefix")
 	addFlag(dockerReleaseCmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addBoolFlag(dockerReleaseCmd, "docker-release-skip-push", "", false, "skip docker push of release image to registry")
+
+	projectCmd.AddCommand(helmFilterCmd)
+	fHelmInput := addFlag(helmFilterCmd, "helm-input", "", "helm", "filter project helm chart input directory")
+	fHelmOutput := addFlag(helmFilterCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")
+	fHelmClean := addBoolFlag(helmFilterCmd, "helm-clean", "", false, "clean output directory before filter")
+	addFlagRequired(helmFilterCmd, "helm-filter-template", "", "maven", "Use the maven template for filter")
+
+	projectCmd.AddCommand(helmBuildCmd)
+	addFlagRef(helmBuildCmd, fHelmInput)
+	addFlagRef(helmBuildCmd, fHelmOutput)
+	addFlagRef(helmBuildCmd, fHelmClean)
+	addSliceFlag(helmBuildCmd, "helm-build-tags", "", []string{"build-version"}, "the list of docker image tags, values:{version,build-version,branch,latest,dev,hash}")
+	addSliceFlag(helmBuildCmd, "helm-push-tags", "", []string{"build-version"}, "helm push tag version, values:{version,build-version,branch,latest,dev,hash}")
+	fHelmSkipPush := addBoolFlag(helmBuildCmd, "helm-skip-push", "", false, "skip helm push")
+
+	projectCmd.AddCommand(helmReleaseCmd)
+	addFlagRef(dockerReleaseCmd, fHelmInput)
+	addFlagRef(dockerReleaseCmd, fHelmOutput)
+	addFlagRef(dockerReleaseCmd, fHelmClean)
+	addFlagRef(dockerReleaseCmd, fHelmSkipPush)
+	addFlag(dockerReleaseCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
+	addFlag(dockerReleaseCmd, "helm-update-values", "", "image.tag={{ .Version }}", "list of key value to be replaced in the values.yaml")
+
 }
 
 func readProjectOptions() (projectFlags, project.Project) {
@@ -428,12 +500,4 @@ func loadProject(file string, projectType project.Type) project.Project {
 		"file": file,
 	}).Fatal("Could to find project file. Please specified the type --type.")
 	return nil
-}
-
-func list2Set(data []string) map[string]bool {
-	result := make(map[string]bool)
-	for _, tag := range data {
-		result[tag] = true
-	}
-	return result
 }

@@ -11,11 +11,12 @@ import (
 
 // DockerRequest the docker command request
 type DockerRequest struct {
+	Project                 project.Project
 	Registry                string
 	RepositoryPrefix        string
 	Repository              string
 	HashLength              int
-	Tags                    map[string]bool
+	Tags                    project.Set
 	CustomTags              []string
 	Dockerfile              string
 	Context                 string
@@ -29,8 +30,8 @@ type DockerRequest struct {
 	BuildNumberPrefix       string
 }
 
-func (request DockerRequest) dockerProjectRepositoryImage(p project.Project) string {
-	return dockerProjectRepositoryImage(request.Registry, request.RepositoryPrefix, request.Repository, p.Name())
+func (request DockerRequest) dockerProjectRepositoryImage() string {
+	return dockerProjectRepositoryImage(request.Registry, request.RepositoryPrefix, request.Repository, request.Project.Name())
 }
 
 func dockerProjectRepositoryImage(registry, repositoryPrefix, repository, name string) string {
@@ -44,8 +45,8 @@ func dockerProjectRepositoryImage(registry, repositoryPrefix, repository, name s
 	return tmp
 }
 
-func (request DockerRequest) dockerProjectImage(p project.Project) string {
-	return dockerProjectImage(request.Repository, p.Name())
+func (request DockerRequest) dockerProjectImage() string {
+	return dockerProjectImage(request.Repository, request.Project.Name())
 }
 
 func dockerProjectImage(repository, name string) string {
@@ -56,10 +57,10 @@ func dockerProjectImage(repository, name string) string {
 }
 
 // DockerRelease docker release existing docker image
-func (request DockerRequest) DockerRelease(p project.Project) string {
+func (request DockerRequest) DockerRelease() string {
 
-	buildVersion := project.BuildVersion(p, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix)
-	imagePull := dockerImageTag(request.dockerProjectRepositoryImage(p), buildVersion.String())
+	buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix)
+	imagePull := dockerImageTag(request.dockerProjectRepositoryImage(), buildVersion.String())
 	log.WithField("image", imagePull).Info("Pull docker image")
 	tools.ExecCmd("docker", "pull", imagePull)
 
@@ -79,8 +80,8 @@ func (request DockerRequest) DockerRelease(p project.Project) string {
 	}
 
 	// release docker registry
-	releaseVersion := project.ReleaseVersion(p)
-	dockerReleaseImageRegistry := dockerProjectRepositoryImage(releaseRegistry, releaseRepositoryPrefix, releaseRepository, p.Name())
+	releaseVersion := project.ReleaseVersion(request.Project)
+	dockerReleaseImageRegistry := dockerProjectRepositoryImage(releaseRegistry, releaseRepositoryPrefix, releaseRepository, request.Project.Name())
 	imageRelease := dockerImageTag(dockerReleaseImageRegistry, releaseVersion.String())
 	log.WithFields(log.Fields{
 		"build":   imagePull,
@@ -91,36 +92,36 @@ func (request DockerRequest) DockerRelease(p project.Project) string {
 	if !request.SkipPush {
 		tools.ExecCmd("docker", "push", imageRelease)
 	} else {
-		log.Info("Skip docker push for docker release image: " + imageRelease)
+		log.WithField("image", imageRelease).Info("Skip docker push for docker release image")
 	}
 	return imageRelease
 }
 
 // DockerBuild build docker image of the project
-func (request DockerRequest) DockerBuild(p project.Project) (string, []string) {
+func (request DockerRequest) DockerBuild() (string, []string) {
 
 	if _, err := os.Stat(request.Dockerfile); os.IsNotExist(err) {
 		log.WithField("Dockerfile", request.Dockerfile).Fatal("Dockerfile does not exists!")
 	}
 
-	dockerImage, tags := request.dockerTags(p)
+	dockerImage, tags := request.dockerTags()
 	request.dockerBuild(tags)
 	return dockerImage, tags
 }
 
 // DockerBuildDev build development version
-func (request DockerRequest) DockerBuildDev(p project.Project) (string, []string) {
+func (request DockerRequest) DockerBuildDev() (string, []string) {
 
 	if _, err := os.Stat(request.Dockerfile); os.IsNotExist(err) {
 		log.WithField("Dockerfile", request.Dockerfile).Fatal("Dockerfile does not exists!")
 	}
 
-	dockerImage := request.dockerProjectImage(p)
+	dockerImage := request.dockerProjectImage()
 
 	var tags []string
 	// project version tag
 	if request.Tags["version"] {
-		tags = append(tags, dockerImageTag(dockerImage, p.Version()))
+		tags = append(tags, dockerImageTag(dockerImage, request.Project.Version()))
 	}
 	// latest tag
 	if request.Tags["latest"] {
@@ -157,9 +158,9 @@ func (request DockerRequest) dockerBuild(tags []string) {
 }
 
 // DockerPush push docker image of the project
-func (request DockerRequest) DockerPush(p project.Project) (string, []string) {
+func (request DockerRequest) DockerPush() (string, []string) {
 
-	dockerImage, tags := request.dockerTags(p)
+	dockerImage, tags := request.dockerTags()
 
 	log.WithFields(log.Fields{
 		"image": dockerImage,
@@ -175,16 +176,16 @@ func (request DockerRequest) DockerPush(p project.Project) (string, []string) {
 	return dockerImage, tags
 }
 
-func (request DockerRequest) dockerTags(p project.Project) (string, []string) {
-	dockerImage := request.dockerProjectRepositoryImage(p)
+func (request DockerRequest) dockerTags() (string, []string) {
+	dockerImage := request.dockerProjectRepositoryImage()
 	var tags []string
 	// project version tag
 	if request.Tags["version"] {
-		tags = append(tags, dockerImageTag(dockerImage, p.Version()))
+		tags = append(tags, dockerImageTag(dockerImage, request.Project.Version()))
 	}
 	// project build-version tag
 	if request.Tags["build-version"] {
-		buildVersion := project.BuildVersion(p, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix)
+		buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix)
 		tags = append(tags, dockerImageTag(dockerImage, buildVersion.String()))
 	}
 	// latest tag
@@ -193,7 +194,7 @@ func (request DockerRequest) dockerTags(p project.Project) (string, []string) {
 	}
 	// hash tag
 	if request.Tags["hash"] {
-		ver := project.HashVersion(p, request.HashLength)
+		ver := project.HashVersion(request.Project, request.HashLength)
 		tags = append(tags, dockerImageTag(dockerImage, ver.String()))
 	}
 	// branch tag
@@ -203,7 +204,7 @@ func (request DockerRequest) dockerTags(p project.Project) (string, []string) {
 	}
 	// developer latest tag
 	if request.Tags["dev"] {
-		tmp := request.dockerProjectImage(p)
+		tmp := request.dockerProjectImage()
 		tags = append(tags, dockerImageTag(tmp, "latest"))
 	}
 	// custom tags

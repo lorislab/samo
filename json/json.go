@@ -25,9 +25,6 @@ func PathInFile(filename string, items []string) *xml.XPathResult {
 	if err != nil {
 		log.Panic(err)
 	}
-	if err != nil {
-		log.Panic(err)
-	}
 
 	data := make(map[string]bool)
 	for _, x := range items {

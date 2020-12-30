@@ -1,22 +1,39 @@
 package helm
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+	"text/template"
 
 	"github.com/lorislab/samo/file"
 	"github.com/lorislab/samo/project"
+	"github.com/lorislab/samo/tools"
+	"github.com/lorislab/samo/yaml"
 	log "github.com/sirupsen/logrus"
 )
 
 type HelmRequest struct {
-	Input    string
-	Output   string
-	Clean    bool
-	Template string
+	Project           project.Project
+	Input             string
+	Output            string
+	Clean             bool
+	Template          string
+	ChartUpdate       []string
+	ValuesUpdate      []string
+	RepositoryURL     string
+	Username          string
+	Password          string
+	SkipPush          bool
+	BuildTags         project.Set
+	PushTags          project.Set
+	BuildNumberLength int
+	BuildNumberPrefix string
+	HashLength        int
+	BuildFilter       bool
 }
 
 var (
@@ -24,23 +41,137 @@ var (
 	regexProjectVersion = regexp.MustCompile(`\$\{project\.version\}`)
 )
 
-// Filter
-func (request HelmRequest) Filter(p project.Project) {
+// Build build helm release
+func (request HelmRequest) Build() {
 
-	template := request.Template
-	if len(template) == 0 {
-		log.WithField("template", request.Template).Warn("Template is empty! Switch back to maven template")
-		template = "maven"
+	buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix).String()
+
+	// clean output directory
+	request.clean()
+
+	//- helm repo add --password ${HELM_REPO_PWD} --username ${HELM_REPO_USER} 1000kit ${HELM_REPO_URL}
+
+	// update helm dependencies
+	tools.ExecCmd("helm", "dependency", "update", request.helmDir())
+
+	// package helm chart
+	request.helmPackage()
+
+	// upload helm chart
+	request.push(buildVersion)
+}
+
+// Release create helm release
+func (request HelmRequest) Release() {
+
+	// clean output directory
+	request.clean()
+
+	buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix).String()
+	releaseVersion := project.ReleaseVersion(request.Project).String()
+
+	// download build version
+	request.download(buildVersion)
+
+	data := templateData{
+		Version:      releaseVersion,
+		BuildVersion: buildVersion,
+		Project:      request.Project,
 	}
-	templateF := templateFunc(template)
+	template := template.New("input-helm-chart")
+	request.updateFile("Chart.yaml", request.ChartUpdate, template, data)
+	request.updateFile("values.yaml", request.ValuesUpdate, template, data)
 
-	// output directory output + project.name
-	outputDir := filepath.FromSlash(request.Output + "/" + p.Name())
+	// package helm chart
+	request.helmPackage()
 
-	if _, err := os.Stat(request.Input); os.IsNotExist(err) {
-		log.WithField("input", request.Input).Fatal("Input helm directory does not exists!")
+	// upload helm chart
+	request.push(releaseVersion)
+}
+
+func (request HelmRequest) updateFile(file string, input []string, template *template.Template, data templateData) {
+	tmp := filepath.FromSlash(request.helmDir() + "/" + file)
+	log.WithFields(log.Fields{
+		"file":   tmp,
+		"update": input,
+	}).Info("Update helm chart file")
+	yaml.ReplaceValueInYaml(tmp, data.template(input, template))
+}
+
+type templateData struct {
+	Version      string
+	BuildVersion string
+	Project      project.Project
+}
+
+func (r templateData) template(input []string, template *template.Template) map[string]string {
+
+	result := make(map[string]string)
+	for _, item := range input {
+		items := strings.Split(item, "=")
+
+		t, err := template.Parse(items[1])
+		if err != nil {
+			log.Panic(err)
+		}
+
+		var tpl bytes.Buffer
+		err = t.Execute(&tpl, r)
+		if err != nil {
+			log.Panic(err)
+		}
+
+		result[items[0]] = tpl.String()
+	}
+	return result
+}
+
+func (request HelmRequest) helmDir() string {
+	return filepath.FromSlash(request.Output + "/" + request.Project.Name())
+}
+
+func (request HelmRequest) helmPackage() {
+	tools.ExecCmd("helm", "package", request.helmDir())
+}
+
+func (request HelmRequest) push(releaseVersion string) {
+
+	// upload helm chart
+	if request.SkipPush {
+		log.WithFields(log.Fields{
+			"repo-url": request.RepositoryURL,
+			"version":  releaseVersion,
+		}).Info("Skip push release version of the helm chart")
+		return
 	}
 
+	var command []string
+	command = append(command, "-is")
+	if len(request.Password) > 0 {
+		command = append(command, "-u", `"`+request.Username+`:`+request.Password+`"`)
+	}
+	command = append(command, request.RepositoryURL, "--upload-file", request.Project.Name()+`-`+releaseVersion+`.tgz`)
+	tools.ExecCmd("curl", command...)
+}
+
+func (request HelmRequest) download(version string) {
+
+	// add repository
+	var command []string
+	command = append(command, "pull", "--untar", "--untadir", request.Output)
+	if len(request.Password) > 0 {
+		command = append(command, "--password", request.Password)
+	}
+	if len(request.Username) > 0 {
+		command = append(command, "--username", request.Username)
+	}
+
+	url := request.RepositoryURL + "/" + request.Project.Name() + "-" + version + ".tgz"
+	command = append(command, url)
+	tools.ExecCmd("helm", command...)
+}
+
+func (request HelmRequest) clean() {
 	// clean output directory
 	if request.Clean {
 		if _, err := os.Stat(request.Output); !os.IsNotExist(err) {
@@ -50,6 +181,27 @@ func (request HelmRequest) Filter(p project.Project) {
 			}
 		}
 	}
+}
+
+// Filter filter helm resources
+func (request HelmRequest) Filter() {
+
+	template := request.Template
+	if len(template) == 0 {
+		log.WithField("template", request.Template).Warn("Template is empty! Switch back to maven template")
+		template = "maven"
+	}
+	templateF := templateFunc(template)
+
+	// output directory output + project.name
+	outputDir := filepath.FromSlash(request.Output + "/" + request.Project.Name())
+
+	if _, err := os.Stat(request.Input); os.IsNotExist(err) {
+		log.WithField("input", request.Input).Fatal("Input helm directory does not exists!")
+	}
+
+	// clean output directory
+	request.clean()
 
 	// get all files from the input directory
 	paths, err := file.GetAllFilePathsInDirectory(request.Input)
@@ -63,7 +215,7 @@ func (request HelmRequest) Filter(p project.Project) {
 		if err != nil {
 			log.Panic(err)
 		}
-		result = templateF(p, result)
+		result = templateF(request.Project, result)
 		// write result to output directory
 		file.WriteBytesToFile(strings.Replace(path, request.Input, outputDir, -1), result)
 	}
