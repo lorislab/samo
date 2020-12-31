@@ -188,7 +188,11 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 		return result, custom
 	}
 
-	types := CreateSet(versions)
+	types := make(map[string]bool)
+	for _, n := range versions {
+		types[n] = true
+	}
+
 	// project version
 	if types[VerVersion] {
 		result[VerVersion] = semVer.String()
