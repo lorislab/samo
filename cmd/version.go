@@ -21,7 +21,7 @@ var (
 		Long:  `Tasks to show the project version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readVersionOptions()
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix)
+			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
 			if !versions.IsEmpty() {
 				for k, v := range versions.Versions() {
 					if op.OutputValue {
@@ -49,7 +49,7 @@ var (
 		Long:  `Change the version of the project to the new version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			options, p := readProjectOptions()
-			versions := project.CreateVersions(p, options.Project.Versions, options.Project.HashLength, options.Project.BuildNumberLength, options.Project.BuildNumberPrefix)
+			versions := project.CreateVersions(p, options.Project.Versions, options.Project.HashLength, options.Project.BuildNumberLength, options.Project.BuildNumber)
 			versions.CheckUnique()
 
 			version := p.Version()

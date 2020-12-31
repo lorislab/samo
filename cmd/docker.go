@@ -44,7 +44,7 @@ var (
 				Dockerfile:       op.Dockerfile,
 				Context:          op.DockerContext,
 				SkipPull:         op.DockerSkipPull,
-				Versions:         project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix),
+				Versions:         project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
 			}
 			docker.Build()
 		},
@@ -62,7 +62,7 @@ var (
 				RepositoryPrefix: op.DockerRepoPrefix,
 				Repository:       op.DockerRepository,
 				SkipPush:         op.DockerSkipPush,
-				Versions:         project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix),
+				Versions:         project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
 			}
 			docker.Push()
 
@@ -84,7 +84,7 @@ var (
 				ReleaseRepositoryPrefix: op.DockerReleaseRepoPrefix,
 				ReleaseRepository:       op.DockerReleaseRepository,
 				SkipPush:                op.DockerReleaseSkipPush,
-				Versions:                project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix),
+				Versions:                project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
 			}
 			docker.Release()
 		},

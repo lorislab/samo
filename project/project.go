@@ -1,7 +1,8 @@
 package project
 
 import (
-	"strconv"
+	"bytes"
+	"html/template"
 
 	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/tools"
@@ -33,25 +34,27 @@ type Project interface {
 }
 
 type ProjectRequest struct {
-	Project          Project
-	Versions         Versions
-	CommitMsg        string
-	TagMsg           string
-	Major            bool
-	SkipPush         bool
-	NextDev          bool
-	Tag              string
-	PathBranchPrefix string
+	Project    Project
+	Versions   Versions
+	CommitMsg  string
+	TagMsg     string
+	Major      bool
+	SkipPush   bool
+	NextDev    bool
+	Tag        string
+	PathBranch string
 }
 
 // CreateRelease create project release
 func (r ProjectRequest) Release() {
 
 	tag := r.Versions.ReleaseVersion()
-	if len(r.TagMsg) == 0 {
-		r.TagMsg = tag
+
+	data := NextDevMsg{
+		Version: tag,
 	}
-	tools.Git("tag", "-a", tag, "-m", r.TagMsg)
+	msg := createText(data, r.TagMsg)
+	tools.Git("tag", "-a", tag, "-m", msg)
 
 	// update project file with next version
 	r.releaseNextDev()
@@ -116,7 +119,7 @@ func (r ProjectRequest) Patch() {
 		log.WithField("tag", tagVer.Original()).Fatal("Can not created patch branch from the patch version!")
 	}
 
-	branch := r.PathBranchPrefix + strconv.FormatInt(tagVer.Major(), 10) + "." + strconv.FormatInt(tagVer.Minor(), 10)
+	branch := createText(tagVer, r.PathBranch)
 	tools.Git("checkout", "-b", branch, r.Tag)
 	log.WithField("branch", branch).Debug("Branch created")
 
@@ -130,6 +133,10 @@ func (r ProjectRequest) Patch() {
 		tools.Git("push", "-u", "origin", branch)
 	}
 	log.WithField("branch", branch).Info("New patch branch created.")
+}
+
+type NextDevMsg struct {
+	Version string
 }
 
 // update project file with next version
@@ -154,5 +161,25 @@ func (r ProjectRequest) patchNextDev(tagVer *semver.Version) {
 	r.Project.SetVersion(patchVersion)
 
 	tools.Git("add", ".")
-	tools.Git("commit", "-m", r.CommitMsg+" ["+patchVersion+"]")
+
+	data := NextDevMsg{
+		Version: patchVersion,
+	}
+	msg := createText(data, r.CommitMsg)
+	tools.Git("commit", "-m", msg)
+}
+
+func createText(obj interface{}, data string) string {
+	template := template.New("template")
+	t, err := template.Parse(data)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	var tpl bytes.Buffer
+	err = t.Execute(&tpl, obj)
+	if err != nil {
+		log.Panic(err)
+	}
+	return tpl.String()
 }

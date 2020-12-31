@@ -39,7 +39,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix)
+			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -67,7 +67,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix)
+			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -91,7 +91,7 @@ var (
 			op, p := readHelmOptions()
 			helm := helm.HelmRequest{
 				Project:      p,
-				Versions:     project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix),
+				Versions:     project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
 				Output:       op.HelmOutputDir,
 				Clean:        op.HelmClean,
 				ChartUpdate:  op.HelmUpdateChart,

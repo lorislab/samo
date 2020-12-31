@@ -16,6 +16,7 @@ const (
 	VerLatest  = "latest"
 	VerBranch  = "branch"
 	VerDev     = "dev"
+	Latest     = "latest"
 )
 
 func VersionsList() []string {
@@ -30,7 +31,7 @@ type Versions struct {
 	custom            []string
 	HashLength        int
 	BuildNumberLength int
-	BuildNumberPrefix string
+	BuildNumber       string
 	versions          map[string]string
 	semVer            *semver.Version
 }
@@ -78,7 +79,6 @@ func (v Versions) Unique() string {
 	if len(v.custom) == 1 {
 		return v.custom[0]
 	}
-
 	return ""
 }
 
@@ -166,20 +166,20 @@ func (v Versions) is(key string) bool {
 	return len(v.versions[key]) > 0
 }
 
-func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumberPrefix string) Versions {
+func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumber string) Versions {
 	semVer := SemVer(project.Version())
-	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumberPrefix)
+	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumber)
 	return Versions{
 		custom:            custom,
 		HashLength:        hashLength,
 		BuildNumberLength: buildNumberLength,
-		BuildNumberPrefix: buildNumberPrefix,
+		BuildNumber:       buildNumber,
 		versions:          ver,
 		semVer:            semVer,
 	}
 }
 
-func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumberPrefix string) (map[string]string, []string) {
+func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumber string) (map[string]string, []string) {
 	result := make(map[string]string)
 	custom := []string{}
 
@@ -199,7 +199,7 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 	}
 	// build version
 	if types[VerBuild] {
-		result[VerBuild] = buildVersion(semVer, hashLength, buildNumberLength, buildNumberPrefix).String()
+		result[VerBuild] = buildVersion(semVer, hashLength, buildNumberLength, buildNumber).String()
 	}
 	// release version
 	if types[VerRelease] {
@@ -207,7 +207,7 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 	}
 	// latest version
 	if types[VerLatest] {
-		result[VerLatest] = "latest"
+		result[VerLatest] = Latest
 	}
 	// hash version
 	if types[VerHash] {
@@ -219,7 +219,7 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 	}
 	// latest version
 	if types[VerDev] {
-		result[VerDev] = "latest"
+		result[VerDev] = Latest
 	}
 
 	// find custom versions
@@ -257,30 +257,32 @@ func hashVersion(tmp *semver.Version, hashLength int) *semver.Version {
 	return &ver
 }
 
+type buildVersionData struct {
+	Number string
+	Hash   string
+	Count  string
+}
+
 // BuildVersion build version of the project
-func buildVersion(semVer *semver.Version, hashLength, length int, prefix string) *semver.Version {
+func buildVersion(semVer *semver.Version, hashLength, length int, template string) *semver.Version {
 	tmp := releaseVersion(semVer)
 	_, count, hash := tools.GitCommit(hashLength)
 
-	pre := prefix
+	// number
+	number := tools.Lpad(count, "0", length)
 
-	// ldap count
-	if len(count) > 0 {
-		pre = pre + tools.Lpad(count, "0", length)
+	data := buildVersionData{
+		Hash:   hash,
+		Number: number,
+		Count:  count,
 	}
-
-	// add hash
-	if len(hash) > 0 {
-		if len(pre) > 0 {
-			pre = pre + "."
-		}
-		pre = pre + hash
-	}
+	pre := createText(data, template)
 
 	result, err := tmp.SetPrerelease(pre)
 	if err != nil {
 		log.WithFields(log.Fields{
 			"prerelease": pre,
+			"data":       data,
 			"version":    tmp.String(),
 		}).Fatal("Error set pre-release")
 	}
