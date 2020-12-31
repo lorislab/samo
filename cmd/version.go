@@ -44,12 +44,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			options, p := readProjectOptions()
 			versions := project.CreateVersions(p, options.Versions, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
-			if !versions.IsUnique() {
-				log.WithFields(log.Fields{
-					"versions": versions.List(),
-					"custom":   versions.Custom(),
-				}).Fatal("No unique version set!")
-			}
+			versions.CheckUnique()
 
 			version := p.Version()
 			p.SetVersion(versions.Unique())

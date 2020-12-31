@@ -13,10 +13,6 @@ func addChildCmd(parent, child *cobra.Command) {
 	child.Flags().AddFlagSet(parent.Flags())
 }
 
-func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
-	command.Flags().AddFlag(flag)
-}
-
 func addSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {
 	command.Flags().StringSliceP(name, shorthand, value, usage)
 	return addViper(command, name)

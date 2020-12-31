@@ -109,7 +109,7 @@ func HashVersion(project Project, hashLength int) *semver.Version {
 }
 
 // CreateRelease create project release
-func CreateRelease(project Project, commitMessage, tagMessage string, major, skipPush bool) string {
+func CreateRelease(project Project, commitMessage, tagMessage string, major, skipPush bool) {
 
 	tag := ReleaseVersion(project).String()
 	if len(tagMessage) == 0 {
@@ -147,13 +147,13 @@ func CreateRelease(project Project, commitMessage, tagMessage string, major, ski
 	}
 
 	// push project to remote repository
-	if !skipPush {
+	if skipPush {
+		log.WithField("tag", tag).Info("Skip git push for project release")
+	} else {
 		tools.Git("push")
 		tools.Git("push", "--tags")
-	} else {
-		log.WithField("tag", tag).Info("Skip git push for project release")
 	}
-	return tag
+	log.WithField("version", tag).Info("New release created.")
 }
 
 // NextReleaseVersion creates next release version
@@ -173,7 +173,7 @@ func NextReleaseVersion(project Project, major bool) semver.Version {
 }
 
 // CreatePatch create patch fo the project
-func CreatePatch(project Project, commitMessage, patchTag, branchPrefix string, skipPush bool) string {
+func CreatePatch(project Project, commitMessage, patchTag, branchPrefix string, skipPush bool) {
 
 	tagVer, e := semver.NewVersion(patchTag)
 	if e != nil {
@@ -213,7 +213,7 @@ func CreatePatch(project Project, commitMessage, patchTag, branchPrefix string, 
 	} else {
 		log.WithField("branch", branch).Info("Skip git push for project patch version")
 	}
-	return branch
+	log.WithField("branch", branch).Info("New patch branch created.")
 }
 
 const (
@@ -240,6 +240,16 @@ type Versions struct {
 	BuildNumberLength int
 	BuildNumberPrefix string
 	versions          map[string]string
+}
+
+func (v Versions) CheckUnique() {
+	if v.IsUnique() {
+		return
+	}
+	log.WithFields(log.Fields{
+		"versions": v.List(),
+		"custom":   v.Custom(),
+	}).Fatal("No unique version set!")
 }
 
 func (v Versions) IsUnique() bool {

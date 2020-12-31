@@ -12,7 +12,6 @@ import (
 type DockerRequest struct {
 	Project                 project.Project
 	Versions                project.Versions
-	PushVersions            project.Versions
 	Registry                string
 	RepositoryPrefix        string
 	Repository              string
@@ -52,29 +51,25 @@ func dockerProjectImage(repository, name string) string {
 }
 
 // DockerRelease docker release existing docker image
-func (request DockerRequest) DockerRelease() string {
+func (request DockerRequest) Release() {
 
 	imagePull := dockerImageTag(request.dockerProjectRepositoryImage(), request.Versions.BuildVersion())
 	log.WithField("image", imagePull).Info("Pull docker image")
 	tools.ExecCmd("docker", "pull", imagePull)
 
 	// check the release configuration
-
-	releaseRegistry := request.ReleaseRegistry
-	if len(releaseRegistry) == 0 {
-		releaseRegistry = request.Registry
+	if len(request.ReleaseRegistry) == 0 {
+		request.ReleaseRegistry = request.Registry
 	}
-	releaseRepositoryPrefix := request.ReleaseRepositoryPrefix
-	if len(releaseRepositoryPrefix) == 0 {
-		releaseRepositoryPrefix = request.RepositoryPrefix
+	if len(request.ReleaseRepositoryPrefix) == 0 {
+		request.ReleaseRepositoryPrefix = request.RepositoryPrefix
 	}
-	releaseRepository := request.ReleaseRepository
-	if len(releaseRepository) == 0 {
-		releaseRepository = request.Repository
+	if len(request.ReleaseRepository) == 0 {
+		request.ReleaseRepository = request.Repository
 	}
 
 	// release docker registry
-	dockerReleaseImageRegistry := dockerProjectRepositoryImage(releaseRegistry, releaseRepositoryPrefix, releaseRepository, request.Project.Name())
+	dockerReleaseImageRegistry := dockerProjectRepositoryImage(request.ReleaseRegistry, request.ReleaseRepositoryPrefix, request.ReleaseRepository, request.Project.Name())
 	imageRelease := dockerImageTag(dockerReleaseImageRegistry, request.Versions.ReleaseVersion())
 	log.WithFields(log.Fields{
 		"build":   imagePull,
@@ -82,27 +77,23 @@ func (request DockerRequest) DockerRelease() string {
 	}).Info("Retag docker image")
 	tools.ExecCmd("docker", "tag", imagePull, imageRelease)
 
-	if !request.SkipPush {
-		tools.ExecCmd("docker", "push", imageRelease)
-	} else {
+	if request.SkipPush {
 		log.WithField("image", imageRelease).Info("Skip docker push for docker release image")
+	} else {
+		tools.ExecCmd("docker", "push", imageRelease)
 	}
-	return imageRelease
+	log.WithField("image", imageRelease).Info("Release docker image done!")
 }
 
 // DockerBuild build docker image of the project
-func (request DockerRequest) DockerBuild() (string, []string) {
+func (request DockerRequest) Build() {
 
 	if _, err := os.Stat(request.Dockerfile); os.IsNotExist(err) {
 		log.WithField("Dockerfile", request.Dockerfile).Fatal("Dockerfile does not exists!")
 	}
 
 	dockerImage, tags := request.dockerTags()
-	request.dockerBuild(tags)
-	return dockerImage, tags
-}
 
-func (request DockerRequest) dockerBuild(tags []string) {
 	log.WithFields(log.Fields{
 		"image": request.Registry,
 		"tags":  tags,
@@ -125,10 +116,12 @@ func (request DockerRequest) dockerBuild(tags []string) {
 	command = append(command, request.Context)
 	// execute command
 	tools.ExecCmd("docker", command...)
+
+	log.WithField("image", dockerImage).Info("Docker build done!")
 }
 
 // DockerPush push docker image of the project
-func (request DockerRequest) DockerPush() (string, []string) {
+func (request DockerRequest) Push() {
 
 	dockerImage, tags := request.dockerTags()
 
@@ -136,14 +129,16 @@ func (request DockerRequest) DockerPush() (string, []string) {
 		"image": dockerImage,
 		"tags":  tags,
 	}).Info("Push docker image tags")
-	if !request.SkipPush {
+
+	if request.SkipPush {
+		log.WithField("image", dockerImage).Info("Skip docker push")
+	} else {
 		for _, tag := range tags {
 			tools.ExecCmd("docker", "push", tag)
 		}
-	} else {
-		log.WithField("image", dockerImage).Info("Skip docker push")
 	}
-	return dockerImage, tags
+
+	log.WithField("image", dockerImage).Info("Push docker image done!")
 }
 
 func (request DockerRequest) dockerTags() (string, []string) {

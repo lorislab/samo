@@ -1,9 +1,7 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/docker"
 	"github.com/lorislab/samo/git"
-	"github.com/lorislab/samo/helm"
 	"github.com/lorislab/samo/maven"
 	"github.com/lorislab/samo/npm"
 	"github.com/lorislab/samo/project"
@@ -20,42 +18,43 @@ type projectFlags struct {
 	HashLength              int          `mapstructure:"build-hash"`
 	BuildNumberPrefix       string       `mapstructure:"build-prefix"`
 	BuildNumberLength       int          `mapstructure:"build-length"`
-	ReleaseSkipPush         bool         `mapstructure:"release-skip-push"`
+	ReleaseSkipPush         bool         `mapstructure:"release-push-skip"`
 	ReleaseTagMessage       string       `mapstructure:"release-tag-message"`
 	DevMsg                  string       `mapstructure:"release-message"`
 	ReleaseMajor            bool         `mapstructure:"release-major"`
 	PatchBranchPrefix       string       `mapstructure:"patch-branch-prefix"`
-	PatchSkipPush           bool         `mapstructure:"patch-skip-push"`
+	PatchSkipPush           bool         `mapstructure:"patch-push-skip"`
 	PatchMsg                string       `mapstructure:"patch-message"`
 	PatchTag                string       `mapstructure:"patch-tag"`
-	DockerBuildTags         []string     `mapstructure:"docker-build-tags"`
 	DockerRegistry          string       `mapstructure:"docker-registry"`
 	DockerRepoPrefix        string       `mapstructure:"docker-repo-prefix"`
 	DockerRepository        string       `mapstructure:"docker-repository"`
 	Dockerfile              string       `mapstructure:"dockerfile"`
 	DockerContext           string       `mapstructure:"docker-context"`
-	DockerSkipPull          bool         `mapstructure:"docker-skip-pull"`
-	DockerSkipPush          bool         `mapstructure:"docker-skip-push"`
-	DockerPushTags          []string     `mapstructure:"docker-push-tags"`
+	DockerSkipPull          bool         `mapstructure:"docker-pull-skip"`
+	DockerSkipPush          bool         `mapstructure:"docker-push-skip"`
 	HelmInputDir            string       `mapstructure:"helm-input"`
 	HelmOutputDir           string       `mapstructure:"helm-output"`
 	HelmClean               bool         `mapstructure:"helm-clean"`
 	HelmFilterTemplate      string       `mapstructure:"helm-filter-template"`
+	HelmBuildFilter         bool         `mapstructure:"helm-filter"`
 	HelmUpdateChart         []string     `mapstructure:"helm-update-chart"`
 	HelmUpdateValues        []string     `mapstructure:"helm-update-values"`
-	HelmBuildTags           []string     `mapstructure:"helm-build-versions"`
-	HelmPushTags            []string     `mapstructure:"helm-push-verions"`
-	HelmSkipPush            bool         `mapstructure:"helm-skip-push"`
+	HelmSkipPush            bool         `mapstructure:"helm-push-skip"`
 	HelmRepository          string       `mapstructure:"helm-repo"`
+	HelmRepoUsername        string       `mapstructure:"helm-repo-username"`
+	HelmRepoPassword        string       `mapstructure:"helm-repo-password"`
 	HelmRepositoryURL       string       `mapstructure:"helm-repo-url"`
 	HelmRepositoryAdd       bool         `mapstructure:"helm-repo-add"`
 	DockerReleaseRegistry   string       `mapstructure:"docker-release-registry"`
 	DockerReleaseRepoPrefix string       `mapstructure:"docker-release-repo-prefix"`
 	DockerReleaseRepository string       `mapstructure:"docker-release-repository"`
-	DockerReleaseSkipPush   bool         `mapstructure:"docker-release-skip-push"`
+	DockerReleaseSkipPush   bool         `mapstructure:"docker-release-push-skip"`
 }
 
 var (
+	verList = project.VersionsText()
+
 	projectCmd = &cobra.Command{
 		Use:              "project",
 		Short:            "Project operation",
@@ -63,164 +62,28 @@ var (
 		TraverseChildren: true,
 	}
 	createReleaseCmd = &cobra.Command{
-		Use:   "create-release",
+		Use:   "release",
 		Short: "Create release of the current project and state",
 		Long:  `Create release of the current project and state`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			version := project.CreateRelease(p, options.DevMsg, options.ReleaseTagMessage, options.ReleaseMajor, options.ReleaseSkipPush)
-			log.WithField("version", version).Info("New release created.")
+			op, p := readProjectOptions()
+			project.CreateRelease(p, op.DevMsg, op.ReleaseTagMessage, op.ReleaseMajor, op.ReleaseSkipPush)
 		},
 		TraverseChildren: true,
 	}
 	createPatchCmd = &cobra.Command{
-		Use:   "create-patch",
+		Use:   "patch",
 		Short: "Create patch of the project release",
 		Long:  `Create patch of the project release`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			branch := project.CreatePatch(p, options.PatchMsg, options.PatchTag, options.PatchBranchPrefix, options.PatchSkipPush)
-			log.WithField("branch", branch).Info("New patch branch.")
-		},
-		TraverseChildren: true,
-	}
-	dockerBuildCmd = &cobra.Command{
-		Use:   "docker-build",
-		Short: "Build the docker image of the project",
-		Long:  `Build the docker image of the project`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-
-			request := docker.DockerRequest{
-				Project:          p,
-				Registry:         options.DockerRegistry,
-				RepositoryPrefix: options.DockerRepoPrefix,
-				Repository:       options.DockerRepository,
-				Dockerfile:       options.Dockerfile,
-				Context:          options.DockerContext,
-				SkipPull:         options.DockerSkipPull,
-				Versions:         project.CreateVersions(p, options.DockerBuildTags, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix),
-			}
-			image, _ := request.DockerBuild()
-			log.WithFields(log.Fields{
-				"image": image,
-			}).Info("Docker build done!")
-		},
-		TraverseChildren: true,
-	}
-	dockerPushCmd = &cobra.Command{
-		Use:   "docker-push",
-		Short: "Push the docker image of the project",
-		Long:  `Push the docker image of the project`,
-		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readProjectOptions()
-			request := docker.DockerRequest{
-				Project:    p,
-				Registry:   op.DockerRegistry,
-				Dockerfile: op.Dockerfile,
-				Context:    op.DockerContext,
-				SkipPush:   op.DockerSkipPush,
-				Versions:   project.CreateVersions(p, op.DockerPushTags, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix),
-			}
-			image, _ := request.DockerPush()
-			log.WithFields(log.Fields{
-				"image": image,
-			}).Info("Push docker image done!")
-		},
-		TraverseChildren: true,
-	}
-	dockerReleaseCmd = &cobra.Command{
-		Use:   "docker-release",
-		Short: "Release the docker image and push to release registry",
-		Long:  `Release the docker image and push to release registry`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-
-			request := docker.DockerRequest{
-				Project:                 p,
-				Registry:                op.DockerRegistry,
-				Dockerfile:              op.Dockerfile,
-				Context:                 op.DockerContext,
-				ReleaseRegistry:         op.DockerReleaseRegistry,
-				ReleaseRepositoryPrefix: op.DockerReleaseRepoPrefix,
-				ReleaseRepository:       op.DockerReleaseRepository,
-				SkipPush:                op.DockerReleaseSkipPush,
-				Versions:                project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix),
-			}
-			image := request.DockerRelease()
-			log.WithFields(log.Fields{
-				"image": image,
-			}).Info("Release docker image done!")
-		},
-		TraverseChildren: true,
-	}
-	helmFilterCmd = &cobra.Command{
-		Use:   "helm-filter",
-		Short: "Filter project helm chart",
-		Long:  `Filter project helm chart`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			helm := helm.HelmRequest{
-				Project:  p,
-				Input:    options.HelmInputDir,
-				Output:   options.HelmOutputDir,
-				Clean:    options.HelmClean,
-				Template: options.HelmFilterTemplate,
-			}
-			helm.Filter()
-		},
-		TraverseChildren: true,
-	}
-	helmBuildCmd = &cobra.Command{
-		Use:   "helm-build",
-		Short: "Build helm chart",
-		Long:  `Helm build helm chart`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-			helm := helm.HelmRequest{
-				Project:       p,
-				Input:         op.HelmInputDir,
-				Output:        op.HelmOutputDir,
-				Clean:         op.HelmClean,
-				SkipPush:      op.HelmSkipPush,
-				Versions:      project.CreateVersions(p, op.HelmBuildTags, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix),
-				PushVersions:  project.CreateVersions(p, op.HelmPushTags, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix),
-				Template:      op.HelmFilterTemplate,
-				Repository:    op.HelmRepository,
-				RepositoryURL: op.HelmRepositoryURL,
-				AddRepo:       op.HelmRepositoryAdd,
-			}
-			helm.Build()
-		},
-		TraverseChildren: true,
-	}
-	helmReleaseCmd = &cobra.Command{
-		Use:   "helm-release",
-		Short: "Release helm chart",
-		Long:  `Download build version of the helm chart and create final version`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			helm := helm.HelmRequest{
-				Project:           p,
-				Input:             options.HelmInputDir,
-				Output:            options.HelmOutputDir,
-				Clean:             options.HelmClean,
-				ChartUpdate:       options.HelmUpdateChart,
-				ValuesUpdate:      options.HelmUpdateValues,
-				SkipPush:          options.HelmSkipPush,
-				HashLength:        options.HashLength,
-				BuildNumberLength: options.BuildNumberLength,
-				BuildNumberPrefix: options.BuildNumberPrefix,
-			}
-			helm.Release()
+			project.CreatePatch(p, op.PatchMsg, op.PatchTag, op.PatchBranchPrefix, op.PatchSkipPush)
 		},
 		TraverseChildren: true,
 	}
 )
 
 func init() {
-	verList := project.VersionsText()
-
 	addChildCmd(rootCmd, projectCmd)
 	addSliceFlag(projectCmd, "version", "", []string{project.VerVersion}, "project version type, custom or "+verList)
 	addFlag(projectCmd, "build-prefix", "b", "rc", "the build number prefix")
@@ -238,55 +101,6 @@ func init() {
 	addFlag(createPatchCmd, "patch-message", "", "Create new patch version", "commit message for new patch version")
 	addFlag(createPatchCmd, "patch-branch-prefix", "", "", "patch branch prefix")
 	addBoolFlag(createPatchCmd, "patch-skip-push", "", false, "skip git push patch branch.")
-
-	addChildCmd(projectCmd, dockerBuildCmd)
-	addSliceFlag(dockerBuildCmd, "docker-build-tags", "", []string{"build", "branch", "latest", "dev", "hash"}, "the list of docker image tags, custom or "+verList)
-	addFlag(dockerBuildCmd, "dockerfile", "d", "src/main/docker/Dockerfile", "project dockerfile")
-	addFlag(dockerBuildCmd, "docker-context", "", ".", "the docker build context")
-	addBoolFlag(dockerBuildCmd, "docker-skip-pull", "", false, "skip docker pull for the build")
-	fDockerRepository := addFlag(dockerBuildCmd, "docker-registry", "", "", "the docker registry")
-	fDockerRepoPrefix := addFlag(dockerBuildCmd, "docker-repo-prefix", "", "", "the docker repository prefix")
-	fDockerRepo := addFlag(dockerBuildCmd, "docker-repo", "i", "", "the docker repository. Default value project name.")
-
-	addChildCmd(projectCmd, dockerPushCmd)
-	addFlagRef(dockerPushCmd, fDockerRepository)
-	addFlagRef(dockerPushCmd, fDockerRepoPrefix)
-	addFlagRef(dockerPushCmd, fDockerRepo)
-	addSliceFlag(dockerPushCmd, "docker-push-tags", "", []string{"build", "hash"}, "the list of docker image tags to be push, custom or "+verList)
-
-	addChildCmd(projectCmd, dockerReleaseCmd)
-	addFlagRef(dockerReleaseCmd, fDockerRepository)
-	addFlagRef(dockerReleaseCmd, fDockerRepo)
-	addFlagRef(dockerReleaseCmd, fDockerRepoPrefix)
-	addFlag(dockerReleaseCmd, "docker-release-registry", "", "", "the docker release registry")
-	addFlag(dockerReleaseCmd, "docker-release-repo-prefix", "", "", "the docker release repository prefix")
-	addFlag(dockerReleaseCmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
-	addBoolFlag(dockerReleaseCmd, "docker-release-skip-push", "", false, "skip docker push of release image to registry")
-
-	addChildCmd(projectCmd, helmFilterCmd)
-	fHelmInput := addFlag(helmFilterCmd, "helm-input", "", "helm", "filter project helm chart input directory")
-	fHelmOutput := addFlag(helmFilterCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")
-	fHelmClean := addBoolFlag(helmFilterCmd, "helm-clean", "", false, "clean output directory before filter")
-	addFlagRequired(helmFilterCmd, "helm-filter-template", "", "maven", "Use the maven template for filter")
-
-	addChildCmd(projectCmd, helmBuildCmd)
-	addFlagRef(helmBuildCmd, fHelmInput)
-	addFlagRef(helmBuildCmd, fHelmOutput)
-	addFlagRef(helmBuildCmd, fHelmClean)
-	addSliceFlag(helmBuildCmd, "helm-build-versions", "", []string{"build"}, "the list of build helm chart versions, custom or "+verList)
-	addSliceFlag(helmBuildCmd, "helm-push-versions", "", []string{"build"}, "helm list of push helm chart versions, custom or "+verList)
-	fHelmSkipPush := addBoolFlag(helmBuildCmd, "helm-skip-push", "", false, "skip helm push")
-	addFlag(helmBuildCmd, "helm-repo", "", "", "helm repository name")
-	addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository name")
-
-	addChildCmd(projectCmd, dockerReleaseCmd)
-	addFlagRef(helmReleaseCmd, fHelmInput)
-	addFlagRef(helmReleaseCmd, fHelmOutput)
-	addFlagRef(helmReleaseCmd, fHelmClean)
-	addFlagRef(helmReleaseCmd, fHelmSkipPush)
-	addFlag(helmReleaseCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
-	addFlag(helmReleaseCmd, "helm-update-values", "", "image.tag={{ .Version }}", "list of key value to be replaced in the values.yaml")
-
 }
 
 func readProjectOptions() (projectFlags, project.Project) {

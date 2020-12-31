@@ -16,25 +16,21 @@ import (
 )
 
 type HelmRequest struct {
-	Project           project.Project
-	Versions          project.Versions
-	PushVersions      project.Versions
-	Input             string
-	Output            string
-	Clean             bool
-	Template          string
-	ChartUpdate       []string
-	ValuesUpdate      []string
-	Repository        string
-	RepositoryURL     string
-	Username          string
-	Password          string
-	SkipPush          bool
-	BuildNumberLength int
-	BuildNumberPrefix string
-	HashLength        int
-	BuildFilter       bool
-	AddRepo           bool
+	Project       project.Project
+	Versions      project.Versions
+	Input         string
+	Output        string
+	Clean         bool
+	Template      string
+	ChartUpdate   []string
+	ValuesUpdate  []string
+	Repository    string
+	RepositoryURL string
+	Username      string
+	Password      string
+	SkipPush      bool
+	Filter        bool
+	AddRepo       bool
 }
 
 var (
@@ -45,10 +41,11 @@ var (
 // Build build helm release
 func (request HelmRequest) Build() {
 
-	buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix).String()
-
 	// clean output directory
 	request.clean()
+
+	// filter resources to output dir
+	request.filter()
 
 	// add repository
 	request.addRepo()
@@ -58,9 +55,16 @@ func (request HelmRequest) Build() {
 
 	// package helm chart
 	request.helmPackage()
+}
+
+// Build build helm release
+func (request HelmRequest) Push() {
+
+	// version
+	version := request.Versions.Unique()
 
 	// upload helm chart
-	request.push(buildVersion)
+	request.push(version)
 }
 
 // Release create helm release
@@ -69,12 +73,12 @@ func (request HelmRequest) Release() {
 	// clean output directory
 	request.clean()
 
-	buildVersion := project.BuildVersion(request.Project, request.HashLength, request.BuildNumberLength, request.BuildNumberPrefix).String()
-	releaseVersion := project.ReleaseVersion(request.Project).String()
-
 	// download build version
+	buildVersion := request.Versions.BuildVersion()
 	request.download(buildVersion)
 
+	// update helm chart with a release version
+	releaseVersion := request.Versions.ReleaseVersion()
 	data := templateData{
 		Version:      releaseVersion,
 		BuildVersion: buildVersion,
@@ -161,7 +165,7 @@ func (request HelmRequest) addRepo() {
 		log.WithFields(log.Fields{
 			"repo-url": request.RepositoryURL,
 			"repo":     request.Repository,
-		}).Info("Skip push release version of the helm chart")
+		}).Debug("Skip add helm repository")
 		return
 	}
 
@@ -197,12 +201,15 @@ func (request HelmRequest) download(version string) {
 
 func (request HelmRequest) clean() {
 	// clean output directory
-	if request.Clean {
-		if _, err := os.Stat(request.Output); !os.IsNotExist(err) {
-			err := os.RemoveAll(request.Output)
-			if err != nil {
-				log.WithField("output", request.Output).Panic(err)
-			}
+	if !request.Clean {
+		log.Debug("Helm clean disabled.")
+		return
+	}
+
+	if _, err := os.Stat(request.Output); !os.IsNotExist(err) {
+		err := os.RemoveAll(request.Output)
+		if err != nil {
+			log.WithField("output", request.Output).Panic(err)
 		}
 	}
 }
@@ -213,7 +220,13 @@ type filterData struct {
 }
 
 // Filter filter helm resources
-func (request HelmRequest) Filter() {
+func (request HelmRequest) filter() {
+
+	// clean output directory
+	if !request.Filter {
+		log.Debug("Helm filter disabled.")
+		return
+	}
 
 	template := request.Template
 	if len(template) == 0 {
@@ -222,15 +235,9 @@ func (request HelmRequest) Filter() {
 	}
 	templateF := templateFunc(template)
 
-	// output directory output + project.name
-	outputDir := request.helmDir()
-
 	if _, err := os.Stat(request.Input); os.IsNotExist(err) {
 		log.WithField("input", request.Input).Fatal("Input helm directory does not exists!")
 	}
-
-	// clean output directory
-	request.clean()
 
 	// get all files from the input directory
 	paths, err := tools.GetAllFilePathsInDirectory(request.Input)
@@ -238,14 +245,16 @@ func (request HelmRequest) Filter() {
 		log.WithField("input", request.Input).Panic(err)
 	}
 
-	version := request.Project.Version()
-	filterData := filterData{Name: request.Project.Name(), Version: version}
+	// filter helm resources
+	outputDir := request.helmDir()
+	filterData := filterData{Name: request.Project.Name(), Version: request.Versions.Unique()}
 	for _, path := range paths {
 		// load file
 		result, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Panic(err)
 		}
+		// replace values in the file
 		result = templateF(filterData, result)
 		// write result to output directory
 		tools.WriteBytesToFile(strings.Replace(path, request.Input, outputDir, -1), result)
