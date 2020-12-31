@@ -18,22 +18,24 @@ import (
 
 type HelmRequest struct {
 	Project           project.Project
+	Versions          project.Versions
+	PushVersions      project.Versions
 	Input             string
 	Output            string
 	Clean             bool
 	Template          string
 	ChartUpdate       []string
 	ValuesUpdate      []string
+	Repository        string
 	RepositoryURL     string
 	Username          string
 	Password          string
 	SkipPush          bool
-	BuildTags         project.Set
-	PushTags          project.Set
 	BuildNumberLength int
 	BuildNumberPrefix string
 	HashLength        int
 	BuildFilter       bool
+	AddRepo           bool
 }
 
 var (
@@ -49,7 +51,8 @@ func (request HelmRequest) Build() {
 	// clean output directory
 	request.clean()
 
-	//- helm repo add --password ${HELM_REPO_PWD} --username ${HELM_REPO_USER} 1000kit ${HELM_REPO_URL}
+	// add repository
+	request.addRepo()
 
 	// update helm dependencies
 	tools.ExecCmd("helm", "dependency", "update", request.helmDir())
@@ -154,6 +157,28 @@ func (request HelmRequest) push(releaseVersion string) {
 	tools.ExecCmd("curl", command...)
 }
 
+func (request HelmRequest) addRepo() {
+	if !request.AddRepo {
+		log.WithFields(log.Fields{
+			"repo-url": request.RepositoryURL,
+			"repo":     request.Repository,
+		}).Info("Skip push release version of the helm chart")
+		return
+	}
+
+	// add repository
+	var command []string
+	command = append(command, "repo", "add")
+	if len(request.Password) > 0 {
+		command = append(command, "--password", request.Password)
+	}
+	if len(request.Username) > 0 {
+		command = append(command, "--username", request.Username)
+	}
+	command = append(command, request.Repository, request.RepositoryURL)
+	tools.ExecCmd("helm", command...)
+}
+
 func (request HelmRequest) download(version string) {
 
 	// add repository
@@ -183,6 +208,11 @@ func (request HelmRequest) clean() {
 	}
 }
 
+type filterData struct {
+	Name    string
+	Version string
+}
+
 // Filter filter helm resources
 func (request HelmRequest) Filter() {
 
@@ -194,7 +224,7 @@ func (request HelmRequest) Filter() {
 	templateF := templateFunc(template)
 
 	// output directory output + project.name
-	outputDir := filepath.FromSlash(request.Output + "/" + request.Project.Name())
+	outputDir := request.helmDir()
 
 	if _, err := os.Stat(request.Input); os.IsNotExist(err) {
 		log.WithField("input", request.Input).Fatal("Input helm directory does not exists!")
@@ -209,23 +239,25 @@ func (request HelmRequest) Filter() {
 		log.WithField("input", request.Input).Panic(err)
 	}
 
+	version := request.Project.Version()
+	filterData := filterData{Name: request.Project.Name(), Version: version}
 	for _, path := range paths {
 		// load file
 		result, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Panic(err)
 		}
-		result = templateF(request.Project, result)
+		result = templateF(filterData, result)
 		// write result to output directory
 		file.WriteBytesToFile(strings.Replace(path, request.Input, outputDir, -1), result)
 	}
 
 }
 
-func templateFunc(template string) func(p project.Project, data []byte) []byte {
+func templateFunc(template string) func(p filterData, data []byte) []byte {
 	switch template {
 	case "maven":
-		return func(p project.Project, data []byte) []byte {
+		return func(p filterData, data []byte) []byte {
 			return templateMavenFilter(p, data)
 		}
 	default:
@@ -234,8 +266,8 @@ func templateFunc(template string) func(p project.Project, data []byte) []byte {
 	return nil
 }
 
-func templateMavenFilter(p project.Project, data []byte) []byte {
-	result := regexProjectName.ReplaceAll(data, []byte(p.Name()))
-	result = regexProjectVersion.ReplaceAll(result, []byte(p.Version()))
+func templateMavenFilter(p filterData, data []byte) []byte {
+	result := regexProjectName.ReplaceAll(data, []byte(p.Name))
+	result = regexProjectVersion.ReplaceAll(result, []byte(p.Version))
 	return result
 }

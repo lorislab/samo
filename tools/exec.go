@@ -21,14 +21,6 @@ func ExecCmdOutput(name string, arg ...string) string {
 	return string(bytes.TrimRight(out, "\n"))
 }
 
-// ExecGitCmd execute git command
-func Git(name string, arg ...string) {
-	err := execCmdErr("git", arg...)
-	if err != nil {
-		ExecCmd("rm", "-f", ".git/index.lock")
-	}
-}
-
 // ExecCmd execute command
 func ExecCmd(name string, arg ...string) {
 	log.Info(name+" ", strings.Join(arg, " "))

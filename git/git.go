@@ -37,7 +37,7 @@ func (g GitProject) Filename() string {
 
 // SetVersion set project version
 func (g GitProject) SetVersion(version string) {
-	log.WithField("type", g.Type()).Fatal("This project does not support project file changes")
+	log.WithField("type", g.Type()).Warn("This project does not support project file changes")
 }
 
 func Load(filename string) project.Project {
@@ -63,16 +63,4 @@ func Load(filename string) project.Project {
 	result.version = tmp.String()
 
 	return &result
-}
-
-func GitBranch() string {
-	tmp, exists := os.LookupEnv("GITHUB_REF")
-	if exists && len(tmp) > 0 {
-		return strings.TrimPrefix(tmp, "refs/heads/")
-	}
-	tmp, exists = os.LookupEnv("CI_COMMIT_REF_SLUG")
-	if exists && len(tmp) > 0 {
-		return tmp
-	}
-	return tools.ExecCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
 }

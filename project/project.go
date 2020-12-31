@@ -2,6 +2,7 @@ package project
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/tools"
@@ -213,4 +214,183 @@ func CreatePatch(project Project, commitMessage, patchTag, branchPrefix string, 
 		log.WithField("branch", branch).Info("Skip git push for project patch version")
 	}
 	return branch
+}
+
+const (
+	VerVersion = "version"
+	VerBuild   = "build"
+	VerRelease = "release"
+	VerHash    = "hash"
+	VerLatest  = "latest"
+	VerBranch  = "branch"
+	VerDev     = "dev"
+)
+
+func VersionsList() []string {
+	return []string{VerVersion, VerBuild, VerRelease, VerHash, VerLatest, VerBranch, VerDev}
+}
+
+func VersionsText() string {
+	return strings.Join(VersionsList(), ",")
+}
+
+type Versions struct {
+	custom            []string
+	HashLength        int
+	BuildNumberLength int
+	BuildNumberPrefix string
+	versions          map[string]string
+}
+
+func (v Versions) IsUnique() bool {
+	return len(v.versions)+len(v.custom) == 0
+}
+
+func (v Versions) Unique() string {
+	if len(v.versions) == 1 {
+		for _, v := range v.versions {
+			return v
+		}
+	}
+	if len(v.custom) == 1 {
+		return v.custom[0]
+	}
+
+	return ""
+}
+
+func (v Versions) IsCustom() bool {
+	return len(v.custom) > 0
+}
+
+func (v Versions) Custom() []string {
+	return v.custom
+}
+
+func (v Versions) IsEmpty() bool {
+	return len(v.versions) <= 0
+}
+
+func (v Versions) List() []string {
+	tmp := []string{}
+	for _, v := range v.versions {
+		tmp = append(tmp, v)
+	}
+	return tmp
+}
+
+func (v Versions) IsVersion() bool {
+	return v.is(VerVersion)
+}
+
+func (v Versions) Version() string {
+	return v.versions[VerVersion]
+}
+
+func (v Versions) IsBuildVersion() bool {
+	return v.is(VerBuild)
+}
+
+func (v Versions) BuildVersion() string {
+	return v.versions[VerBuild]
+}
+
+func (v Versions) IsReleaseVersion() bool {
+	return v.is(VerRelease)
+}
+
+func (v Versions) ReleaseVersion() string {
+	return v.versions[VerRelease]
+}
+
+func (v Versions) IsHashVersion() bool {
+	return v.is(VerHash)
+}
+
+func (v Versions) HashVersion() string {
+	return v.versions[VerHash]
+}
+
+func (v Versions) IsLatestVersion() bool {
+	return v.is(VerLatest)
+}
+
+func (v Versions) LatestVersion() string {
+	return v.versions[VerLatest]
+}
+
+func (v Versions) IsBranchVersion() bool {
+	return v.is(VerBranch)
+}
+
+func (v Versions) BranchVersion() string {
+	return v.versions[VerBranch]
+}
+
+func (v Versions) IsDevVersion() bool {
+	return v.is(VerDev)
+}
+
+func (v Versions) DevVersion() string {
+	return v.versions[VerDev]
+}
+
+func (v Versions) is(key string) bool {
+	return len(v.versions[key]) > 0
+}
+
+func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumberPrefix string) Versions {
+	ver, custom := createVersions(project, versions, hashLength, buildNumberLength, buildNumberPrefix)
+	return Versions{
+		custom:            custom,
+		HashLength:        hashLength,
+		BuildNumberLength: buildNumberLength,
+		BuildNumberPrefix: buildNumberPrefix,
+		versions:          ver,
+	}
+}
+
+func createVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumberPrefix string) (map[string]string, []string) {
+
+	types := CreateSet(versions)
+
+	var result = make(map[string]string)
+	// project version
+	if types[VerVersion] {
+		result[VerVersion] = CreateVersion(project).String()
+	}
+	// build version
+	if types[VerBuild] {
+		result[VerBuild] = BuildVersion(project, hashLength, buildNumberLength, buildNumberPrefix).String()
+	}
+	// release version
+	if types[VerRelease] {
+		result[VerRelease] = ReleaseVersion(project).String()
+	}
+	// latest version
+	if types[VerLatest] {
+		result[VerLatest] = "latest"
+	}
+	// hash version
+	if types[VerHash] {
+		result[VerHash] = HashVersion(project, hashLength).String()
+	}
+	// branch tag
+	if types[VerBranch] {
+		result[VerBranch] = tools.GitBranch()
+	}
+	// latest version
+	if types[VerDev] {
+		result[VerDev] = "latest"
+	}
+
+	// find custom versions
+	for _, k := range VersionsList() {
+		delete(types, k)
+	}
+	custom := []string{}
+	for k := range types {
+		custom = append(custom, k)
+	}
+	return result, custom
 }
