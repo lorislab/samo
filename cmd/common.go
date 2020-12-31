@@ -1,6 +1,10 @@
 package cmd
 
 import (
+	"github.com/lorislab/samo/git"
+	"github.com/lorislab/samo/maven"
+	"github.com/lorislab/samo/npm"
+	"github.com/lorislab/samo/project"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -8,9 +12,51 @@ import (
 	"github.com/spf13/viper"
 )
 
+func loadProject(file string, projectType project.Type) project.Project {
+
+	// find the project type
+	if len(projectType) > 0 {
+		switch projectType {
+		case project.Maven:
+			return maven.Load(file)
+		case project.Npm:
+			return npm.Load(file)
+		case project.Git:
+			return git.Load(file)
+		}
+	}
+
+	// priority 1 maven
+	project := maven.Load("")
+	if project != nil {
+		return project
+	}
+	// priority 2 npm
+	project = npm.Load("")
+	if project != nil {
+		return project
+	}
+	// priority 3 git
+	project = git.Load("")
+	if project != nil {
+		return project
+	}
+
+	// failed loading the poject
+	log.WithFields(log.Fields{
+		"type": projectType,
+		"file": file,
+	}).Fatal("Could to find project file. Please specified the type --type.")
+	return nil
+}
+
 func addChildCmd(parent, child *cobra.Command) {
 	parent.AddCommand(child)
 	child.Flags().AddFlagSet(parent.Flags())
+}
+
+func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
+	command.Flags().AddFlag(flag)
 }
 
 func addSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {

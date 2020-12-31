@@ -3,8 +3,27 @@ package cmd
 import (
 	"github.com/lorislab/samo/helm"
 	"github.com/lorislab/samo/project"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
+
+type helmFlags struct {
+	Project            commonFlags `mapstructure:",squash"`
+	HelmInputDir       string      `mapstructure:"helm-input"`
+	HelmOutputDir      string      `mapstructure:"helm-output"`
+	HelmClean          bool        `mapstructure:"helm-clean"`
+	HelmFilterTemplate string      `mapstructure:"helm-filter-template"`
+	HelmBuildFilter    bool        `mapstructure:"helm-filter"`
+	HelmUpdateChart    []string    `mapstructure:"helm-update-chart"`
+	HelmUpdateValues   []string    `mapstructure:"helm-update-values"`
+	HelmSkipPush       bool        `mapstructure:"helm-push-skip"`
+	HelmRepository     string      `mapstructure:"helm-repo"`
+	HelmRepoUsername   string      `mapstructure:"helm-repo-username"`
+	HelmRepoPassword   string      `mapstructure:"helm-repo-password"`
+	HelmRepositoryURL  string      `mapstructure:"helm-repo-url"`
+	HelmRepositoryAdd  bool        `mapstructure:"helm-repo-add"`
+}
 
 var (
 	helmCmd = &cobra.Command{
@@ -18,9 +37,9 @@ var (
 		Short: "Build helm chart",
 		Long:  `Helm build helm chart`,
 		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
+			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Versions, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix)
+			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -46,9 +65,9 @@ var (
 		Short: "Push helm chart",
 		Long:  `Push helm chart to the helm repository`,
 		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
+			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Versions, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix)
+			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -69,10 +88,10 @@ var (
 		Short: "Release helm chart",
 		Long:  `Download build version of the helm chart and create final version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
+			op, p := readHelmOptions()
 			helm := helm.HelmRequest{
 				Project:      p,
-				Versions:     project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix),
+				Versions:     project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumberPrefix),
 				Output:       op.HelmOutputDir,
 				Clean:        op.HelmClean,
 				ChartUpdate:  op.HelmUpdateChart,
@@ -106,4 +125,14 @@ func init() {
 	addFlag(helmReleaseCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
 	addFlag(helmReleaseCmd, "helm-update-values", "", "image.tag={{ .Version }}", "list of key value to be replaced in the values.yaml")
 
+}
+
+func readHelmOptions() (helmFlags, project.Project) {
+	options := helmFlags{}
+	err := viper.Unmarshal(&options)
+	if err != nil {
+		panic(err)
+	}
+	log.WithField("options", options).Debug("Load project options")
+	return options, loadProject(options.Project.File, project.Type(options.Project.Type))
 }

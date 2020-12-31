@@ -15,6 +15,11 @@ type GitProject struct {
 	version string
 }
 
+// IsFile is project base on the project file
+func (g GitProject) IsFile() bool {
+	return false
+}
+
 // Type the type of the project
 func (g GitProject) Type() project.Type {
 	return project.Git
@@ -59,7 +64,8 @@ func Load(filename string) project.Project {
 		version: version,
 	}
 
-	tmp := project.NextReleaseVersion(result, false)
+	versions := project.CreateVersions(result, nil, 0, 0, "")
+	tmp := versions.NextReleaseVersion(false)
 	result.version = tmp.String()
 
 	return &result

@@ -46,6 +46,11 @@ func (r NpmProject) SetVersion(version string) {
 	tools.ReplaceTextInFile(r.filename, version, r.version.Begin(), r.version.End())
 }
 
+// IsFile is project base on the project file
+func (r NpmProject) IsFile() bool {
+	return true
+}
+
 func Load(filename string) project.Project {
 	if len(filename) == 0 {
 		filename = "package.json"

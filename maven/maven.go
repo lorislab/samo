@@ -85,6 +85,11 @@ func (r MavenProject) Version() string {
 	return r.projectID.Version()
 }
 
+// IsFile is project base on the project file
+func (r MavenProject) IsFile() bool {
+	return true
+}
+
 // SetVersion set project version
 func (r MavenProject) SetVersion(version string) {
 	tools.ReplaceTextInFile(r.filename, version, r.projectID.version.Begin(), r.projectID.version.End())
