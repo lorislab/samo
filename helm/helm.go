@@ -9,7 +9,6 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/lorislab/samo/file"
 	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	"github.com/lorislab/samo/yaml"
@@ -234,7 +233,7 @@ func (request HelmRequest) Filter() {
 	request.clean()
 
 	// get all files from the input directory
-	paths, err := file.GetAllFilePathsInDirectory(request.Input)
+	paths, err := tools.GetAllFilePathsInDirectory(request.Input)
 	if err != nil {
 		log.WithField("input", request.Input).Panic(err)
 	}
@@ -249,7 +248,7 @@ func (request HelmRequest) Filter() {
 		}
 		result = templateF(filterData, result)
 		// write result to output directory
-		file.WriteBytesToFile(strings.Replace(path, request.Input, outputDir, -1), result)
+		tools.WriteBytesToFile(strings.Replace(path, request.Input, outputDir, -1), result)
 	}
 
 }

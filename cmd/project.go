@@ -1,8 +1,6 @@
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/lorislab/samo/docker"
 	"github.com/lorislab/samo/git"
 	"github.com/lorislab/samo/helm"
@@ -17,14 +15,15 @@ import (
 type projectFlags struct {
 	File                    string       `mapstructure:"file"`
 	Type                    project.Type `mapstructure:"type"`
-	Versions                []string     `mapstructure:"versions"`
+	Versions                []string     `mapstructure:"version"`
+	OutputValue             bool         `mapstructure:"value-only"`
+	HashLength              int          `mapstructure:"build-hash"`
+	BuildNumberPrefix       string       `mapstructure:"build-prefix"`
+	BuildNumberLength       int          `mapstructure:"build-length"`
 	ReleaseSkipPush         bool         `mapstructure:"release-skip-push"`
 	ReleaseTagMessage       string       `mapstructure:"release-tag-message"`
 	DevMsg                  string       `mapstructure:"release-message"`
 	ReleaseMajor            bool         `mapstructure:"release-major"`
-	HashLength              int          `mapstructure:"hash-length"`
-	BuildNumberPrefix       string       `mapstructure:"build-number-prefix"`
-	BuildNumberLength       int          `mapstructure:"build-number-length"`
 	PatchBranchPrefix       string       `mapstructure:"patch-branch-prefix"`
 	PatchSkipPush           bool         `mapstructure:"patch-skip-push"`
 	PatchMsg                string       `mapstructure:"patch-message"`
@@ -61,61 +60,6 @@ var (
 		Use:              "project",
 		Short:            "Project operation",
 		Long:             `Tasks for the project`,
-		TraverseChildren: true,
-	}
-	nameCmd = &cobra.Command{
-		Use:   "name",
-		Short: "Show the project name",
-		Long:  `Tasks to show the maven project name`,
-		Run: func(cmd *cobra.Command, args []string) {
-			_, p := readProjectOptions()
-			fmt.Printf("%s\n", p.Name())
-		},
-		TraverseChildren: true,
-	}
-	projectVersionCmd = &cobra.Command{
-		Use:   "version",
-		Short: "Show the project version",
-		Long:  `Tasks to show the project version`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-			versions := project.CreateVersions(p, op.Versions, op.HashLength, op.BuildNumberLength, op.BuildNumberPrefix)
-			if !versions.IsEmpty() {
-				for _, v := range versions.List() {
-					fmt.Printf("%s\n", v)
-				}
-			}
-			if versions.IsCustom() {
-				for _, v := range versions.Custom() {
-					fmt.Printf("%s\n", v)
-				}
-			}
-		},
-		TraverseChildren: true,
-	}
-	setVersionCmd = &cobra.Command{
-		Use:   "set-version",
-		Short: "Set the version to the project",
-		Long:  `Change the version of the project to the new version`,
-		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			versions := project.CreateVersions(p, options.Versions, options.HashLength, options.BuildNumberLength, options.BuildNumberPrefix)
-			if !versions.IsUnique() {
-				log.WithFields(log.Fields{
-					"versions": versions.Version(),
-					"custom":   versions.Custom(),
-				}).Fatal("No unique version set!")
-			}
-
-			version := p.Version()
-			p.SetVersion(versions.Unique())
-
-			log.WithFields(log.Fields{
-				"file":          p.Filename(),
-				"version":       version,
-				"build-version": versions.Unique(),
-			}).Info("Change the version of the project to the new version")
-		},
 		TraverseChildren: true,
 	}
 	createReleaseCmd = &cobra.Command{
@@ -277,50 +221,25 @@ var (
 func init() {
 	verList := project.VersionsText()
 
-	rootCmd.AddCommand(projectCmd)
+	addChildCmd(rootCmd, projectCmd)
+	addSliceFlag(projectCmd, "version", "", []string{project.VerVersion}, "project version type, custom or "+verList)
+	addFlag(projectCmd, "build-prefix", "b", "rc", "the build number prefix")
+	addIntFlag(projectCmd, "build-length", "e", 3, "the build number length")
+	addIntFlag(projectCmd, "build-hash", "", 12, "the git hash length")
 
-	projectCmd.AddCommand(nameCmd)
-	fFile := addFlag(nameCmd, "file", "f", "", "project file pom.xml, project.json or .git")
-	fType := addFlag(nameCmd, "type", "t", "", "project type maven, npm or git")
-
-	projectCmd.AddCommand(projectVersionCmd)
-	addFlagRef(projectVersionCmd, fFile)
-	addFlagRef(projectVersionCmd, fType)
-	fVersion := addSliceFlag(projectVersionCmd, "versions", "", []string{project.VerVersion}, "project version type, custom or "+verList)
-	fBuildNumberPrefix := addFlag(projectVersionCmd, "build-number-prefix", "b", "rc", "the build number prefix")
-	fBuildNumberLength := addIntFlag(projectVersionCmd, "build-number-length", "e", 3, "the build number length")
-	fHashLength := addIntFlag(projectVersionCmd, "hash-length", "", 12, "the git hash length")
-
-	projectCmd.AddCommand(setVersionCmd)
-	addFlagRef(setVersionCmd, fFile)
-	addFlagRef(setVersionCmd, fType)
-	addFlagRef(setVersionCmd, fBuildNumberPrefix)
-	addFlagRef(setVersionCmd, fBuildNumberLength)
-	addFlagRef(setVersionCmd, fHashLength)
-	addFlagRef(setVersionCmd, fVersion)
-
-	projectCmd.AddCommand(createReleaseCmd)
-	addFlagRef(createReleaseCmd, fFile)
-	addFlagRef(createReleaseCmd, fType)
+	addChildCmd(projectCmd, createReleaseCmd)
 	addFlag(createReleaseCmd, "release-message", "", "Create new development version", "commit message for new development version")
 	addBoolFlag(createReleaseCmd, "release-major", "", false, "create a major release")
 	addFlag(createReleaseCmd, "release-tag-message", "", "", "the release tag message")
 	addBoolFlag(createReleaseCmd, "release-skip-push", "", false, "skip git push release")
 
-	projectCmd.AddCommand(createPatchCmd)
-	addFlagRef(createPatchCmd, fFile)
-	addFlagRef(createPatchCmd, fType)
+	addChildCmd(projectCmd, createPatchCmd)
 	addFlagRequired(createPatchCmd, "patch-tag", "", "", "the tag version of the patch branch")
 	addFlag(createPatchCmd, "patch-message", "", "Create new patch version", "commit message for new patch version")
 	addFlag(createPatchCmd, "patch-branch-prefix", "", "", "patch branch prefix")
 	addBoolFlag(createPatchCmd, "patch-skip-push", "", false, "skip git push patch branch.")
 
-	projectCmd.AddCommand(dockerBuildCmd)
-	addFlagRef(dockerBuildCmd, fFile)
-	addFlagRef(dockerBuildCmd, fType)
-	addFlagRef(dockerBuildCmd, fHashLength)
-	addFlagRef(dockerBuildCmd, fBuildNumberPrefix)
-	addFlagRef(dockerBuildCmd, fBuildNumberLength)
+	addChildCmd(projectCmd, dockerBuildCmd)
 	addSliceFlag(dockerBuildCmd, "docker-build-tags", "", []string{"build", "branch", "latest", "dev", "hash"}, "the list of docker image tags, custom or "+verList)
 	addFlag(dockerBuildCmd, "dockerfile", "d", "src/main/docker/Dockerfile", "project dockerfile")
 	addFlag(dockerBuildCmd, "docker-context", "", ".", "the docker build context")
@@ -329,23 +248,13 @@ func init() {
 	fDockerRepoPrefix := addFlag(dockerBuildCmd, "docker-repo-prefix", "", "", "the docker repository prefix")
 	fDockerRepo := addFlag(dockerBuildCmd, "docker-repo", "i", "", "the docker repository. Default value project name.")
 
-	projectCmd.AddCommand(dockerPushCmd)
-	addFlagRef(dockerPushCmd, fFile)
-	addFlagRef(dockerPushCmd, fType)
+	addChildCmd(projectCmd, dockerPushCmd)
 	addFlagRef(dockerPushCmd, fDockerRepository)
 	addFlagRef(dockerPushCmd, fDockerRepoPrefix)
 	addFlagRef(dockerPushCmd, fDockerRepo)
-	addFlagRef(dockerPushCmd, fHashLength)
-	addFlagRef(dockerPushCmd, fBuildNumberPrefix)
-	addFlagRef(dockerPushCmd, fBuildNumberLength)
 	addSliceFlag(dockerPushCmd, "docker-push-tags", "", []string{"build", "hash"}, "the list of docker image tags to be push, custom or "+verList)
 
-	projectCmd.AddCommand(dockerReleaseCmd)
-	addFlagRef(dockerReleaseCmd, fFile)
-	addFlagRef(dockerReleaseCmd, fType)
-	addFlagRef(dockerReleaseCmd, fHashLength)
-	addFlagRef(dockerReleaseCmd, fBuildNumberPrefix)
-	addFlagRef(dockerReleaseCmd, fBuildNumberLength)
+	addChildCmd(projectCmd, dockerReleaseCmd)
 	addFlagRef(dockerReleaseCmd, fDockerRepository)
 	addFlagRef(dockerReleaseCmd, fDockerRepo)
 	addFlagRef(dockerReleaseCmd, fDockerRepoPrefix)
@@ -354,13 +263,13 @@ func init() {
 	addFlag(dockerReleaseCmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addBoolFlag(dockerReleaseCmd, "docker-release-skip-push", "", false, "skip docker push of release image to registry")
 
-	projectCmd.AddCommand(helmFilterCmd)
+	addChildCmd(projectCmd, helmFilterCmd)
 	fHelmInput := addFlag(helmFilterCmd, "helm-input", "", "helm", "filter project helm chart input directory")
 	fHelmOutput := addFlag(helmFilterCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")
 	fHelmClean := addBoolFlag(helmFilterCmd, "helm-clean", "", false, "clean output directory before filter")
 	addFlagRequired(helmFilterCmd, "helm-filter-template", "", "maven", "Use the maven template for filter")
 
-	projectCmd.AddCommand(helmBuildCmd)
+	addChildCmd(projectCmd, helmBuildCmd)
 	addFlagRef(helmBuildCmd, fHelmInput)
 	addFlagRef(helmBuildCmd, fHelmOutput)
 	addFlagRef(helmBuildCmd, fHelmClean)
@@ -370,11 +279,11 @@ func init() {
 	addFlag(helmBuildCmd, "helm-repo", "", "", "helm repository name")
 	addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository name")
 
-	projectCmd.AddCommand(helmReleaseCmd)
-	addFlagRef(dockerReleaseCmd, fHelmInput)
-	addFlagRef(dockerReleaseCmd, fHelmOutput)
-	addFlagRef(dockerReleaseCmd, fHelmClean)
-	addFlagRef(dockerReleaseCmd, fHelmSkipPush)
+	addChildCmd(projectCmd, dockerReleaseCmd)
+	addFlagRef(helmReleaseCmd, fHelmInput)
+	addFlagRef(helmReleaseCmd, fHelmOutput)
+	addFlagRef(helmReleaseCmd, fHelmClean)
+	addFlagRef(helmReleaseCmd, fHelmSkipPush)
 	addFlag(helmReleaseCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
 	addFlag(helmReleaseCmd, "helm-update-values", "", "image.tag={{ .Version }}", "list of key value to be replaced in the values.yaml")
 

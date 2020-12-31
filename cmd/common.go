@@ -8,6 +8,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+func addChildCmd(parent, child *cobra.Command) {
+	parent.AddCommand(child)
+	child.Flags().AddFlagSet(parent.Flags())
+}
+
 func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
 	command.Flags().AddFlag(flag)
 }
@@ -15,6 +20,11 @@ func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
 func addSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {
 	command.Flags().StringSliceP(name, shorthand, value, usage)
 	return addViper(command, name)
+}
+
+func addPersistentFlag(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
+	command.PersistentFlags().StringP(name, shorthand, value, usage)
+	return addPersistentViper(command, name)
 }
 
 func addFlag(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
@@ -43,6 +53,15 @@ func addFlagRequired(command *cobra.Command, name, shorthand string, value strin
 
 func addViper(command *cobra.Command, name string) *pflag.Flag {
 	f := command.Flags().Lookup(name)
+	err := viper.BindPFlag(name, f)
+	if err != nil {
+		log.WithField("name", name).Panic(err)
+	}
+	return f
+}
+
+func addPersistentViper(command *cobra.Command, name string) *pflag.Flag {
+	f := command.PersistentFlags().Lookup(name)
 	err := viper.BindPFlag(name, f)
 	if err != nil {
 		log.WithField("name", name).Panic(err)

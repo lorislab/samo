@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/lorislab/samo/file"
 	"github.com/lorislab/samo/project"
+	"github.com/lorislab/samo/tools"
 	"github.com/lorislab/samo/xml"
 	log "github.com/sirupsen/logrus"
 )
@@ -87,7 +87,7 @@ func (r MavenProject) Version() string {
 
 // SetVersion set project version
 func (r MavenProject) SetVersion(version string) {
-	file.ReplaceTextInFile(r.filename, version, r.projectID.version.Begin(), r.projectID.version.End())
+	tools.ReplaceTextInFile(r.filename, version, r.projectID.version.Begin(), r.projectID.version.End())
 }
 
 // Load load maven project

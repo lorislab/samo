@@ -3,9 +3,9 @@ package npm
 import (
 	"os"
 
-	"github.com/lorislab/samo/file"
 	"github.com/lorislab/samo/json"
 	"github.com/lorislab/samo/project"
+	"github.com/lorislab/samo/tools"
 	"github.com/lorislab/samo/xml"
 	log "github.com/sirupsen/logrus"
 )
@@ -43,7 +43,7 @@ func (r NpmProject) Filename() string {
 
 // SetVersion set project version
 func (r NpmProject) SetVersion(version string) {
-	file.ReplaceTextInFile(r.filename, version, r.version.Begin(), r.version.End())
+	tools.ReplaceTextInFile(r.filename, version, r.version.Begin(), r.version.End())
 }
 
 func Load(filename string) project.Project {

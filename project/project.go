@@ -231,7 +231,7 @@ func VersionsList() []string {
 }
 
 func VersionsText() string {
-	return strings.Join(VersionsList(), ",")
+	return "[" + strings.Join(VersionsList(), ",") + "]"
 }
 
 type Versions struct {
@@ -243,7 +243,7 @@ type Versions struct {
 }
 
 func (v Versions) IsUnique() bool {
-	return len(v.versions)+len(v.custom) == 0
+	return len(v.versions)+len(v.custom) == 1
 }
 
 func (v Versions) Unique() string {
@@ -277,6 +277,10 @@ func (v Versions) List() []string {
 		tmp = append(tmp, v)
 	}
 	return tmp
+}
+
+func (v Versions) Versions() map[string]string {
+	return v.versions
 }
 
 func (v Versions) IsVersion() bool {
