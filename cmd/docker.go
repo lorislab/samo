@@ -76,6 +76,8 @@ var (
 			docker := docker.DockerRequest{
 				Project:                 p,
 				Registry:                op.DockerRegistry,
+				RepositoryPrefix:        op.DockerRepoPrefix,
+				Repository:              op.DockerRepository,
 				Dockerfile:              op.Dockerfile,
 				Context:                 op.DockerContext,
 				ReleaseRegistry:         op.DockerReleaseRegistry,

@@ -22,8 +22,8 @@ type HelmRequest struct {
 	Output        string
 	Clean         bool
 	Template      string
-	ChartUpdate   []string
-	ValuesUpdate  []string
+	FilterChart   []string
+	FilterValues  []string
 	Repository    string
 	RepositoryURL string
 	Username      string
@@ -31,6 +31,7 @@ type HelmRequest struct {
 	SkipPush      bool
 	Filter        bool
 	AddRepo       bool
+	UpdateVersion bool
 }
 
 var (
@@ -44,14 +45,28 @@ func (request HelmRequest) Build() {
 	// clean output directory
 	request.clean()
 
+	version := request.Versions.Unique()
+
 	// filter resources to output dir
-	request.filter()
+	request.filter(version)
 
 	// add repository
 	request.addRepo()
 
 	// update helm dependencies
 	tools.ExecCmd("helm", "dependency", "update", request.helmDir())
+
+	// update version
+	if request.UpdateVersion {
+		data := templateData{
+			Version:      version,
+			BuildVersion: request.Project.Version(),
+			Project:      request.Project,
+		}
+		request.updateVersion(data)
+	} else {
+		log.Debug("Skip update version.")
+	}
 
 	// package helm chart
 	request.helmPackage()
@@ -77,22 +92,30 @@ func (request HelmRequest) Release() {
 	buildVersion := request.Versions.BuildVersion()
 	request.download(buildVersion)
 
-	// update helm chart with a release version
 	releaseVersion := request.Versions.ReleaseVersion()
 	data := templateData{
 		Version:      releaseVersion,
 		BuildVersion: buildVersion,
 		Project:      request.Project,
 	}
-	template := template.New("input-helm-chart")
-	request.updateFile("Chart.yaml", request.ChartUpdate, template, data)
-	request.updateFile("values.yaml", request.ValuesUpdate, template, data)
+	request.updateVersion(data)
 
 	// package helm chart
 	request.helmPackage()
 
 	// upload helm chart
 	request.push(releaseVersion)
+}
+
+// update helm chart with a release version
+func (request HelmRequest) updateVersion(data templateData) {
+	template := template.New("input-helm-chart")
+	if len(request.FilterChart) > 0 {
+		request.updateFile("Chart.yaml", request.FilterChart, template, data)
+	}
+	if len(request.FilterValues) > 0 {
+		request.updateFile("values.yaml", request.FilterValues, template, data)
+	}
 }
 
 func (request HelmRequest) updateFile(file string, input []string, template *template.Template, data templateData) {
@@ -220,12 +243,15 @@ type filterData struct {
 }
 
 // Filter filter helm resources
-func (request HelmRequest) filter() {
+func (request HelmRequest) filter(version string) {
 
 	// clean output directory
 	if !request.Filter {
 		log.Debug("Helm filter disabled.")
 		return
+	}
+	if len(request.Template) <= 0 {
+		log.Fatal("Missing template for the helm chart filtering!")
 	}
 
 	template := request.Template
@@ -247,7 +273,7 @@ func (request HelmRequest) filter() {
 
 	// filter helm resources
 	outputDir := request.helmDir()
-	filterData := filterData{Name: request.Project.Name(), Version: request.Versions.Unique()}
+	filterData := filterData{Name: request.Project.Name(), Version: version}
 	for _, path := range paths {
 		// load file
 		result, err := ioutil.ReadFile(path)

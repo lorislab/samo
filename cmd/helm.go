@@ -13,14 +13,15 @@ type helmFlags struct {
 	HelmClean          bool        `mapstructure:"helm-clean"`
 	HelmFilterTemplate string      `mapstructure:"helm-filter-template"`
 	HelmBuildFilter    bool        `mapstructure:"helm-filter"`
-	HelmUpdateChart    []string    `mapstructure:"helm-update-chart"`
-	HelmUpdateValues   []string    `mapstructure:"helm-update-values"`
+	HelmFilterChart    []string    `mapstructure:"helm-update-chart"`
+	HelmFilterValues   []string    `mapstructure:"helm-update-values"`
 	HelmSkipPush       bool        `mapstructure:"helm-push-skip"`
 	HelmRepository     string      `mapstructure:"helm-repo"`
 	HelmRepoUsername   string      `mapstructure:"helm-repo-username"`
 	HelmRepoPassword   string      `mapstructure:"helm-repo-password"`
 	HelmRepositoryURL  string      `mapstructure:"helm-repo-url"`
 	HelmRepositoryAdd  bool        `mapstructure:"helm-repo-add"`
+	HelmUpdateVersion  bool        `mapstructure:"helm-update-version"`
 }
 
 var (
@@ -53,6 +54,9 @@ var (
 				Username:      op.HelmRepoUsername,
 				Password:      op.HelmRepoPassword,
 				Filter:        op.HelmBuildFilter,
+				FilterChart:   op.HelmFilterChart,
+				FilterValues:  op.HelmFilterValues,
+				UpdateVersion: op.HelmUpdateVersion,
 			}
 			helm.Build()
 		},
@@ -92,8 +96,8 @@ var (
 				Versions:     createVersionsFrom(p, op.Project, []string{project.VerBuild, project.VerRelease}),
 				Output:       op.HelmOutputDir,
 				Clean:        op.HelmClean,
-				ChartUpdate:  op.HelmUpdateChart,
-				ValuesUpdate: op.HelmUpdateValues,
+				FilterChart:  op.HelmFilterChart,
+				FilterValues: op.HelmFilterValues,
 				SkipPush:     op.HelmSkipPush,
 			}
 			helm.Release()
@@ -110,18 +114,22 @@ func initHelm() {
 
 	addChildCmd(helmCmd, helmBuildCmd)
 	addFlag(helmBuildCmd, "helm-repo", "", "", "helm repository name")
-	addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository name")
+	addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository URL")
+	addBoolFlag(helmBuildCmd, "helm-repo-add", "", false, "add helm repository before build")
 	addFlag(helmBuildCmd, "helm-repo-username", "u", "", "helm repository username")
 	addFlag(helmBuildCmd, "helm-repo-password", "p", "", "helm repository password")
-	addBoolFlag(helmCmd, "helm-filter", "", false, "filter helm reousrces from input to output directory")
-	addFlagRequired(helmBuildCmd, "helm-filter-template", "", "maven", "Use the maven template for filter")
+	addBoolFlag(helmBuildCmd, "helm-filter", "", false, "filter helm reousrces from input to output directory")
+	addFlag(helmBuildCmd, "helm-filter-template", "", "maven", "use the maven template for filter")
+	fc := addFlag(helmBuildCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
+	fv := addFlag(helmBuildCmd, "helm-update-values", "", "", "list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}")
+	addBoolFlag(helmBuildCmd, "helm-update-version", "", false, "update version before package")
 
 	addChildCmd(helmCmd, helmPushCmd)
 	addBoolFlag(helmCmd, "helm-skip-push", "", false, "skip helm push")
 
 	addChildCmd(helmCmd, helmReleaseCmd)
-	addFlag(helmReleaseCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
-	addFlag(helmReleaseCmd, "helm-update-values", "", "image.tag={{ .Version }}", "list of key value to be replaced in the values.yaml")
+	addFlagRef(helmReleaseCmd, fc)
+	addFlagRef(helmReleaseCmd, fv)
 
 }
 
