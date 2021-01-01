@@ -101,11 +101,6 @@ func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
 	command.Flags().AddFlag(flag)
 }
 
-func addFlagRefReq(command *cobra.Command, flag *pflag.Flag) {
-	command.Flags().AddFlag(flag)
-	markReq(command, flag.Name)
-}
-
 func addSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {
 	command.Flags().StringSliceP(name, shorthand, value, usage)
 	return addViper(command, name)
