@@ -33,6 +33,25 @@ func loadProject(p commonFlags) project.Project {
 	file := p.File
 	projectType := project.Type(p.Type)
 
+	result := findProject(file, projectType)
+	if result != nil {
+		log.WithFields(log.Fields{
+			"type": result.Type(),
+			"file": result.Filename(),
+		}).Debug("Find project")
+		return result
+	}
+
+	// failed loading the poject
+	log.WithFields(log.Fields{
+		"type": projectType,
+		"file": file,
+	}).Fatal("Could to find project file. Please specified the type --type.")
+	return nil
+}
+
+func findProject(file string, projectType project.Type) project.Project {
+
 	// find the project type
 	if len(projectType) > 0 {
 		switch projectType {
@@ -61,11 +80,6 @@ func loadProject(p commonFlags) project.Project {
 		return project
 	}
 
-	// failed loading the poject
-	log.WithFields(log.Fields{
-		"type": projectType,
-		"file": file,
-	}).Fatal("Could to find project file. Please specified the type --type.")
 	return nil
 }
 

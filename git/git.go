@@ -55,7 +55,8 @@ func Load(filename string) project.Project {
 		}
 	}
 
-	name := tools.ExecCmdOutput("basename", "$(git remote get-url origin)")
+	name := tools.ExecCmdOutput("git", "remote", "get-url", "origin")
+	name = name[strings.LastIndex(name, "/")+1:]
 	name = strings.TrimSuffix(name, ".git")
 
 	version, _, _ := tools.GitCommit(6)
