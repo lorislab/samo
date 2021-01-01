@@ -11,6 +11,7 @@ import (
 type versionFlags struct {
 	Project     commonFlags `mapstructure:",squash"`
 	OutputValue bool        `mapstructure:"value-only"`
+	All         bool        `mapstructure:"all"`
 }
 
 var (
@@ -20,7 +21,11 @@ var (
 		Long:  `Tasks to show the project version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readVersionOptions()
-			versions := createVersions(p, op.Project)
+			ver := op.Project.Versions
+			if op.All {
+				ver = project.VersionsList()
+			}
+			versions := createVersionsFrom(p, op.Project, ver)
 			if !versions.IsEmpty() {
 				for k, v := range versions.Versions() {
 					if op.OutputValue {
@@ -67,6 +72,7 @@ var (
 func init() {
 	addChildCmd(projectCmd, projectVersionCmd)
 	addBoolFlag(projectVersionCmd, "value-only", "", false, "write only the value to the console")
+	addBoolFlag(projectVersionCmd, "all", "", false, "show all versions")
 	addChildCmd(projectVersionCmd, setVersionCmd)
 }
 
