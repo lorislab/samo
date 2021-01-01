@@ -11,7 +11,7 @@ type dockerFlags struct {
 	DockerRegistry          string      `mapstructure:"docker-registry"`
 	DockerRepoPrefix        string      `mapstructure:"docker-repo-prefix"`
 	DockerRepository        string      `mapstructure:"docker-repository"`
-	Dockerfile              string      `mapstructure:"dockerfile"`
+	Dockerfile              string      `mapstructure:"docker-file"`
 	DockerContext           string      `mapstructure:"docker-context"`
 	DockerSkipPull          bool        `mapstructure:"docker-pull-skip"`
 	DockerSkipPush          bool        `mapstructure:"docker-push-skip"`
@@ -90,7 +90,7 @@ var (
 	}
 )
 
-func init() {
+func initDocker() {
 	addChildCmd(projectCmd, dockerCmd)
 	addFlag(dockerCmd, "docker-registry", "", "", "the docker registry")
 	addFlag(dockerCmd, "docker-repo-prefix", "", "", "the docker repository prefix")

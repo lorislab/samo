@@ -102,7 +102,7 @@ var (
 	}
 )
 
-func init() {
+func initHelm() {
 	addChildCmd(projectCmd, helmCmd)
 	addFlag(helmCmd, "helm-input", "", "src/main/helm", "filter project helm chart input directory")
 	addFlag(helmCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")

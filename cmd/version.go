@@ -69,7 +69,7 @@ var (
 	}
 )
 
-func init() {
+func initVersion() {
 	addChildCmd(projectCmd, projectVersionCmd)
 	addBoolFlag(projectVersionCmd, "value-only", "", false, "write only the value to the console")
 	addBoolFlag(projectVersionCmd, "all", "", false, "show all versions")

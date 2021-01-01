@@ -62,7 +62,7 @@ func Execute(version BuildVersion) {
 	}
 }
 
-func init() {
+func initRoot() {
 	addPersistentFlag(rootCmd, "file", "f", "", "project file pom.xml, project.json or .git")
 	addPersistentFlag(rootCmd, "type", "t", "", "project type maven, npm or git")
 

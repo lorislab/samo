@@ -19,6 +19,6 @@ var (
 	}
 )
 
-func init() {
+func initName() {
 	projectCmd.AddCommand(nameCmd)
 }

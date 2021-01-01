@@ -12,6 +12,15 @@ import (
 	"github.com/spf13/viper"
 )
 
+func init() {
+	initRoot()
+	initProject()
+	initVersion()
+	initName()
+	initDocker()
+	initHelm()
+}
+
 func createVersions(p project.Project, op commonFlags) project.Versions {
 	return createVersionsFrom(p, op, op.Versions)
 }

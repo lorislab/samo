@@ -74,7 +74,7 @@ var (
 	}
 )
 
-func init() {
+func initProject() {
 	addChildCmd(rootCmd, projectCmd)
 	addSliceFlag(projectCmd, "version", "", []string{project.VerVersion}, "project version type, custom or "+verList)
 	addFlag(projectCmd, "build-number", "b", "rc{{ .Number }}.{{ .Hash }}", "the build number (temmplate) [Number,Hash,Count]")

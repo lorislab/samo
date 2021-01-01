@@ -117,7 +117,10 @@ func (request DockerRequest) Build() {
 	// execute command
 	tools.ExecCmd("docker", command...)
 
-	log.WithField("image", dockerImage).Info("Docker build done!")
+	log.WithFields(log.Fields{
+		"image": dockerImage,
+		"tags":  tags,
+	}).Info("Docker build done!")
 }
 
 // DockerPush push docker image of the project
@@ -138,7 +141,10 @@ func (request DockerRequest) Push() {
 		}
 	}
 
-	log.WithField("image", dockerImage).Info("Push docker image done!")
+	log.WithFields(log.Fields{
+		"image": dockerImage,
+		"tags":  tags,
+	}).Info("Push docker image done!")
 }
 
 func (request DockerRequest) dockerTags() (string, []string) {
