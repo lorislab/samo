@@ -104,7 +104,7 @@ var (
 
 func init() {
 	addChildCmd(projectCmd, helmCmd)
-	addFlag(helmCmd, "helm-input", "", "helm", "filter project helm chart input directory")
+	addFlag(helmCmd, "helm-input", "", "src/main/helm", "filter project helm chart input directory")
 	addFlag(helmCmd, "helm-output", "", "target/helm", "filter project helm chart output directory")
 	addBoolFlag(helmCmd, "helm-clean", "", false, "clean output directory before filter")
 
