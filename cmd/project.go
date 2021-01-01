@@ -2,9 +2,7 @@ package cmd
 
 import (
 	"github.com/lorislab/samo/project"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type commonFlags struct {
@@ -49,7 +47,7 @@ var (
 				SkipPush:  op.SkipPush,
 				NextDev:   op.NextDev,
 				CommitMsg: op.NextDevMsg,
-				Versions:  project.CreateVersions(p, []string{"version", "release"}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
+				Versions:  createVersionsFrom(p, op.Project, []string{project.VerVersion, project.VerRelease}),
 			}
 			r.Release()
 		},
@@ -68,7 +66,7 @@ var (
 				SkipPush:   op.SkipPush,
 				NextDev:    op.NextDev,
 				CommitMsg:  op.NextDevMsg,
-				Versions:   project.CreateVersions(p, nil, 0, 0, ""),
+				Versions:   createVersions(p, op.Project),
 			}
 			r.Patch()
 		},
@@ -100,10 +98,6 @@ func init() {
 
 func readProjectOptions() (projectFlags, project.Project) {
 	options := projectFlags{}
-	err := viper.Unmarshal(&options)
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("options", options).Debug("Load project options")
-	return options, loadProject(options.Project.File, project.Type(options.Project.Type))
+	readOptions(&options)
+	return options, loadProject(options.Project)
 }

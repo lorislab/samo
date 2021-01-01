@@ -3,9 +3,7 @@ package cmd
 import (
 	"github.com/lorislab/samo/helm"
 	"github.com/lorislab/samo/project"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type helmFlags struct {
@@ -39,7 +37,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
+			versions := createVersions(p, op.Project)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -67,7 +65,7 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
 
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
+			versions := createVersions(p, op.Project)
 			versions.CheckUnique()
 
 			helm := helm.HelmRequest{
@@ -91,7 +89,7 @@ var (
 			op, p := readHelmOptions()
 			helm := helm.HelmRequest{
 				Project:      p,
-				Versions:     project.CreateVersions(p, []string{project.VerBuild, project.VerRelease}, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber),
+				Versions:     createVersionsFrom(p, op.Project, []string{project.VerBuild, project.VerRelease}),
 				Output:       op.HelmOutputDir,
 				Clean:        op.HelmClean,
 				ChartUpdate:  op.HelmUpdateChart,
@@ -129,10 +127,6 @@ func init() {
 
 func readHelmOptions() (helmFlags, project.Project) {
 	options := helmFlags{}
-	err := viper.Unmarshal(&options)
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("options", options).Debug("Load project options")
-	return options, loadProject(options.Project.File, project.Type(options.Project.Type))
+	readOptions(&options)
+	return options, loadProject(options.Project)
 }

@@ -6,7 +6,6 @@ import (
 	"github.com/lorislab/samo/project"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type versionFlags struct {
@@ -21,7 +20,7 @@ var (
 		Long:  `Tasks to show the project version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readVersionOptions()
-			versions := project.CreateVersions(p, op.Project.Versions, op.Project.HashLength, op.Project.BuildNumberLength, op.Project.BuildNumber)
+			versions := createVersions(p, op.Project)
 			if !versions.IsEmpty() {
 				for k, v := range versions.Versions() {
 					if op.OutputValue {
@@ -48,8 +47,8 @@ var (
 		Short: "Set the version to the project",
 		Long:  `Change the version of the project to the new version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			options, p := readProjectOptions()
-			versions := project.CreateVersions(p, options.Project.Versions, options.Project.HashLength, options.Project.BuildNumberLength, options.Project.BuildNumber)
+			op, p := readProjectOptions()
+			versions := createVersions(p, op.Project)
 			versions.CheckUnique()
 
 			version := p.Version()
@@ -68,16 +67,11 @@ var (
 func init() {
 	addChildCmd(projectCmd, projectVersionCmd)
 	addBoolFlag(projectVersionCmd, "value-only", "", false, "write only the value to the console")
-
 	addChildCmd(projectVersionCmd, setVersionCmd)
 }
 
 func readVersionOptions() (versionFlags, project.Project) {
 	options := versionFlags{}
-	err := viper.Unmarshal(&options)
-	if err != nil {
-		panic(err)
-	}
-	log.WithField("options", options).Debug("Load version options")
-	return options, loadProject(options.Project.File, project.Type(options.Project.Type))
+	readOptions(&options)
+	return options, loadProject(options.Project)
 }

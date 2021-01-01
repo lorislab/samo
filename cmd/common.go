@@ -12,7 +12,26 @@ import (
 	"github.com/spf13/viper"
 )
 
-func loadProject(file string, projectType project.Type) project.Project {
+func createVersions(p project.Project, op commonFlags) project.Versions {
+	return createVersionsFrom(p, op, op.Versions)
+}
+
+func createVersionsFrom(p project.Project, op commonFlags, versions []string) project.Versions {
+	return project.CreateVersions(p, versions, op.HashLength, op.BuildNumberLength, op.BuildNumber)
+}
+
+func readOptions(options interface{}) {
+	err := viper.Unmarshal(options)
+	if err != nil {
+		log.Panic(err)
+	}
+	log.WithField("options", options).Debug("Load options")
+}
+
+func loadProject(p commonFlags) project.Project {
+
+	file := p.File
+	projectType := project.Type(p.Type)
 
 	// find the project type
 	if len(projectType) > 0 {
