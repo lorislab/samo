@@ -36,6 +36,7 @@ type HelmRequest struct {
 
 var (
 	regexProjectName    = regexp.MustCompile(`\$\{project\.name\}`)
+	regexProjectName2   = regexp.MustCompile(`\$\{project\.artifactId\}`)
 	regexProjectVersion = regexp.MustCompile(`\$\{project\.version\}`)
 )
 
@@ -87,6 +88,9 @@ func (request HelmRequest) Release() {
 
 	// clean output directory
 	request.clean()
+
+	// update repositories
+	request.repoUpdate()
 
 	// download build version
 	buildVersion := request.Versions.BuildVersion()
@@ -174,12 +178,17 @@ func (request HelmRequest) push(releaseVersion string) {
 		return
 	}
 
-	var command []string
-	command = append(command, "-is")
-	if len(request.Password) > 0 {
-		command = append(command, "-u", `"`+request.Username+`:`+request.Password+`"`)
+	filename := request.Project.Name() + `-` + releaseVersion + `.tgz`
+	if !tools.Exists(filename) {
+		log.WithField("helm-file", filename).Fatal("Helm package file does not exists!")
 	}
-	command = append(command, request.RepositoryURL, "--upload-file", request.Project.Name()+`-`+releaseVersion+`.tgz`)
+
+	var command []string
+	command = append(command, "-fis", "--show-error")
+	if len(request.Password) > 0 {
+		command = append(command, "-u", request.Username+`:`+request.Password)
+	}
+	command = append(command, request.RepositoryURL, "--upload-file", filename)
 	tools.ExecCmd("curl", command...)
 }
 
@@ -203,13 +212,19 @@ func (request HelmRequest) addRepo() {
 	}
 	command = append(command, request.Repository, request.RepositoryURL)
 	tools.ExecCmd("helm", command...)
+
+	request.repoUpdate()
+}
+
+func (request HelmRequest) repoUpdate() {
+	tools.ExecCmd("helm", "repo", "update")
 }
 
 func (request HelmRequest) download(version string) {
 
 	// add repository
 	var command []string
-	command = append(command, "pull", "--untar", "--untadir", request.Output)
+	command = append(command, "pull", "--untar", "--untardir", request.Output)
 	if len(request.Password) > 0 {
 		command = append(command, "--password", request.Password)
 	}
@@ -217,7 +232,11 @@ func (request HelmRequest) download(version string) {
 		command = append(command, "--username", request.Username)
 	}
 
-	url := request.RepositoryURL + "/" + request.Project.Name() + "-" + version + ".tgz"
+	url := request.RepositoryURL
+	if !strings.HasSuffix(url, "/") {
+		url = url + "/"
+	}
+	url = url + request.Project.Name() + "-" + version + ".tgz"
 	command = append(command, url)
 	tools.ExecCmd("helm", command...)
 }
@@ -230,6 +249,7 @@ func (request HelmRequest) clean() {
 	}
 
 	if _, err := os.Stat(request.Output); !os.IsNotExist(err) {
+		log.WithField("dir", request.Output).Debug("Clean directory")
 		err := os.RemoveAll(request.Output)
 		if err != nil {
 			log.WithField("output", request.Output).Panic(err)
@@ -276,6 +296,10 @@ func (request HelmRequest) filter(version string) {
 	filterData := filterData{Name: request.Project.Name(), Version: version}
 	for _, path := range paths {
 		// load file
+		log.WithFields(log.Fields{
+			"file": path,
+			"data": filterData,
+		}).Debug("Filter file")
 		result, err := ioutil.ReadFile(path)
 		if err != nil {
 			log.Panic(err)
@@ -302,6 +326,7 @@ func templateFunc(template string) func(p filterData, data []byte) []byte {
 
 func templateMavenFilter(p filterData, data []byte) []byte {
 	result := regexProjectName.ReplaceAll(data, []byte(p.Name))
+	result = regexProjectName2.ReplaceAll(result, []byte(p.Name))
 	result = regexProjectVersion.ReplaceAll(result, []byte(p.Version))
 	return result
 }

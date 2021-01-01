@@ -9,6 +9,14 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+func Exists(file string) bool {
+	if _, err := os.Stat(file); os.IsNotExist(err) {
+		log.WithField("file", file).Debug("File does not exists!")
+		return false
+	}
+	return true
+}
+
 // WriteBytesToFile writes the byte array into the file
 func WriteBytesToFile(filename string, data []byte) {
 	dir := filepath.Dir(filename)

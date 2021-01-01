@@ -68,7 +68,7 @@ func ExecCmd(name string, arg ...string) {
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Panic(err)
+		log.WithField("error", err).Fatal("Error execute command")
 	}
 }
 

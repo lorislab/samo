@@ -1,8 +1,6 @@
 package docker
 
 import (
-	"os"
-
 	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
@@ -88,7 +86,7 @@ func (request DockerRequest) Release() {
 // DockerBuild build docker image of the project
 func (request DockerRequest) Build() {
 
-	if _, err := os.Stat(request.Dockerfile); os.IsNotExist(err) {
+	if !tools.Exists(request.Dockerfile) {
 		log.WithField("Dockerfile", request.Dockerfile).Fatal("Dockerfile does not exists!")
 	}
 

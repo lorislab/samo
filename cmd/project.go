@@ -89,7 +89,7 @@ func initProject() {
 	gsk := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
 
 	addChildCmd(projectCmd, createPatchCmd)
-	addFlagRequired(createPatchCmd, "patch-tag", "", "", "the tag version of the patch branch")
+	addFlagReq(createPatchCmd, "patch-tag", "", "", "the tag version of the patch branch")
 	addFlag(createPatchCmd, "patch-branch", "", "{{ .Major }}.{{ .Minor }}", "patch branch name (template) [Major,Minor,Patch]")
 	addFlagRef(createPatchCmd, nd)
 	addFlagRef(createPatchCmd, ndm)

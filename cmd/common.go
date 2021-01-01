@@ -101,6 +101,11 @@ func addFlagRef(command *cobra.Command, flag *pflag.Flag) {
 	command.Flags().AddFlag(flag)
 }
 
+func addFlagRefReq(command *cobra.Command, flag *pflag.Flag) {
+	command.Flags().AddFlag(flag)
+	markReq(command, flag.Name)
+}
+
 func addSliceFlag(command *cobra.Command, name, shorthand string, value []string, usage string) *pflag.Flag {
 	command.Flags().StringSliceP(name, shorthand, value, usage)
 	return addViper(command, name)
@@ -126,13 +131,17 @@ func addBoolFlag(command *cobra.Command, name, shorthand string, value bool, usa
 	return addViper(command, name)
 }
 
-func addFlagRequired(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
+func addFlagReq(command *cobra.Command, name, shorthand string, value string, usage string) *pflag.Flag {
 	f := addFlag(command, name, shorthand, value, usage)
+	markReq(command, name)
+	return f
+}
+
+func markReq(command *cobra.Command, name string) {
 	err := command.MarkFlagRequired(name)
 	if err != nil {
 		log.WithField("name", name).Panic(err)
 	}
-	return f
 }
 
 func addViper(command *cobra.Command, name string) *pflag.Flag {

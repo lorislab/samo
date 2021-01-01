@@ -3,6 +3,7 @@ package cmd
 import (
 	"github.com/lorislab/samo/helm"
 	"github.com/lorislab/samo/project"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -69,6 +70,10 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
 
+			if len(op.HelmRepositoryURL) <= 0 {
+				log.WithField("--helm-repo-url", op.HelmRepositoryURL).Fatal("Helm repository URL is required!")
+			}
+
 			versions := createVersions(p, op.Project)
 			versions.CheckUnique()
 
@@ -91,14 +96,22 @@ var (
 		Long:  `Download build version of the helm chart and create final version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readHelmOptions()
+
+			if len(op.HelmRepositoryURL) <= 0 {
+				log.WithField("--helm-repo-url", op.HelmRepositoryURL).Fatal("Helm repository URL is required!")
+			}
+
 			helm := helm.HelmRequest{
-				Project:      p,
-				Versions:     createVersionsFrom(p, op.Project, []string{project.VerBuild, project.VerRelease}),
-				Output:       op.HelmOutputDir,
-				Clean:        op.HelmClean,
-				FilterChart:  op.HelmFilterChart,
-				FilterValues: op.HelmFilterValues,
-				SkipPush:     op.HelmSkipPush,
+				Project:       p,
+				Versions:      createVersionsFrom(p, op.Project, []string{project.VerBuild, project.VerRelease}),
+				Output:        op.HelmOutputDir,
+				Clean:         op.HelmClean,
+				FilterChart:   op.HelmFilterChart,
+				FilterValues:  op.HelmFilterValues,
+				SkipPush:      op.HelmSkipPush,
+				Username:      op.HelmRepoUsername,
+				Password:      op.HelmRepoPassword,
+				RepositoryURL: op.HelmRepositoryURL,
 			}
 			helm.Release()
 		},
@@ -114,10 +127,10 @@ func initHelm() {
 
 	addChildCmd(helmCmd, helmBuildCmd)
 	addFlag(helmBuildCmd, "helm-repo", "", "", "helm repository name")
-	addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository URL")
+	hurl := addFlag(helmBuildCmd, "helm-repo-url", "", "", "helm repository URL")
 	addBoolFlag(helmBuildCmd, "helm-repo-add", "", false, "add helm repository before build")
-	addFlag(helmBuildCmd, "helm-repo-username", "u", "", "helm repository username")
-	addFlag(helmBuildCmd, "helm-repo-password", "p", "", "helm repository password")
+	hu := addFlag(helmBuildCmd, "helm-repo-username", "u", "", "helm repository username")
+	hp := addFlag(helmBuildCmd, "helm-repo-password", "p", "", "helm repository password")
 	addBoolFlag(helmBuildCmd, "helm-filter", "", false, "filter helm reousrces from input to output directory")
 	addFlag(helmBuildCmd, "helm-filter-template", "", "maven", "use the maven template for filter")
 	fc := addFlag(helmBuildCmd, "helm-update-chart", "", "version={{ .Version }},appVersion={{ .Version }}", "list of key value to be replaced in the Chart.yaml")
@@ -125,9 +138,16 @@ func initHelm() {
 	addBoolFlag(helmBuildCmd, "helm-update-version", "", false, "update version before package")
 
 	addChildCmd(helmCmd, helmPushCmd)
-	addBoolFlag(helmCmd, "helm-skip-push", "", false, "skip helm push")
+	skipPush := addBoolFlag(helmPushCmd, "helm-push-skip", "", false, "skip helm push")
+	addFlagRef(helmPushCmd, hurl)
+	addFlagRef(helmPushCmd, hu)
+	addFlagRef(helmPushCmd, hp)
 
 	addChildCmd(helmCmd, helmReleaseCmd)
+	addFlagRef(helmReleaseCmd, hurl)
+	addFlagRef(helmReleaseCmd, hu)
+	addFlagRef(helmReleaseCmd, hp)
+	addFlagRef(helmReleaseCmd, skipPush)
 	addFlagRef(helmReleaseCmd, fc)
 	addFlagRef(helmReleaseCmd, fv)
 
