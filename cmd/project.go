@@ -32,7 +32,7 @@ var (
 	projectCmd = &cobra.Command{
 		Use:              "project",
 		Short:            "Project operation",
-		Long:             `Tasks for the project`,
+		Long:             `Tasks for the project. To build, push or release docker and helm artifacts of the project.`,
 		TraverseChildren: true,
 	}
 	createReleaseCmd = &cobra.Command{

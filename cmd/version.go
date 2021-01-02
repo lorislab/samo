@@ -18,7 +18,18 @@ var (
 	projectVersionCmd = &cobra.Command{
 		Use:   "version",
 		Short: "Show the project version",
-		Long:  `Tasks to show the project version`,
+		Long: `Show the project version.
+
+Version types:
+  version  current project version
+  build    build version base on the template <project_version>-<template>. 
+           Default template: <project_version>-rc<git_count>.<git_hash>
+  hash     hash version <project_version>-<git_hash>
+  branch   branch version <project_version>-<git_branch>  
+  release  release/final version of the project
+  latest   latest verison for the docker image
+  dev	   local developer version for the docker image without repository
+  'custom' custom version which could will be use`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readVersionOptions()
 			ver := op.Project.Versions
