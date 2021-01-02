@@ -20,7 +20,7 @@ type projectFlags struct {
 	ReleaseTagMessage string      `mapstructure:"release-tag-message"`
 	ReleaseMajor      bool        `mapstructure:"release-major"`
 	SkipNextDev       bool        `mapstructure:"skip-next-dev"`
-	NextDevMsg        string      `mapstructure:"dev-message"`
+	NextDevMsg        string      `mapstructure:"next-dev-message"`
 	SkipPush          bool        `mapstructure:"skip-push"`
 	PatchBranch       string      `mapstructure:"patch-branch"`
 	PatchTag          string      `mapstructure:"patch-tag"`
@@ -87,7 +87,7 @@ func initProject() {
 	addBoolFlag(createReleaseCmd, "release-major", "", false, "create a major release")
 	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
 	nd := addBoolFlag(createReleaseCmd, "skip-next-dev", "", false, "skip update project file (if exists) to next dev version")
-	ndm := addFlag(createReleaseCmd, "next-dev-msg", "", "Create new development version {{ .Version }}", "commit message for new development version (template) [Version]")
+	ndm := addFlag(createReleaseCmd, "next-dev-message", "", "Create new development version [{{ .Version }}]", "commit message for new development version (template) [Version]")
 	skipPush := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
 
 	addChildCmd(projectCmd, createPatchCmd)

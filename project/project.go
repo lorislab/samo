@@ -96,8 +96,15 @@ func (r ProjectRequest) releaseNextDev() {
 	devVersion := tmp.String()
 
 	r.Project.SetVersion(devVersion)
+	log.WithField("dev-version", devVersion).Info("Update project version to next development version")
+
+	data := NextDevMsg{
+		Version: devVersion,
+	}
+	msg := createText(data, r.CommitMsg)
+
 	tools.Git("add", ".")
-	tools.Git("commit", "-m", r.CommitMsg+" ["+devVersion+"]")
+	tools.Git("commit", "-m", msg)
 
 	log.WithFields(log.Fields{
 		"version":     currentVersion.String(),
@@ -159,6 +166,7 @@ func (r ProjectRequest) patchNextDev(tagVer *semver.Version) {
 	// set version to project file
 	patchVersion := patchVer.String()
 	r.Project.SetVersion(patchVersion)
+	log.WithField("patch-version", patchVersion).Info("Update project version to next patch development version")
 
 	tools.Git("add", ".")
 
