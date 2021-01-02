@@ -26,7 +26,7 @@ func createVersions(p project.Project, op commonFlags) project.Versions {
 }
 
 func createVersionsFrom(p project.Project, op commonFlags, versions []string) project.Versions {
-	return project.CreateVersions(p, versions, op.HashLength, op.BuildNumberLength, op.BuildNumber)
+	return project.CreateVersions(p, versions, op.HashLength, op.BuildNumberLength, op.BuildNumber, op.FirstVersion)
 }
 
 func readOptions(options interface{}) {
@@ -42,7 +42,7 @@ func loadProject(p commonFlags) project.Project {
 	file := p.File
 	projectType := project.Type(p.Type)
 
-	result := findProject(file, projectType)
+	result := findProject(file, projectType, p.FirstVersion)
 	if result != nil {
 		log.WithFields(log.Fields{
 			"type": result.Type(),
@@ -59,7 +59,7 @@ func loadProject(p commonFlags) project.Project {
 	return nil
 }
 
-func findProject(file string, projectType project.Type) project.Project {
+func findProject(file string, projectType project.Type, firstVer string) project.Project {
 
 	// find the project type
 	if len(projectType) > 0 {
@@ -69,7 +69,7 @@ func findProject(file string, projectType project.Type) project.Project {
 		case project.Npm:
 			return npm.Load(file)
 		case project.Git:
-			return git.Load(file)
+			return git.Load(file, firstVer)
 		}
 	}
 
@@ -84,7 +84,7 @@ func findProject(file string, projectType project.Type) project.Project {
 		return project
 	}
 	// priority 3 git
-	project = git.Load("")
+	project = git.Load("", firstVer)
 	if project != nil {
 		return project
 	}

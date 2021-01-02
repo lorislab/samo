@@ -45,7 +45,7 @@ func (g GitProject) SetVersion(version string) {
 	log.WithField("type", g.Type()).Warn("This project does not support project file changes")
 }
 
-func Load(filename string) project.Project {
+func Load(filename, firstVer string) project.Project {
 
 	if len(filename) == 0 {
 		filename = ".git"
@@ -59,13 +59,13 @@ func Load(filename string) project.Project {
 	name = name[strings.LastIndex(name, "/")+1:]
 	name = strings.TrimSuffix(name, ".git")
 
-	version, _, _ := tools.GitCommit(6)
+	version, _, _ := tools.GitCommit(6, firstVer)
 	result := GitProject{
 		name:    name,
 		version: version,
 	}
 
-	versions := project.CreateVersions(result, nil, 0, 0, "")
+	versions := project.CreateVersions(result, nil, 0, 0, "", firstVer)
 	tmp := versions.NextReleaseVersion(false)
 	result.version = tmp.String()
 

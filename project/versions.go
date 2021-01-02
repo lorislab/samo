@@ -166,9 +166,9 @@ func (v Versions) is(key string) bool {
 	return len(v.versions[key]) > 0
 }
 
-func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumber string) Versions {
+func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string) Versions {
 	semVer := SemVer(project.Version())
-	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumber)
+	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumber, firstVer)
 	return Versions{
 		custom:            custom,
 		HashLength:        hashLength,
@@ -179,7 +179,7 @@ func CreateVersions(project Project, versions []string, hashLength, buildNumberL
 	}
 }
 
-func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumber string) (map[string]string, []string) {
+func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string) (map[string]string, []string) {
 	result := make(map[string]string)
 	custom := []string{}
 
@@ -199,7 +199,7 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 	}
 	// build version
 	if types[VerBuild] {
-		result[VerBuild] = buildVersion(semVer, hashLength, buildNumberLength, buildNumber).String()
+		result[VerBuild] = buildVersion(semVer, hashLength, buildNumberLength, buildNumber, firstVer).String()
 	}
 	// release version
 	if types[VerRelease] {
@@ -211,7 +211,7 @@ func createVersions(semVer *semver.Version, versions []string, hashLength, build
 	}
 	// hash version
 	if types[VerHash] {
-		result[VerHash] = hashVersion(semVer, hashLength).String()
+		result[VerHash] = hashVersion(semVer, hashLength, firstVer).String()
 	}
 	// branch tag
 	if types[VerBranch] {
@@ -245,8 +245,8 @@ func releaseVersion(tmp *semver.Version) *semver.Version {
 	return &version
 }
 
-func hashVersion(tmp *semver.Version, hashLength int) *semver.Version {
-	_, _, hash := tools.GitCommit(hashLength)
+func hashVersion(tmp *semver.Version, hashLength int, firstVer string) *semver.Version {
+	_, _, hash := tools.GitCommit(hashLength, firstVer)
 	ver, err := tmp.SetPrerelease(hash)
 	if err != nil {
 		log.WithFields(log.Fields{
@@ -264,9 +264,9 @@ type buildVersionData struct {
 }
 
 // BuildVersion build version of the project
-func buildVersion(semVer *semver.Version, hashLength, length int, template string) *semver.Version {
+func buildVersion(semVer *semver.Version, hashLength, length int, template, firstVer string) *semver.Version {
 	tmp := releaseVersion(semVer)
-	_, count, hash := tools.GitCommit(hashLength)
+	_, count, hash := tools.GitCommit(hashLength, firstVer)
 
 	// number
 	number := tools.Lpad(count, "0", length)

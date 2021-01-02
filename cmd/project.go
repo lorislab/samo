@@ -12,6 +12,7 @@ type commonFlags struct {
 	HashLength        int          `mapstructure:"build-hash"`
 	BuildNumber       string       `mapstructure:"build-number"`
 	BuildNumberLength int          `mapstructure:"build-length"`
+	FirstVersion      string       `mapstructure:"first-version"`
 }
 
 type projectFlags struct {
@@ -80,20 +81,21 @@ func initProject() {
 	addFlag(projectCmd, "build-number", "b", "rc{{ .Number }}.{{ .Hash }}", "the build number (temmplate) [Number,Hash,Count]")
 	addIntFlag(projectCmd, "build-length", "e", 3, "the build number length.")
 	addIntFlag(projectCmd, "build-hash", "", 12, "the git hash length")
+	addFlag(projectCmd, "first-version", "", "0.0.0", "the first version of the project")
 
 	addChildCmd(projectCmd, createReleaseCmd)
 	addBoolFlag(createReleaseCmd, "release-major", "", false, "create a major release")
 	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
 	nd := addBoolFlag(createReleaseCmd, "next-dev", "", true, "update project file (if exists) to next dev version")
 	ndm := addFlag(createReleaseCmd, "next-dev-msg", "", "Create new development version {{ .Version }}", "commit message for new development version (template) [Version]")
-	gsk := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
+	skipPush := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
 
 	addChildCmd(projectCmd, createPatchCmd)
-	addFlagReq(createPatchCmd, "patch-tag", "", "", "the tag version of the patch branch")
+	addFlagReq(createPatchCmd, "patch-tag", "", "", "create patch branch for the release tag")
 	addFlag(createPatchCmd, "patch-branch", "", "{{ .Major }}.{{ .Minor }}", "patch branch name (template) [Major,Minor,Patch]")
 	addFlagRef(createPatchCmd, nd)
 	addFlagRef(createPatchCmd, ndm)
-	addFlagRef(createPatchCmd, gsk)
+	addFlagRef(createPatchCmd, skipPush)
 }
 
 func readProjectOptions() (projectFlags, project.Project) {

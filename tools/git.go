@@ -30,7 +30,7 @@ func Git(name string, arg ...string) {
 }
 
 // GitCommit get the git commit
-func GitCommit(length int) (string, string, string) {
+func GitCommit(length int, firstVer string) (string, string, string) {
 	// search for latest annotated tag
 	lastTag, err := cmdOutputErr("git", "describe", "--abbrev=0")
 	log.WithField("tag", lastTag).Debug("Last tag")
@@ -44,7 +44,7 @@ func GitCommit(length int) (string, string, string) {
 		}
 	}
 	// not tag found in the git repository
-	lastTag = "0.0.0"
+	lastTag = firstVer
 	count := "0"
 	// git commit hash
 	hash, err := cmdOutputErr("git", "rev-parse", "--short="+strconv.Itoa(length), "HEAD")
