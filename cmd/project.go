@@ -19,7 +19,7 @@ type projectFlags struct {
 	Project           commonFlags `mapstructure:",squash"`
 	ReleaseTagMessage string      `mapstructure:"release-tag-message"`
 	ReleaseMajor      bool        `mapstructure:"release-major"`
-	NextDev           bool        `mapstructure:"next-dev"`
+	SkipNextDev       bool        `mapstructure:"skip-next-dev"`
 	NextDevMsg        string      `mapstructure:"dev-message"`
 	SkipPush          bool        `mapstructure:"skip-push"`
 	PatchBranch       string      `mapstructure:"patch-branch"`
@@ -42,13 +42,13 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readProjectOptions()
 			r := project.ProjectRequest{
-				Project:   p,
-				TagMsg:    op.ReleaseTagMessage,
-				Major:     op.ReleaseMajor,
-				SkipPush:  op.SkipPush,
-				NextDev:   op.NextDev,
-				CommitMsg: op.NextDevMsg,
-				Versions:  createVersionsFrom(p, op.Project, []string{project.VerVersion, project.VerRelease}),
+				Project:     p,
+				TagMsg:      op.ReleaseTagMessage,
+				Major:       op.ReleaseMajor,
+				SkipPush:    op.SkipPush,
+				SkipNextDev: op.SkipNextDev,
+				CommitMsg:   op.NextDevMsg,
+				Versions:    createVersionsFrom(p, op.Project, []string{project.VerVersion, project.VerRelease}),
 			}
 			r.Release()
 		},
@@ -61,13 +61,13 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readProjectOptions()
 			r := project.ProjectRequest{
-				Project:    p,
-				Tag:        op.PatchTag,
-				PathBranch: op.PatchBranch,
-				SkipPush:   op.SkipPush,
-				NextDev:    op.NextDev,
-				CommitMsg:  op.NextDevMsg,
-				Versions:   createVersions(p, op.Project),
+				Project:     p,
+				Tag:         op.PatchTag,
+				PathBranch:  op.PatchBranch,
+				SkipPush:    op.SkipPush,
+				SkipNextDev: op.SkipNextDev,
+				CommitMsg:   op.NextDevMsg,
+				Versions:    createVersions(p, op.Project),
 			}
 			r.Patch()
 		},
@@ -86,7 +86,7 @@ func initProject() {
 	addChildCmd(projectCmd, createReleaseCmd)
 	addBoolFlag(createReleaseCmd, "release-major", "", false, "create a major release")
 	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
-	nd := addBoolFlag(createReleaseCmd, "next-dev", "", true, "update project file (if exists) to next dev version")
+	nd := addBoolFlag(createReleaseCmd, "skip-next-dev", "", false, "skip update project file (if exists) to next dev version")
 	ndm := addFlag(createReleaseCmd, "next-dev-msg", "", "Create new development version {{ .Version }}", "commit message for new development version (template) [Version]")
 	skipPush := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
 

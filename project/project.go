@@ -34,15 +34,15 @@ type Project interface {
 }
 
 type ProjectRequest struct {
-	Project    Project
-	Versions   Versions
-	CommitMsg  string
-	TagMsg     string
-	Major      bool
-	SkipPush   bool
-	NextDev    bool
-	Tag        string
-	PathBranch string
+	Project     Project
+	Versions    Versions
+	CommitMsg   string
+	TagMsg      string
+	Major       bool
+	SkipPush    bool
+	SkipNextDev bool
+	Tag         string
+	PathBranch  string
 }
 
 // CreateRelease create project release
@@ -70,7 +70,7 @@ func (r ProjectRequest) Release() {
 
 // Update project file with new dev version
 func (r ProjectRequest) releaseNextDev() {
-	if !r.NextDev || !r.Project.IsFile() {
+	if r.SkipNextDev || !r.Project.IsFile() {
 		return
 	}
 
@@ -141,7 +141,7 @@ type NextDevMsg struct {
 
 // update project file with next version
 func (r ProjectRequest) patchNextDev(tagVer *semver.Version) {
-	if !r.NextDev || !r.Project.IsFile() {
+	if r.SkipNextDev || !r.Project.IsFile() {
 		return
 	}
 

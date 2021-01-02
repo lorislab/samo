@@ -22,7 +22,7 @@ func GitBranch() string {
 }
 
 // Git execute git command
-func Git(name string, arg ...string) {
+func Git(arg ...string) {
 	err := execCmdErr("git", arg...)
 	if err != nil {
 		ExecCmd("rm", "-f", ".git/index.lock")
