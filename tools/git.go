@@ -1,14 +1,36 @@
 package tools
 
 import (
+	"os"
 	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
 )
 
+func GitBranch() string {
+	tmp, exists := os.LookupEnv("GITHUB_REF")
+	if exists && len(tmp) > 0 {
+		return strings.TrimPrefix(tmp, "refs/heads/")
+	}
+	tmp, exists = os.LookupEnv("CI_COMMIT_REF_SLUG")
+	if exists && len(tmp) > 0 {
+		return tmp
+	}
+	tmp = ExecCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
+	return strings.TrimPrefix(tmp, "heads/")
+}
+
+// Git execute git command
+func Git(arg ...string) {
+	err := execCmdErr("git", arg...)
+	if err != nil {
+		ExecCmd("rm", "-f", ".git/index.lock")
+	}
+}
+
 // GitCommit get the git commit
-func GitCommit(length int) (string, string, string) {
+func GitCommit(length int, firstVer string) (string, string, string) {
 	// search for latest annotated tag
 	lastTag, err := cmdOutputErr("git", "describe", "--abbrev=0")
 	log.WithField("tag", lastTag).Debug("Last tag")
@@ -22,7 +44,7 @@ func GitCommit(length int) (string, string, string) {
 		}
 	}
 	// not tag found in the git repository
-	lastTag = "0.0.0"
+	lastTag = firstVer
 	count := "0"
 	// git commit hash
 	hash, err := cmdOutputErr("git", "rev-parse", "--short="+strconv.Itoa(length), "HEAD")

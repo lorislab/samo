@@ -30,6 +30,7 @@ var (
 			}
 			return nil
 		},
+		TraverseChildren: true,
 	}
 	versionCmd = &cobra.Command{
 		Use:   "version",
@@ -61,7 +62,10 @@ func Execute(version BuildVersion) {
 	}
 }
 
-func init() {
+func initRoot() {
+	addPersistentFlag(rootCmd, "file", "f", "", "project file pom.xml, project.json or .git")
+	addPersistentFlag(rootCmd, "type", "t", "", "project type maven, npm or git")
+
 	versionCmd.Flags().BoolVarP(&shortened, "short", "s", false, "Print just the version number.")
 	versionCmd.Flags().StringVarP(&output, "output", "o", "json", "Output format. One of 'yaml' or 'json'.")
 	rootCmd.AddCommand(versionCmd)

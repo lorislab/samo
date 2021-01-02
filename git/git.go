@@ -15,6 +15,11 @@ type GitProject struct {
 	version string
 }
 
+// IsFile is project base on the project file
+func (g GitProject) IsFile() bool {
+	return false
+}
+
 // Type the type of the project
 func (g GitProject) Type() project.Type {
 	return project.Git
@@ -37,10 +42,10 @@ func (g GitProject) Filename() string {
 
 // SetVersion set project version
 func (g GitProject) SetVersion(version string) {
-	log.WithField("type", g.Type()).Fatal("This project does not support project file changes")
+	log.WithField("type", g.Type()).Warn("This project does not support project file changes")
 }
 
-func Load(filename string) project.Project {
+func Load(filename, firstVer string) project.Project {
 
 	if len(filename) == 0 {
 		filename = ".git"
@@ -50,29 +55,19 @@ func Load(filename string) project.Project {
 		}
 	}
 
-	name := tools.ExecCmdOutput("basename", "$(git remote get-url origin)")
+	name := tools.ExecCmdOutput("git", "remote", "get-url", "origin")
+	name = name[strings.LastIndex(name, "/")+1:]
 	name = strings.TrimSuffix(name, ".git")
 
-	version, _, _ := tools.GitCommit(6)
+	version, _, _ := tools.GitCommit(6, firstVer)
 	result := GitProject{
 		name:    name,
 		version: version,
 	}
 
-	tmp := project.NextReleaseVersion(result, false)
+	versions := project.CreateVersions(result, nil, 0, 0, "", firstVer)
+	tmp := versions.NextReleaseVersion(false)
 	result.version = tmp.String()
 
 	return &result
-}
-
-func GitBranch() string {
-	tmp, exists := os.LookupEnv("GITHUB_REF")
-	if exists && len(tmp) > 0 {
-		return strings.TrimPrefix(tmp, "refs/heads/")
-	}
-	tmp, exists = os.LookupEnv("CI_COMMIT_REF_SLUG")
-	if exists && len(tmp) > 0 {
-		return tmp
-	}
-	return tools.ExecCmdOutput("git", "rev-parse", "--abbrev-ref", "HEAD")
 }

@@ -16,17 +16,13 @@ func ExecCmdOutput(name string, arg ...string) string {
 	log.Debug("Output: ", string(out))
 	if err != nil {
 		log.Error(string(out))
-		log.Panic(err)
+		log.WithFields(log.Fields{
+			"cmd":   name,
+			"args":  arg,
+			"error": err,
+		}).Fatal("Error execute command")
 	}
 	return string(bytes.TrimRight(out, "\n"))
-}
-
-// ExecGitCmd execute git command
-func Git(name string, arg ...string) {
-	err := execCmdErr("git", arg...)
-	if err != nil {
-		ExecCmd("rm", "-f", ".git/index.lock")
-	}
 }
 
 // ExecCmd execute command
@@ -72,7 +68,7 @@ func ExecCmd(name string, arg ...string) {
 
 	err = cmd.Wait()
 	if err != nil {
-		log.Panic(err)
+		log.WithField("error", err).Fatal("Error execute command")
 	}
 }
 
@@ -81,7 +77,12 @@ func execCmdErr(name string, arg ...string) error {
 	out, err := exec.Command(name, arg...).CombinedOutput()
 	log.Debug("Output: ", string(out))
 	if err != nil {
-		log.Error(err)
+		log.Error(string(out))
+		log.WithFields(log.Fields{
+			"cmd":   name,
+			"args":  arg,
+			"error": err,
+		}).Fatal("Error execute command")
 	}
 	return err
 }
