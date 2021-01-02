@@ -1,10 +1,13 @@
 package cmd
 
 import (
+	"strings"
+
 	"github.com/lorislab/samo/git"
 	"github.com/lorislab/samo/maven"
 	"github.com/lorislab/samo/npm"
 	"github.com/lorislab/samo/project"
+	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/spf13/cobra"
@@ -155,4 +158,27 @@ func addPersistentViper(command *cobra.Command, name string) *pflag.Flag {
 		log.WithField("name", name).Panic(err)
 	}
 	return f
+}
+
+func removeCurrentTag(skip bool) {
+	if skip {
+		log.Debug("Skip remove tag from HEAD")
+		return
+	}
+
+	// find all tags for the current commit
+	list := tools.ExecCmdOutput("git", "--no-pager", "tag", "--points-at", "HEAD")
+	if len(list) <= 0 {
+		log.Debug("No tag found on current commit")
+		return
+	}
+	// could be multiple tags
+	tags := strings.Split(list, "\n")
+	log.WithField("tags", tags).Info("Remove git tags for current commit")
+
+	// delete the local tags
+	var cmd []string
+	cmd = append(cmd, "tag", "-d")
+	cmd = append(cmd, tags...)
+	tools.Git(cmd...)
 }

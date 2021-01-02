@@ -23,6 +23,7 @@ type helmFlags struct {
 	HelmRepositoryURL  string      `mapstructure:"helm-repo-url"`
 	HelmRepositoryAdd  bool        `mapstructure:"helm-repo-add"`
 	HelmUpdateVersion  bool        `mapstructure:"helm-update-version"`
+	HelmSkipRemoveTag  bool        `mapstructure:"helm-remove-tag-skip"`
 }
 
 var (
@@ -101,6 +102,9 @@ var (
 				log.WithField("--helm-repo-url", op.HelmRepositoryURL).Fatal("Helm repository URL is required!")
 			}
 
+			// remove current git tag
+			removeCurrentTag(op.HelmSkipRemoveTag)
+
 			helm := helm.HelmRequest{
 				Project:       p,
 				Versions:      createVersionsFrom(p, op.Project, []string{project.VerBuild, project.VerRelease}),
@@ -150,6 +154,7 @@ func initHelm() {
 	addFlagRef(helmReleaseCmd, skipPush)
 	addFlagRef(helmReleaseCmd, fc)
 	addFlagRef(helmReleaseCmd, fv)
+	addBoolFlag(helmReleaseCmd, "helm-remove-tag-skip", "", false, "remove tag from the git head")
 
 }
 

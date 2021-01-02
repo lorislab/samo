@@ -19,6 +19,7 @@ type dockerFlags struct {
 	DockerReleaseRepoPrefix string      `mapstructure:"docker-release-repo-prefix"`
 	DockerReleaseRepository string      `mapstructure:"docker-release-repository"`
 	DockerReleaseSkipPush   bool        `mapstructure:"docker-release-push-skip"`
+	DockerSkipRemoveTag     bool        `mapstructure:"docker-remove-tag-skip"`
 }
 
 var (
@@ -73,6 +74,10 @@ var (
 		Long:  `Release the docker image and push to release registry`,
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readDockerOptions()
+
+			// remove current git tag
+			removeCurrentTag(op.DockerSkipRemoveTag)
+
 			docker := docker.DockerRequest{
 				Project:                 p,
 				Registry:                op.DockerRegistry,
@@ -112,6 +117,7 @@ func initDocker() {
 	addFlag(dockerReleaseCmd, "docker-release-repo-prefix", "", "", "the docker release repository prefix")
 	addFlag(dockerReleaseCmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addBoolFlag(dockerReleaseCmd, "docker-release-push-skip", "", false, "skip docker push of release image to registry")
+	addBoolFlag(dockerReleaseCmd, "docker-remove-tag-skip", "", false, "remove tag from the git head")
 }
 
 func readDockerOptions() (dockerFlags, project.Project) {
