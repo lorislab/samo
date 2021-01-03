@@ -109,7 +109,6 @@ func initDocker() {
 	addBoolFlag(dockerBuildCmd, "docker-skip-pull", "", false, "skip docker pull for the build")
 
 	addChildCmd(dockerCmd, dockerPushCmd)
-	addSliceFlag(dockerPushCmd, "docker-push-tags", "", []string{"build", "hash"}, "the list of docker image tags to be push, custom or "+verList)
 	addBoolFlag(dockerPushCmd, "docker-push-skip", "", false, "skip docker push of release image to registry")
 
 	addChildCmd(dockerCmd, dockerReleaseCmd)
