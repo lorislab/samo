@@ -9,14 +9,15 @@ import (
 type dockerFlags struct {
 	Project                 commonFlags `mapstructure:",squash"`
 	DockerRegistry          string      `mapstructure:"docker-registry"`
-	DockerRepoPrefix        string      `mapstructure:"docker-repo-prefix"`
+	DockerRepoPrefix        string      `mapstructure:"docker-group"`
 	DockerRepository        string      `mapstructure:"docker-repository"`
 	Dockerfile              string      `mapstructure:"docker-file"`
+	DockerfileProfile       string      `mapstructure:"docker-file-profile"`
 	DockerContext           string      `mapstructure:"docker-context"`
 	DockerSkipPull          bool        `mapstructure:"docker-pull-skip"`
 	DockerSkipPush          bool        `mapstructure:"docker-push-skip"`
 	DockerReleaseRegistry   string      `mapstructure:"docker-release-registry"`
-	DockerReleaseRepoPrefix string      `mapstructure:"docker-release-repo-prefix"`
+	DockerReleaseRepoPrefix string      `mapstructure:"docker-release-group"`
 	DockerReleaseRepository string      `mapstructure:"docker-release-repository"`
 	DockerReleaseSkipPush   bool        `mapstructure:"docker-release-push-skip"`
 	DockerSkipRemoveTag     bool        `mapstructure:"docker-remove-tag-skip"`
@@ -36,14 +37,15 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readDockerOptions()
 			docker := docker.DockerRequest{
-				Project:          p,
-				Registry:         op.DockerRegistry,
-				RepositoryPrefix: op.DockerRepoPrefix,
-				Repository:       op.DockerRepository,
-				Dockerfile:       op.Dockerfile,
-				Context:          op.DockerContext,
-				SkipPull:         op.DockerSkipPull,
-				Versions:         createVersions(p, op.Project),
+				Project:           p,
+				Registry:          op.DockerRegistry,
+				RepositoryPrefix:  op.DockerRepoPrefix,
+				Repository:        op.DockerRepository,
+				Dockerfile:        op.Dockerfile,
+				DockerfileProfile: op.DockerfileProfile,
+				Context:           op.DockerContext,
+				SkipPull:          op.DockerSkipPull,
+				Versions:          createVersions(p, op.Project),
 			}
 			docker.Build()
 		},
@@ -105,8 +107,9 @@ func initDocker() {
 
 	addChildCmd(dockerCmd, dockerBuildCmd)
 	addFlag(dockerBuildCmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
+	addFlag(dockerBuildCmd, "docker-file-profile", "p", "", "profile of the Dockerfile.<profile>")
 	addFlag(dockerBuildCmd, "docker-context", "", ".", "the docker build context")
-	addBoolFlag(dockerBuildCmd, "docker-skip-pull", "", false, "skip docker pull for the build")
+	addBoolFlag(dockerBuildCmd, "docker-pull-skip", "", false, "skip docker pull for the build")
 
 	addChildCmd(dockerCmd, dockerPushCmd)
 	addBoolFlag(dockerPushCmd, "docker-push-skip", "", false, "skip docker push of release image to registry")

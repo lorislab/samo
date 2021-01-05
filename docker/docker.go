@@ -14,6 +14,7 @@ type DockerRequest struct {
 	RepositoryPrefix        string
 	Repository              string
 	Dockerfile              string
+	DockerfileProfile       string
 	Context                 string
 	SkipPull                bool
 	SkipPush                bool
@@ -86,8 +87,18 @@ func (request DockerRequest) Release() {
 // DockerBuild build docker image of the project
 func (request DockerRequest) Build() {
 
+	dockerfile := request.Dockerfile
+	if len(dockerfile) <= 0 {
+		dockerfile = "Dockerfile"
+	}
+	if len(request.DockerfileProfile) > 0 {
+		dockerfile = dockerfile + "." + request.DockerfileProfile
+	}
+
 	if !tools.Exists(request.Dockerfile) {
-		log.WithField("Dockerfile", request.Dockerfile).Fatal("Dockerfile does not exists!")
+		log.WithFields(log.Fields{
+			"docker-file": dockerfile,
+		}).Fatal("Dockerfile does not exists!")
 	}
 
 	dockerImage, tags := request.dockerTags()
@@ -106,10 +117,10 @@ func (request DockerRequest) Build() {
 	for _, tag := range tags {
 		command = append(command, "-t", tag)
 	}
-	// add dockerfile
-	if len(request.Dockerfile) > 0 {
-		command = append(command, "-f", request.Dockerfile)
-	}
+
+	// add dockerfile and dockerfile profile
+	command = append(command, "-f", dockerfile)
+
 	// set docker context
 	command = append(command, request.Context)
 	// execute command
