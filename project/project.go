@@ -38,7 +38,6 @@ type ProjectRequest struct {
 	Versions    Versions
 	CommitMsg   string
 	TagMsg      string
-	Major       bool
 	SkipPush    bool
 	SkipNextDev bool
 	Tag         string
@@ -75,7 +74,7 @@ func (r ProjectRequest) releaseNextDev() {
 	}
 
 	currentVersion := r.Versions.SemVer()
-	tmp := r.Versions.NextReleaseVersion(r.Major)
+	tmp := r.Versions.NextReleaseVersion()
 
 	tmp, err := tmp.SetPrerelease(currentVersion.Prerelease())
 	if err != nil {

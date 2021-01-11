@@ -29,7 +29,7 @@ func createVersions(p project.Project, op commonFlags) project.Versions {
 }
 
 func createVersionsFrom(p project.Project, op commonFlags, versions []string) project.Versions {
-	return project.CreateVersions(p, versions, op.HashLength, op.BuildNumberLength, op.BuildNumber, op.FirstVersion)
+	return project.CreateVersions(p, versions, op.HashLength, op.BuildNumberLength, op.BuildNumber, op.FirstVersion, op.ReleaseMajor, op.PatchBranchRegex)
 }
 
 func readOptions(options interface{}) {
@@ -42,10 +42,7 @@ func readOptions(options interface{}) {
 
 func loadProject(p commonFlags) project.Project {
 
-	file := p.File
-	projectType := project.Type(p.Type)
-
-	result := findProject(file, projectType, p.FirstVersion)
+	result := findProject(p)
 	if result != nil {
 		log.WithFields(log.Fields{
 			"type": result.Type(),
@@ -56,23 +53,25 @@ func loadProject(p commonFlags) project.Project {
 
 	// failed loading the poject
 	log.WithFields(log.Fields{
-		"type": projectType,
-		"file": file,
+		"type": p.Type,
+		"file": p.File,
 	}).Fatal("Could to find project file. Please specified the type --type.")
 	return nil
 }
 
-func findProject(file string, projectType project.Type, firstVer string) project.Project {
+func findProject(p commonFlags) project.Project {
+
+	projectType := project.Type(p.Type)
 
 	// find the project type
 	if len(projectType) > 0 {
 		switch projectType {
 		case project.Maven:
-			return maven.Load(file)
+			return maven.Load(p.File)
 		case project.Npm:
-			return npm.Load(file)
+			return npm.Load(p.File)
 		case project.Git:
-			return git.Load(file, firstVer)
+			return git.Load(p.File, p.FirstVersion, p.PatchBranchRegex, p.ReleaseMajor)
 		}
 	}
 
@@ -87,7 +86,7 @@ func findProject(file string, projectType project.Type, firstVer string) project
 		return project
 	}
 	// priority 3 git
-	project = git.Load("", firstVer)
+	project = git.Load("", p.FirstVersion, p.PatchBranchRegex, p.ReleaseMajor)
 	if project != nil {
 		return project
 	}

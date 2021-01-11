@@ -1,6 +1,7 @@
 package project
 
 import (
+	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -32,24 +33,15 @@ type Versions struct {
 	HashLength        int
 	BuildNumberLength int
 	BuildNumber       string
+	PatchBranch       bool
+	Major             bool
 	versions          map[string]string
 	semVer            *semver.Version
 }
 
 // NextReleaseVersion creates next release version
-func (v Versions) NextReleaseVersion(major bool) semver.Version {
-	ver := v.semVer
-	if major {
-		if ver.Patch() != 0 {
-			log.WithField("version", ver.String()).Fatal("Can not created major release from the patch version!")
-		}
-		tmp := ver.IncMajor()
-		return tmp
-	}
-	if ver.Patch() != 0 {
-		return ver.IncPatch()
-	}
-	return ver.IncMinor()
+func (v Versions) NextReleaseVersion() semver.Version {
+	return *nextReleaseVersion(v.semVer, v.Major, v.PatchBranch)
 }
 
 func (v Versions) SemVer() *semver.Version {
@@ -166,9 +158,31 @@ func (v Versions) is(key string) bool {
 	return len(v.versions[key]) > 0
 }
 
-func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string) Versions {
+func CreateVersions(project Project, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string,
+	major bool, patchBranchRegex string) Versions {
+
+	patchBranh := false
+	if len(patchBranchRegex) > 0 {
+		branch := tools.GitBranch()
+
+		match, e := regexp.MatchString(patchBranchRegex, branch)
+		if e != nil {
+			log.WithFields(log.Fields{
+				"branch": branch,
+				"regex":  patchBranchRegex,
+				"error":  e,
+			}).Fatal("Error parsing patch branch regex")
+		}
+		log.WithFields(log.Fields{
+			"branch": branch,
+			"regex":  patchBranchRegex,
+			"match":  match,
+		}).Debug("Check patch branch regex")
+		patchBranh = match
+	}
+
 	semVer := SemVer(project.Version())
-	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumber, firstVer)
+	ver, custom := createVersions(semVer, versions, hashLength, buildNumberLength, buildNumber, firstVer, major, patchBranh)
 	return Versions{
 		custom:            custom,
 		HashLength:        hashLength,
@@ -176,10 +190,13 @@ func CreateVersions(project Project, versions []string, hashLength, buildNumberL
 		BuildNumber:       buildNumber,
 		versions:          ver,
 		semVer:            semVer,
+		Major:             major,
+		PatchBranch:       patchBranh,
 	}
 }
 
-func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string) (map[string]string, []string) {
+func createVersions(semVer *semver.Version, versions []string, hashLength, buildNumberLength int, buildNumber, firstVer string,
+	major, patchBranch bool) (map[string]string, []string) {
 	result := make(map[string]string)
 	custom := []string{}
 
@@ -296,4 +313,21 @@ func SemVer(version string) *semver.Version {
 		log.WithField("version", version).Fatal("Version value is not valid semver 2.0.")
 	}
 	return result
+}
+
+// NextReleaseVersion creates next release version
+func nextReleaseVersion(ver *semver.Version, major, patchBranch bool) *semver.Version {
+	if major {
+		if ver.Patch() != 0 {
+			log.WithField("version", ver.String()).Fatal("Can not created major release from the patch version!")
+		}
+		tmp := ver.IncMajor()
+		return &tmp
+	}
+	if ver.Patch() != 0 || patchBranch {
+		tmp := ver.IncPatch()
+		return &tmp
+	}
+	tmp := ver.IncMinor()
+	return &tmp
 }

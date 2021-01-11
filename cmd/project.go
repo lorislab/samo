@@ -13,12 +13,13 @@ type commonFlags struct {
 	BuildNumber       string       `mapstructure:"build-number"`
 	BuildNumberLength int          `mapstructure:"build-length"`
 	FirstVersion      string       `mapstructure:"first-version"`
+	PatchBranchRegex  string       `mapstructure:"patch-branch-regex"`
+	ReleaseMajor      bool         `mapstructure:"release-major"`
 }
 
 type projectFlags struct {
 	Project           commonFlags `mapstructure:",squash"`
 	ReleaseTagMessage string      `mapstructure:"release-tag-message"`
-	ReleaseMajor      bool        `mapstructure:"release-major"`
 	SkipNextDev       bool        `mapstructure:"skip-next-dev"`
 	NextDevMsg        string      `mapstructure:"next-dev-message"`
 	SkipPush          bool        `mapstructure:"skip-push"`
@@ -44,7 +45,6 @@ var (
 			r := project.ProjectRequest{
 				Project:     p,
 				TagMsg:      op.ReleaseTagMessage,
-				Major:       op.ReleaseMajor,
 				SkipPush:    op.SkipPush,
 				SkipNextDev: op.SkipNextDev,
 				CommitMsg:   op.NextDevMsg,
@@ -79,12 +79,13 @@ func initProject() {
 	addChildCmd(rootCmd, projectCmd)
 	addSliceFlag(projectCmd, "version", "", []string{project.VerVersion}, "project version type, custom or "+verList)
 	addFlag(projectCmd, "build-number", "b", "rc{{ .Number }}.{{ .Hash }}", "the build number (temmplate) [Number,Hash,Count]")
+	addFlag(projectCmd, "patch-branch-regex", "", "", `patch branch regex (if match increment patch version). For example: ^release/\d\.\d\..$`)
 	addIntFlag(projectCmd, "build-length", "e", 3, "the build number length.")
 	addIntFlag(projectCmd, "build-hash", "", 12, "the git hash length")
 	addFlag(projectCmd, "first-version", "", "0.0.0", "the first version of the project")
+	addBoolFlag(projectCmd, "release-major", "", false, "create a major release")
 
 	addChildCmd(projectCmd, createReleaseCmd)
-	addBoolFlag(createReleaseCmd, "release-major", "", false, "create a major release")
 	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
 	nd := addBoolFlag(createReleaseCmd, "skip-next-dev", "", false, "skip update project file (if exists) to next dev version")
 	ndm := addFlag(createReleaseCmd, "next-dev-message", "", "Create new development version [{{ .Version }}]", "commit message for new development version (template) [Version]")
