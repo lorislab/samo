@@ -16,6 +16,7 @@ type dockerFlags struct {
 	DockerContext           string      `mapstructure:"docker-context"`
 	DockerSkipPull          bool        `mapstructure:"docker-pull-skip"`
 	DockerSkipPush          bool        `mapstructure:"docker-push-skip"`
+	DockerBuildpPush        bool        `mapstructure:"docker-build-push"`
 	DockerReleaseRegistry   string      `mapstructure:"docker-release-registry"`
 	DockerReleaseRepoPrefix string      `mapstructure:"docker-release-group"`
 	DockerReleaseRepository string      `mapstructure:"docker-release-repository"`
@@ -45,6 +46,7 @@ var (
 				DockerfileProfile: op.DockerfileProfile,
 				Context:           op.DockerContext,
 				SkipPull:          op.DockerSkipPull,
+				SkipPush:          !op.DockerBuildpPush,
 				Versions:          createVersions(p, op.Project),
 			}
 			docker.Build()
@@ -110,6 +112,7 @@ func initDocker() {
 	addFlag(dockerBuildCmd, "docker-file-profile", "p", "", "profile of the Dockerfile.<profile>")
 	addFlag(dockerBuildCmd, "docker-context", "", ".", "the docker build context")
 	addBoolFlag(dockerBuildCmd, "docker-pull-skip", "", false, "skip docker pull for the build")
+	addBoolFlag(dockerBuildCmd, "docker-build-push", "", false, "push docker images after build")
 
 	addChildCmd(dockerCmd, dockerPushCmd)
 	addBoolFlag(dockerPushCmd, "docker-push-skip", "", false, "skip docker push of release image to registry")

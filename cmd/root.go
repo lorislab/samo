@@ -87,7 +87,9 @@ func initConfig() {
 			log.Fatal(err)
 		}
 
-		// Search config in home directory with name ".cobra" (without extension).
+		// Search confing in current directory
+		viper.AddConfigPath(".")
+		// Search config in home directory with name ".samo" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".samo")
 	}

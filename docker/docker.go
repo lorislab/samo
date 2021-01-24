@@ -130,6 +130,15 @@ func (request DockerRequest) Build() {
 		"image": dockerImage,
 		"tags":  tags,
 	}).Info("Docker build done!")
+
+	if !request.SkipPush {
+		request.Push()
+	} else {
+		log.WithFields(log.Fields{
+			"image": dockerImage,
+			"tags":  tags,
+		}).Debug("Skip push docker images after build.")
+	}
 }
 
 // DockerPush push docker image of the project
