@@ -38,6 +38,7 @@ type ProjectRequest struct {
 	Versions    Versions
 	CommitMsg   string
 	TagMsg      string
+	TagTemplate string
 	SkipPush    bool
 	SkipNextDev bool
 	Tag         string
@@ -47,11 +48,11 @@ type ProjectRequest struct {
 // CreateRelease create project release
 func (r ProjectRequest) Release() {
 
-	tag := r.Versions.ReleaseVersion()
-
 	data := NextDevMsg{
-		Version: tag,
+		Version: r.Versions.ReleaseVersion(),
 	}
+	tag := createText(data, r.TagTemplate)
+	data.Version = tag
 	msg := createText(data, r.TagMsg)
 	tools.Git("tag", "-a", tag, "-m", msg)
 

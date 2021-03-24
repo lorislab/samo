@@ -18,13 +18,14 @@ type commonFlags struct {
 }
 
 type projectFlags struct {
-	Project           commonFlags `mapstructure:",squash"`
-	ReleaseTagMessage string      `mapstructure:"release-tag-message"`
-	SkipNextDev       bool        `mapstructure:"skip-next-dev"`
-	NextDevMsg        string      `mapstructure:"next-dev-message"`
-	SkipPush          bool        `mapstructure:"skip-push"`
-	PatchBranch       string      `mapstructure:"patch-branch"`
-	PatchTag          string      `mapstructure:"patch-tag"`
+	Project            commonFlags `mapstructure:",squash"`
+	ReleaseTagMessage  string      `mapstructure:"release-tag-message"`
+	ReleaseTagTemplate string      `mapstructure:"release-tag-template"`
+	SkipNextDev        bool        `mapstructure:"skip-next-dev"`
+	NextDevMsg         string      `mapstructure:"next-dev-message"`
+	SkipPush           bool        `mapstructure:"skip-push"`
+	PatchBranch        string      `mapstructure:"patch-branch"`
+	PatchTag           string      `mapstructure:"patch-tag"`
 }
 
 var (
@@ -48,6 +49,7 @@ var (
 				SkipPush:    op.SkipPush,
 				SkipNextDev: op.SkipNextDev,
 				CommitMsg:   op.NextDevMsg,
+				TagTemplate: op.ReleaseTagTemplate,
 				Versions:    createVersionsFrom(p, op.Project, []string{project.VerVersion, project.VerRelease}),
 			}
 			r.Release()
@@ -87,6 +89,7 @@ func initProject() {
 
 	addChildCmd(projectCmd, createReleaseCmd)
 	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
+	addFlag(createReleaseCmd, "release-tag-template", "", "{{ .Version }}", "the release tag template. (template) [Version]")
 	nd := addBoolFlag(createReleaseCmd, "skip-next-dev", "", false, "skip update project file (if exists) to next dev version")
 	ndm := addFlag(createReleaseCmd, "next-dev-message", "", "Create new development version [{{ .Version }}]", "commit message for new development version (template) [Version]")
 	skipPush := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
