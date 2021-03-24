@@ -18,6 +18,7 @@ type DockerRequest struct {
 	Context                 string
 	SkipPull                bool
 	SkipPush                bool
+	SkipRemoveBuildImg      bool
 	ReleaseRegistry         string
 	ReleaseRepositoryPrefix string
 	ReleaseRepository       string
@@ -113,6 +114,11 @@ func (request DockerRequest) Build() {
 	if !request.SkipPull {
 		command = append(command, "--pull")
 	}
+	// Removing intermediate container
+	if !request.SkipRemoveBuildImg {
+		command = append(command, "--rm")
+	}
+
 	// add tags
 	for _, tag := range tags {
 		command = append(command, "-t", tag)

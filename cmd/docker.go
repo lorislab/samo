@@ -17,6 +17,7 @@ type dockerFlags struct {
 	DockerSkipPull          bool        `mapstructure:"docker-pull-skip"`
 	DockerSkipPush          bool        `mapstructure:"docker-push-skip"`
 	DockerBuildpPush        bool        `mapstructure:"docker-build-push"`
+	DockerSkipRemoveBuild   bool        `mapstructure:"docker-remove-intermediate-img-skip"`
 	DockerReleaseRegistry   string      `mapstructure:"docker-release-registry"`
 	DockerReleaseRepoPrefix string      `mapstructure:"docker-release-group"`
 	DockerReleaseRepository string      `mapstructure:"docker-release-repository"`
@@ -38,16 +39,17 @@ var (
 		Run: func(cmd *cobra.Command, args []string) {
 			op, p := readDockerOptions()
 			docker := docker.DockerRequest{
-				Project:           p,
-				Registry:          op.DockerRegistry,
-				RepositoryPrefix:  op.DockerRepoPrefix,
-				Repository:        op.DockerRepository,
-				Dockerfile:        op.Dockerfile,
-				DockerfileProfile: op.DockerfileProfile,
-				Context:           op.DockerContext,
-				SkipPull:          op.DockerSkipPull,
-				SkipPush:          !op.DockerBuildpPush,
-				Versions:          createVersions(p, op.Project),
+				Project:            p,
+				Registry:           op.DockerRegistry,
+				RepositoryPrefix:   op.DockerRepoPrefix,
+				Repository:         op.DockerRepository,
+				Dockerfile:         op.Dockerfile,
+				DockerfileProfile:  op.DockerfileProfile,
+				Context:            op.DockerContext,
+				SkipPull:           op.DockerSkipPull,
+				SkipPush:           !op.DockerBuildpPush,
+				SkipRemoveBuildImg: op.DockerSkipRemoveBuild,
+				Versions:           createVersions(p, op.Project),
 			}
 			docker.Build()
 		},
@@ -113,6 +115,7 @@ func initDocker() {
 	addFlag(dockerBuildCmd, "docker-context", "", ".", "the docker build context")
 	addBoolFlag(dockerBuildCmd, "docker-pull-skip", "", false, "skip docker pull for the build")
 	addBoolFlag(dockerBuildCmd, "docker-build-push", "", false, "push docker images after build")
+	addBoolFlag(dockerBuildCmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate container")
 
 	addChildCmd(dockerCmd, dockerPushCmd)
 	addBoolFlag(dockerPushCmd, "docker-push-skip", "", false, "skip docker push of release image to registry")
