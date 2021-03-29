@@ -106,7 +106,7 @@ var (
 func initDocker() {
 	addChildCmd(projectCmd, dockerCmd)
 	addFlag(dockerCmd, "docker-registry", "", "", "the docker registry")
-	addFlag(dockerCmd, "docker-repo-prefix", "", "", "the docker repository prefix")
+	addFlag(dockerCmd, "docker-group", "", "", "the docker repository group")
 	addFlag(dockerCmd, "docker-repo", "", "", "the docker repository. Default value is the project name.")
 
 	addChildCmd(dockerCmd, dockerBuildCmd)
@@ -122,7 +122,7 @@ func initDocker() {
 
 	addChildCmd(dockerCmd, dockerReleaseCmd)
 	addFlag(dockerReleaseCmd, "docker-release-registry", "", "", "the docker release registry")
-	addFlag(dockerReleaseCmd, "docker-release-repo-prefix", "", "", "the docker release repository prefix")
+	addFlag(dockerReleaseCmd, "docker-release-group", "", "", "the docker release repository group")
 	addFlag(dockerReleaseCmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addBoolFlag(dockerReleaseCmd, "docker-release-push-skip", "", false, "skip docker push of release image to registry")
 	addBoolFlag(dockerReleaseCmd, "docker-remove-tag-skip", "", false, "remove tag from the git head")
