@@ -87,16 +87,9 @@ func execCmdErr(name string, arg ...string) error {
 	return err
 }
 
-func cmdOutputErr(name string, arg ...string) (string, error) {
+func CmdOutputErr(name string, arg ...string) (string, error) {
 	log.Debug(name+" ", strings.Join(arg, " "))
 	out, err := exec.Command(name, arg...).CombinedOutput()
 	log.Debug("Output: ", string(out))
 	return string(bytes.TrimRight(out, "\n")), err
-}
-
-func Lpad(data, pad string, length int) string {
-	for i := len(data); i < length; i++ {
-		data = pad + data
-	}
-	return data
 }

@@ -1,109 +1,42 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/spf13/cobra"
 )
 
-type commonFlags struct {
-	File              string       `mapstructure:"file"`
-	Type              project.Type `mapstructure:"type"`
-	Versions          []string     `mapstructure:"version"`
-	HashLength        int          `mapstructure:"build-hash"`
-	BuildNumber       string       `mapstructure:"build-number"`
-	BuildNumberLength int          `mapstructure:"build-length"`
-	FirstVersion      string       `mapstructure:"first-version"`
-	PatchBranchRegex  string       `mapstructure:"patch-branch-regex"`
-	ReleaseMajor      bool         `mapstructure:"release-major"`
-}
-
 type projectFlags struct {
-	Project            commonFlags `mapstructure:",squash"`
-	ReleaseTagMessage  string      `mapstructure:"release-tag-message"`
-	ReleaseTagTemplate string      `mapstructure:"release-tag-template"`
-	SkipNextDev        bool        `mapstructure:"skip-next-dev"`
-	NextDevMsg         string      `mapstructure:"next-dev-message"`
-	SkipPush           bool        `mapstructure:"skip-push"`
-	PatchBranch        string      `mapstructure:"patch-branch"`
-	PatchTag           string      `mapstructure:"patch-tag"`
+	FirstVersion    string `mapstructure:"first-version"`
+	ReleaseMajor    bool   `mapstructure:"release-major"`
+	ReleasePatch    bool   `mapstructure:"release-patch"`
+	VersionTemplate string `mapstructure:"version-template"`
+	SkipPush        bool   `mapstructure:"skip-push"`
 }
 
-var (
-	verList = project.VersionsText()
+var versionTemplateInfo = `the version go temmplate string.
+values: Tag,Hash,Count,Branch
+functions:  trunc <lenght>
+For example: {{ .Tag }}-{{ trunc 10 .Hash }}
+`
 
-	projectCmd = &cobra.Command{
+func createProjectCmd() *cobra.Command {
+
+	cmd := &cobra.Command{
 		Use:              "project",
 		Short:            "Project operation",
 		Long:             `Tasks for the project. To build, push or release docker and helm artifacts of the project.`,
 		TraverseChildren: true,
 	}
-	createReleaseCmd = &cobra.Command{
-		Use:   "release",
-		Short: "Create release of the current project and state",
-		Long:  `Create release of the current project and state`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-			r := project.ProjectRequest{
-				Project:     p,
-				TagMsg:      op.ReleaseTagMessage,
-				SkipPush:    op.SkipPush,
-				SkipNextDev: op.SkipNextDev,
-				CommitMsg:   op.NextDevMsg,
-				TagTemplate: op.ReleaseTagTemplate,
-				Versions:    createVersionsFrom(p, op.Project, []string{project.VerVersion, project.VerRelease}),
-			}
-			r.Release()
-		},
-		TraverseChildren: true,
-	}
-	createPatchCmd = &cobra.Command{
-		Use:   "patch",
-		Short: "Create patch of the project release",
-		Long:  `Create patch of the project release`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-			r := project.ProjectRequest{
-				Project:     p,
-				Tag:         op.PatchTag,
-				PathBranch:  op.PatchBranch,
-				SkipPush:    op.SkipPush,
-				SkipNextDev: op.SkipNextDev,
-				CommitMsg:   op.NextDevMsg,
-				Versions:    createVersions(p, op.Project),
-			}
-			r.Patch()
-		},
-		TraverseChildren: true,
-	}
-)
 
-func initProject() {
-	addChildCmd(rootCmd, projectCmd)
-	addSliceFlag(projectCmd, "version", "", []string{project.VerVersion}, "project version type, custom or "+verList)
-	addFlag(projectCmd, "build-number", "b", "rc{{ .Number }}.{{ .Hash }}", "the build number (temmplate) [Number,Hash,Count]")
-	addFlag(projectCmd, "patch-branch-regex", "", "", `patch branch regex (if match increment patch version). For example: ^release/\d\.\d\..$`)
-	addIntFlag(projectCmd, "build-length", "e", 3, "the build number length.")
-	addIntFlag(projectCmd, "build-hash", "", 12, "the git hash length")
-	addFlag(projectCmd, "first-version", "", "0.0.0", "the first version of the project")
-	addBoolFlag(projectCmd, "release-major", "", false, "create a major release")
+	addStringFlag(cmd, "first-version", "", "0.0.0", "the first version of the project")
+	addBoolFlag(cmd, "release-major", "", false, "create a major release")
+	addBoolFlag(cmd, "release-patch", "", false, "create a patch release")
+	addStringFlag(cmd, "version-template", "t", "{{ .Tag }}-rc.{{ .Count }}", versionTemplateInfo)
+	addBoolFlag(cmd, "skip-push", "", false, "skip git push changes")
 
-	addChildCmd(projectCmd, createReleaseCmd)
-	addFlag(createReleaseCmd, "release-tag-message", "", "{{ .Version }}", "the release tag message. (template) [Version]")
-	addFlag(createReleaseCmd, "release-tag-template", "", "{{ .Version }}", "the release tag template. (template) [Version]")
-	nd := addBoolFlag(createReleaseCmd, "skip-next-dev", "", false, "skip update project file (if exists) to next dev version")
-	ndm := addFlag(createReleaseCmd, "next-dev-message", "", "Create new development version [{{ .Version }}]", "commit message for new development version (template) [Version]")
-	skipPush := addBoolFlag(createReleaseCmd, "skip-push", "", false, "skip git push changes")
+	addChildCmd(cmd, createProjectVersionCmd())
+	addChildCmd(cmd, createProjectNameCmd())
+	addChildCmd(cmd, createProjectReleaseCmd())
+	addChildCmd(cmd, createProjectPatchCmd())
 
-	addChildCmd(projectCmd, createPatchCmd)
-	addFlagReq(createPatchCmd, "patch-tag", "", "", "create patch branch for the release tag")
-	addFlag(createPatchCmd, "patch-branch", "", "{{ .Major }}.{{ .Minor }}", "patch branch name (template) [Major,Minor,Patch]")
-	addFlagRef(createPatchCmd, nd)
-	addFlagRef(createPatchCmd, ndm)
-	addFlagRef(createPatchCmd, skipPush)
-}
-
-func readProjectOptions() (projectFlags, project.Project) {
-	options := projectFlags{}
-	readOptions(&options)
-	return options, loadProject(options.Project)
+	return cmd
 }

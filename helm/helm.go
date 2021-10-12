@@ -16,8 +16,7 @@ import (
 )
 
 type HelmRequest struct {
-	Project       project.Project
-	Versions      project.Versions
+	Project       *project.Project
 	Input         string
 	Output        string
 	Clean         bool
@@ -134,7 +133,7 @@ func (request HelmRequest) updateFile(file string, input []string, template *tem
 type templateData struct {
 	Version      string
 	BuildVersion string
-	Project      project.Project
+	Project      *project.Project
 }
 
 func (r templateData) template(input []string, template *template.Template) map[string]string {

@@ -8,8 +8,7 @@ import (
 
 // DockerRequest the docker command request
 type DockerRequest struct {
-	Project                 project.Project
-	Versions                project.Versions
+	Project                 *project.Project
 	Registry                string
 	RepositoryPrefix        string
 	Repository              string

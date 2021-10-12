@@ -1,193 +1,109 @@
 package project
 
 import (
-	"bytes"
-	"html/template"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/Masterminds/semver"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 )
 
-type Type string
-
-const (
-	Maven = "maven"
-	Npm   = "npm"
-	Git   = "git"
-)
-
 // Project common project interface
-type Project interface {
-	// Type the type of the project
-	Type() Type
-	// Name project name
-	Name() string
-	// Version project version
-	Version() string
-	// Filename project file name
-	Filename() string
-	// IsFile Project file
-	IsFile() bool
-	// SetVersion set project version
-	SetVersion(version string)
+type Project struct {
+	name    string
+	tag     string
+	count   string
+	hash    string
+	branch  string
+	version *semver.Version
+	release *semver.Version
 }
 
-type ProjectRequest struct {
-	Project     Project
-	Versions    Versions
-	CommitMsg   string
-	TagMsg      string
-	TagTemplate string
-	SkipPush    bool
-	SkipNextDev bool
-	Tag         string
-	PathBranch  string
+// Name project name
+func (g Project) Name() string {
+	return g.name
 }
 
-// CreateRelease create project release
-func (r ProjectRequest) Release() {
-
-	data := NextDevMsg{
-		Version: r.Versions.ReleaseVersion(),
-	}
-	tag := createText(data, r.TagTemplate)
-	data.Version = tag
-	msg := createText(data, r.TagMsg)
-	tools.Git("tag", "-a", tag, "-m", msg)
-
-	// update project file with next version
-	r.releaseNextDev()
-
-	// push project to remote repository
-	if r.SkipPush {
-		log.WithField("tag", tag).Info("Skip git push for project release")
-	} else {
-		tools.Git("push", "--tags")
-	}
-	log.WithField("version", tag).Info("New release created.")
+func (g Project) Version() string {
+	return g.version.String()
 }
 
-// Update project file with new dev version
-func (r ProjectRequest) releaseNextDev() {
-	if r.SkipNextDev || !r.Project.IsFile() {
-		return
+func (g Project) ReleaseVersion() string {
+	return g.release.String()
+}
+
+func LoadProject(firstVer, template string, major, patch bool) *Project {
+
+	if _, err := os.Stat(".git"); os.IsNotExist(err) {
+		log.WithField("directory", ".git").Fatal("Missing git directory!")
 	}
 
-	currentVersion := r.Versions.SemVer()
-	tmp := r.Versions.NextReleaseVersion()
-
-	tmp, err := tmp.SetPrerelease(currentVersion.Prerelease())
+	name := "no-name"
+	tmp, err := tools.CmdOutputErr("git", "config", "remote.origin.url")
 	if err != nil {
-		log.WithFields(log.Fields{
-			"prerelease": currentVersion.Prerelease(),
-			"version":    tmp.String(),
-		}).Fatal("Error set pre-release")
+		tmp = tools.ExecCmdOutput("git", "rev-parse", "--show-toplevel")
+	}
+	tmp = strings.TrimSuffix(tmp, ".git")
+	tmp = filepath.Base(tmp)
+	if len(tmp) > 0 && tmp != "." && tmp != "/" {
+		name = tmp
 	}
 
-	tmp, err = tmp.SetMetadata(currentVersion.Metadata())
-	if err != nil {
-		log.WithFields(log.Fields{
-			"prerelease": currentVersion.Metadata(),
-			"version":    tmp.String(),
-		}).Fatal("Error set metada")
+	tag, count, hash := tools.GitDescribe(firstVer)
+
+	branch := tools.GitBranch()
+
+	nextVersion := createNextVersion(tag, major, patch)
+
+	result := &Project{
+		name:    name,
+		tag:     tag,
+		count:   count,
+		hash:    hash,
+		branch:  branch,
+		version: createVersion(tag, nextVersion, count, hash, branch, template),
+		release: tools.CreateSemVer(nextVersion),
 	}
-
-	devVersion := tmp.String()
-
-	r.Project.SetVersion(devVersion)
-	log.WithField("dev-version", devVersion).Info("Update project version to next development version")
-
-	data := NextDevMsg{
-		Version: devVersion,
-	}
-	msg := createText(data, r.CommitMsg)
-
-	tools.Git("add", ".")
-	tools.Git("commit", "-m", msg)
-
-	log.WithFields(log.Fields{
-		"version":     currentVersion.String(),
-		"new-version": devVersion,
-	}).Debug("Switch project to the new version")
-
-	if r.SkipPush {
-		log.WithField("dev", devVersion).Info("Skip git push for next project dev version")
-	} else {
-		tools.Git("push")
-	}
+	return result
 }
 
-// CreatePatch create patch fo the project
-func (r ProjectRequest) Patch() {
+func createVersion(tag, nextVersion, count, hash, branch, template string) *semver.Version {
 
-	tagVer := SemVer(r.Tag)
-	if tagVer.Patch() != 0 || len(tagVer.Prerelease()) > 0 {
-		log.WithField("tag", tagVer.Original()).Fatal("Can not created patch branch from the patch version!")
+	if count == "0" {
+		return tools.CreateSemVer(tag)
 	}
 
-	branch := createText(tagVer, r.PathBranch)
-	tools.Git("checkout", "-b", branch, r.Tag)
-	log.WithField("branch", branch).Debug("Branch created")
-
-	// update project file
-	r.patchNextDev(tagVer)
-
-	// push changes
-	if r.SkipPush {
-		log.WithField("branch", branch).Info("Skip git push for project patch version")
-	} else {
-		tools.Git("push", "-u", "origin", branch)
+	data := struct {
+		Tag    string
+		Hash   string
+		Count  string
+		Branch string
+	}{
+		Tag:    nextVersion,
+		Hash:   hash,
+		Count:  count,
+		Branch: branch,
 	}
-	log.WithField("branch", branch).Info("New patch branch created.")
+
+	tmp := tools.Template(data, template)
+	return tools.CreateSemVer(tmp)
 }
 
-type NextDevMsg struct {
-	Version string
-}
-
-// update project file with next version
-func (r ProjectRequest) patchNextDev(tagVer *semver.Version) {
-	if r.SkipNextDev || !r.Project.IsFile() {
-		return
+func createNextVersion(tag string, major, patch bool) string {
+	ver := tools.CreateSemVer(tag)
+	if patch || ver.Patch() != 0 {
+		tmp := ver.IncPatch()
+		return tmp.String()
 	}
-
-	// remove the prerelease
-	patchVer := tagVer.IncPatch()
-
-	version := r.Versions.SemVer()
-
-	// add suffix (maven = snapshot)
-	patchVer, e := patchVer.SetPrerelease(version.Prerelease())
-	if e != nil {
-		log.WithField("version", patchVer.String()).Fatal("Error add pre-release to the version")
+	if major {
+		if ver.Patch() != 0 {
+			log.WithField("version", ver.String()).Fatal("Can not created major release from the patch version!")
+		}
+		tmp := ver.IncMajor()
+		return tmp.String()
 	}
-
-	// set version to project file
-	patchVersion := patchVer.String()
-	r.Project.SetVersion(patchVersion)
-	log.WithField("patch-version", patchVersion).Info("Update project version to next patch development version")
-
-	tools.Git("add", ".")
-
-	data := NextDevMsg{
-		Version: patchVersion,
-	}
-	msg := createText(data, r.CommitMsg)
-	tools.Git("commit", "-m", msg)
-}
-
-func createText(obj interface{}, data string) string {
-	template := template.New("template")
-	t, err := template.Parse(data)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	var tpl bytes.Buffer
-	err = t.Execute(&tpl, obj)
-	if err != nil {
-		log.Panic(err)
-	}
-	return tpl.String()
+	tmp := ver.IncMinor()
+	return tmp.String()
 }
