@@ -22,7 +22,7 @@ func createProjectReleaseCmd() *cobra.Command {
 			flags := projectReleaseFlags{}
 			readOptions(&flags)
 			project := loadProject(flags.Project)
-			Release(project, flags)
+			release(project, flags)
 		},
 		TraverseChildren: true,
 	}
@@ -33,7 +33,7 @@ func createProjectReleaseCmd() *cobra.Command {
 }
 
 // CreateRelease create project release
-func Release(project *project.Project, flags projectReleaseFlags) {
+func release(project *project.Project, flags projectReleaseFlags) {
 
 	tagData := struct {
 		Version string

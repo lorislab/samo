@@ -13,12 +13,27 @@ import (
 
 var (
 	// Used for flags.
-	shortened = false
-	output    = "json"
-	bv        BuildVersion
-	cfgFile   string
-	v         string
-	rootCmd   = &cobra.Command{
+	cfgFile string
+	v       string
+	cmd     *cobra.Command
+)
+
+// Execute executes the root command.
+func Execute(version BuildVersion) {
+	bv = version
+
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: true,
+	})
+	err := cmd.Execute()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func init() {
+
+	cmd = &cobra.Command{
 		Use:   "samo",
 		Short: "samo build and release tool",
 		Long:  `Samo is semantic version release utility for git project.`,
@@ -30,31 +45,14 @@ var (
 		},
 		TraverseChildren: true,
 	}
-)
-
-// Execute executes the root command.
-func Execute(version BuildVersion) {
-	bv = version
-
-	log.SetFormatter(&log.TextFormatter{
-		DisableTimestamp: true,
-	})
-	err := rootCmd.Execute()
-	if err != nil {
-		log.Fatal(err)
-	}
-}
-
-func init() {
-
-	rootCmd.AddCommand(createVersionCmd())
 
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
+	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
+	cmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
 
-	addChildCmd(rootCmd, createProjectCmd())
+	addChildCmd(cmd, createVersionCmd())
+	addChildCmd(cmd, createProjectCmd())
 }
 
 func initConfig() {

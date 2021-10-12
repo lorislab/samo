@@ -7,6 +7,12 @@ import (
 	goVersion "go.hein.dev/go-version"
 )
 
+var (
+	shortened = false
+	output    = "json"
+	bv        BuildVersion
+)
+
 type BuildVersion struct {
 	Version string
 	Commit  string
