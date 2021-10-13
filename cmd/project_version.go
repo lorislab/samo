@@ -19,8 +19,8 @@ func createProjectVersionCmd() *cobra.Command {
 		Long: `Show the project version.
 
 Version types:
-  version  version base on the template <project_version>-<template>. 
-           Default template: <project_version>-rc.<git_count>
+  version  current version base on the template 'version-template'. 
+           Default template: {{ .Version }}-rc.{{ .Count }}
   release  release/final version of the project`,
 		Run: func(cmd *cobra.Command, args []string) {
 

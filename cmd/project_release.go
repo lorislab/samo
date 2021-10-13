@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,19 +25,19 @@ func createProjectReleaseCmd() *cobra.Command {
 		},
 		TraverseChildren: true,
 	}
-	addStringFlag(cmd, "message-template", "", "{{ .Project.Version }}", `the annotated tag message template.
-	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release.`)
-	addStringFlag(cmd, "tag-template", "", "{{ .Project.Version }}", `the release tag template. 
-	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release.`)
+	addStringFlag(cmd, "message-template", "", "{{ .Version }}", `the annotated tag message template.
+	Values: Hash,Branch,Tag,Count,Version,Release.`)
+	addStringFlag(cmd, "tag-template", "", "{{ .Version }}", `the release tag template. 
+	Values: Hash,Project.Branch,Tag,Count,Version,Release.`)
 
 	return cmd
 }
 
 // CreateRelease create project release
-func release(pro *project.Project, flags projectReleaseFlags) {
+func release(pro *Project, flags projectReleaseFlags) {
 
 	data := struct {
-		Project *project.Project
+		Project *Project
 	}{
 		Project: pro,
 	}

@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -25,6 +24,10 @@ func createHealmReleaseCmd() *cobra.Command {
 		Long:  `Download version of the helm chart and create final version`,
 		Run: func(cmd *cobra.Command, args []string) {
 			flags := helmReleaseFlags{}
+
+			// remove all tags from current commit
+			tools.GitRemoveAllTagsForCurrentCommit()
+
 			readOptions(&flags)
 			project := loadProject(flags.Helm.Project)
 			helmRelease(project, flags)
@@ -32,17 +35,17 @@ func createHealmReleaseCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "chart-filter-template", "", "version={{ .Project.ReleaseVersion }},appVersion={{ .Project.ReleaseVersion }}", `list of key value to be replaced in the Chart.yaml
-	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release. 
-	Example: version={{ .Project.Version }},appVersion={{ .Project.Hash }}
+	addStringFlag(cmd, "chart-filter-template", "", "version={{ .Release }},appVersion={{ .Release }}", `list of key value to be replaced in the Chart.yaml
+	Values: Hash,Branch,Tag,Count,Version,Release. 
+	Example: version={{ .Version }},appVersion={{ .Hash }}
 	`)
-	addStringFlag(cmd, "values-filter-template", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Project.ReleaseVersion }}
-	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release. 
+	addStringFlag(cmd, "values-filter-template", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Release }}
+	Values: Hash,Branch,Tag,Count,Version,Release. 
 	`)
 	return cmd
 }
 
-func helmRelease(pro *project.Project, flags helmReleaseFlags) {
+func helmRelease(pro *Project, flags helmReleaseFlags) {
 	// clean helm dir
 	healmClean(flags.Helm)
 	// add custom helm repo
@@ -59,7 +62,7 @@ func helmRelease(pro *project.Project, flags helmReleaseFlags) {
 	helmPush(pro.ReleaseVersion(), pro, flags.Helm)
 }
 
-func updateVersion(pro *project.Project, flags helmReleaseFlags) {
+func updateVersion(pro *Project, flags helmReleaseFlags) {
 	if len(flags.ChartFilterTemplate) > 0 {
 		updateFile("Chart.yaml", flags.ChartFilterTemplate, flags.Helm, pro)
 	}
@@ -68,14 +71,8 @@ func updateVersion(pro *project.Project, flags helmReleaseFlags) {
 	}
 }
 
-func updateFile(filename, template string, flags helmFlags, pro *project.Project) {
-
-	filter := struct {
-		Project *project.Project
-	}{
-		Project: pro,
-	}
-	tmp := tools.Template(filter, template)
+func updateFile(filename, template string, flags helmFlags, pro *Project) {
+	tmp := tools.Template(pro, template)
 	items := strings.Split(tmp, ",")
 
 	data := map[string]string{}
@@ -89,7 +86,7 @@ func updateFile(filename, template string, flags helmFlags, pro *project.Project
 	replaceValueInYaml(file, data)
 }
 
-func helmDownload(project *project.Project, flags helmReleaseFlags) {
+func helmDownload(project *Project, flags helmReleaseFlags) {
 	var command []string
 	command = append(command, "pull")
 	command = append(command, flags.Helm.Repo+"/"+project.Name())

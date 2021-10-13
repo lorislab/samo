@@ -6,7 +6,6 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -45,7 +44,7 @@ func createHealmBuildCmd() *cobra.Command {
 	return cmd
 }
 
-func helmBuild(project *project.Project, flags helmBuildFlags) {
+func helmBuild(project *Project, flags helmBuildFlags) {
 
 	if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
 		log.WithField("input", flags.Source).Fatal("Input helm directory does not exists!")
@@ -68,7 +67,7 @@ func helmBuild(project *project.Project, flags helmBuildFlags) {
 }
 
 // Filter filter helm resources
-func buildHelmChart(flags helmBuildFlags, pro *project.Project) {
+func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
 	templateF := emptyFilter
 	if flags.Filter {
@@ -101,12 +100,12 @@ func buildHelmChart(flags helmBuildFlags, pro *project.Project) {
 
 }
 
-type tf func(pro *project.Project, data []byte) []byte
+type tf func(pro *Project, data []byte) []byte
 
 func templateFunc(template string) tf {
 	switch template {
 	case "maven":
-		return func(pro *project.Project, data []byte) []byte {
+		return func(pro *Project, data []byte) []byte {
 			return templateMavenFilter(pro, data)
 		}
 	default:
@@ -115,11 +114,11 @@ func templateFunc(template string) tf {
 	return nil
 }
 
-func emptyFilter(pro *project.Project, data []byte) []byte {
+func emptyFilter(pro *Project, data []byte) []byte {
 	return data
 }
 
-func templateMavenFilter(pro *project.Project, data []byte) []byte {
+func templateMavenFilter(pro *Project, data []byte) []byte {
 	result := regexProjectName.ReplaceAll(data, []byte(pro.Name()))
 	result = regexProjectName2.ReplaceAll(result, []byte(pro.Name()))
 	result = regexProjectVersion.ReplaceAll(result, []byte(pro.Version()))

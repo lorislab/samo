@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -35,7 +34,7 @@ func createDockerReleaseCmd() *cobra.Command {
 	return cmd
 }
 
-func dockerRelease(project *project.Project, flags dockerReleaseFlags) {
+func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	imagePull := dockerImageTag(dockerPullImage, project.Version())

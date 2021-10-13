@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +22,7 @@ func createDockerPushCmd() *cobra.Command {
 	return cmd
 }
 
-func dockerPush(project *project.Project, flags dockerFlags) {
+func dockerPush(project *Project, flags dockerFlags) {
 	dockerImage := dockerImage(project, flags.Registry, flags.Group, flags.Repo)
 	tags := dockerTags(dockerImage, project, flags)
 	dockerImagePush(dockerImage, tags, flags.Project.SkipPush)

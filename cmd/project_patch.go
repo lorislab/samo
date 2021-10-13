@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -35,7 +34,7 @@ func createProjectPatchCmd() *cobra.Command {
 }
 
 // CreatePatch create patch fo the project
-func patch(project *project.Project, flags projectPatchFlags) {
+func patch(project *Project, flags projectPatchFlags) {
 
 	tagVer := tools.CreateSemVer(flags.Tag)
 	if tagVer.Patch() != 0 || len(tagVer.Prerelease()) > 0 {

@@ -3,18 +3,10 @@ package cmd
 import (
 	"os"
 
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
-
-// import (
-// 	"github.com/lorislab/samo/helm"
-// 	"github.com/lorislab/samo/project"
-// 	log "github.com/sirupsen/logrus"
-// 	"github.com/spf13/cobra"
-// )
 
 type helmFlags struct {
 	Project       projectFlags `mapstructure:",squash"`
@@ -90,7 +82,7 @@ func helmRepoUpdate() {
 	tools.ExecCmd("helm", "repo", "update")
 }
 
-func helmPush(version string, project *project.Project, flags helmFlags) {
+func helmPush(version string, project *Project, flags helmFlags) {
 
 	if len(flags.PushURL) == 0 {
 		log.WithFields(log.Fields{"push-url": flags.PushURL, "version": version}).Fatal("Flag --push-url is mandatory!")

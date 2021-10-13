@@ -3,7 +3,6 @@ package cmd
 import (
 	"strings"
 
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -28,9 +27,9 @@ func createDockerCmd() *cobra.Command {
 	addStringFlag(cmd, "registry", "", "", "the docker registry")
 	addStringFlag(cmd, "group", "", "", "the docker repository group")
 	addStringFlag(cmd, "repository", "", "", "the docker repository. Default value is the project name.")
-	addStringFlag(cmd, "tag-list-template", "", "{{ .Project.Version }}", `docker tag list template. 
-	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release. 
-	Example: {{ .Project.Version }},latest,{{ .Project.Hash }}`)
+	addStringFlag(cmd, "tag-list-template", "", "{{ .Version }}", `docker tag list template. 
+	Values: Hash,Branch,Tag,Count,Version,Release. 
+	Example: {{ .Version }},latest,{{ .Hash }}`)
 
 	addChildCmd(cmd, createDockerBuildCmd())
 	addChildCmd(cmd, createDockerPushCmd())
@@ -39,7 +38,7 @@ func createDockerCmd() *cobra.Command {
 	return cmd
 }
 
-func dockerImage(project *project.Project, registry, group, repository string) string {
+func dockerImage(project *Project, registry, group, repository string) string {
 	dockerImage := repository
 	if len(dockerImage) == 0 {
 		dockerImage = project.Name()
@@ -53,14 +52,8 @@ func dockerImage(project *project.Project, registry, group, repository string) s
 	return dockerImage
 }
 
-func dockerTags(dockerImage string, pro *project.Project, flags dockerFlags) []string {
-
-	data := struct {
-		Project *project.Project
-	}{
-		Project: pro,
-	}
-	tagTemplate := tools.Template(data, flags.TagListTemplate)
+func dockerTags(dockerImage string, pro *Project, flags dockerFlags) []string {
+	tagTemplate := tools.Template(pro, flags.TagListTemplate)
 	items := strings.Split(tagTemplate, ",")
 
 	var tags []string

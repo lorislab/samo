@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"github.com/lorislab/samo/project"
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -43,7 +42,7 @@ func createDockerBuildCmd() *cobra.Command {
 }
 
 // DockerBuild build docker image of the project
-func dockerBuild(project *project.Project, flags dockerBuildFlags) {
+func dockerBuild(project *Project, flags dockerBuildFlags) {
 
 	dockerfile := flags.File
 	if len(dockerfile) <= 0 {
