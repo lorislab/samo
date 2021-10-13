@@ -37,6 +37,8 @@ func createProjectCmd() *cobra.Command {
 	addChildCmd(cmd, createProjectNameCmd())
 	addChildCmd(cmd, createProjectReleaseCmd())
 	addChildCmd(cmd, createProjectPatchCmd())
+	addChildCmd(cmd, createDockerCmd())
+	addChildCmd(cmd, createHelmCmd())
 
 	return cmd
 }

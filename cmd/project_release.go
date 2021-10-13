@@ -26,30 +26,24 @@ func createProjectReleaseCmd() *cobra.Command {
 		},
 		TraverseChildren: true,
 	}
-	addStringFlag(cmd, "message-template", "", "{{ .Version }}", "the annotated tag message template. Values: Version,Tag")
-	addStringFlag(cmd, "tag-template", "", "{{ .Version }}", "the release tag template. Values: Version")
+	addStringFlag(cmd, "message-template", "", "{{ .Project.Version }}", `the annotated tag message template.
+	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release.`)
+	addStringFlag(cmd, "tag-template", "", "{{ .Project.Version }}", `the release tag template. 
+	Values: Project.Hash,Project.Branch,Project.Tag,Project.Count,Project.Version,Project.Release.`)
 
 	return cmd
 }
 
 // CreateRelease create project release
-func release(project *project.Project, flags projectReleaseFlags) {
+func release(pro *project.Project, flags projectReleaseFlags) {
 
-	tagData := struct {
-		Version string
+	data := struct {
+		Project *project.Project
 	}{
-		Version: project.ReleaseVersion(),
+		Project: pro,
 	}
-	tag := tools.Template(tagData, flags.TagTemplate)
-
-	messageData := struct {
-		Version string
-		Tag     string
-	}{
-		Version: tagData.Version,
-		Tag:     tag,
-	}
-	msg := tools.Template(messageData, flags.MessageTemplate)
+	tag := tools.Template(data, flags.TagTemplate)
+	msg := tools.Template(data, flags.MessageTemplate)
 	tools.Git("tag", "-a", tag, "-m", msg)
 
 	// push project to remote repository

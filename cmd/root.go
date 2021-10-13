@@ -15,7 +15,7 @@ var (
 	// Used for flags.
 	cfgFile string
 	v       string
-	cmd     *cobra.Command
+	rootCmd *cobra.Command
 )
 
 // Execute executes the root command.
@@ -25,7 +25,7 @@ func Execute(version BuildVersion) {
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: true,
 	})
-	err := cmd.Execute()
+	err := rootCmd.Execute()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -33,7 +33,7 @@ func Execute(version BuildVersion) {
 
 func init() {
 
-	cmd = &cobra.Command{
+	rootCmd = &cobra.Command{
 		Use:   "samo",
 		Short: "samo build and release tool",
 		Long:  `Samo is semantic version release utility for git project.`,
@@ -48,11 +48,11 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 
-	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
-	cmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
+	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
 
-	addChildCmd(cmd, createVersionCmd())
-	addChildCmd(cmd, createProjectCmd())
+	addChildCmd(rootCmd, createVersionCmd())
+	addChildCmd(rootCmd, createProjectCmd())
 }
 
 func initConfig() {

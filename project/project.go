@@ -34,6 +34,22 @@ func (g Project) ReleaseVersion() string {
 	return g.release.String()
 }
 
+func (g Project) Hash() string {
+	return g.hash
+}
+
+func (g Project) Branch() string {
+	return g.branch
+}
+
+func (g Project) Count() string {
+	return g.count
+}
+
+func (g Project) Tag() string {
+	return g.tag
+}
+
 func LoadProject(firstVer, template string, major, patch bool) *Project {
 
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
