@@ -46,11 +46,19 @@ func Git(arg ...string) {
 	}
 }
 
-func GitDescribe() (string, string, string) {
+type GitDescribe struct {
+	Tag, Count, Hash string
+}
+
+func GitDescribeInfo() GitDescribe {
 	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100")
 	if err == nil {
 		items := strings.Split(output, "-")
-		return items[0], items[1], strings.TrimPrefix(items[2], "g")
+		return GitDescribe{
+			Tag:   items[0],
+			Count: items[1],
+			Hash:  strings.TrimPrefix(items[2], "g"),
+		}
 	}
 
 	count := "0"
@@ -63,14 +71,33 @@ func GitDescribe() (string, string, string) {
 			count = c
 		}
 	}
-	return "", count, hash
+	return GitDescribe{
+		Tag:   "",
+		Count: count,
+		Hash:  hash,
+	}
 }
 
-func GitDescribeExclude(tag string) (string, string, string) {
+func GitDescribeExclude(tag string) GitDescribe {
 	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100", "--exclude", tag)
 	if err != nil {
-		log.WithField("tag", tag).Info("Error execute git discribe with exclude tag")
+		log.WithField("tag", tag).Fatal("Error execute git discribe with exclude tag")
 	}
 	items := strings.Split(output, "-")
-	return items[0], items[1], strings.TrimPrefix(items[2], "g")
+	return GitDescribe{
+		Tag:   items[0],
+		Count: items[1],
+		Hash:  strings.TrimPrefix(items[2], "g"),
+	}
+}
+
+func GitLogMessages(from, to string) []string {
+	output, err := CmdOutputErr("git", "--no-pager", "log", `--pretty=format:"%s"`, from+"..."+to)
+	if err != nil {
+		log.WithFields(log.Fields{"from": from, "to": to}).Fatal("Error execute git log messages")
+	}
+	if len(output) < 1 {
+		return []string{}
+	}
+	return strings.Split(output, "\n")
 }

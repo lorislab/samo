@@ -27,9 +27,6 @@ Version types:
 			flags := projectVersionFlags{}
 			readOptions(&flags)
 			project := loadProject(flags.Project)
-
-			fmt.Println(args)
-
 			version := "?"
 			switch flags.Version {
 			case "version":

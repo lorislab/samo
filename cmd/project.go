@@ -9,6 +9,7 @@ import (
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	cc "gitlab.com/digitalxero/go-conventional-commit"
 )
 
 type projectFlags struct {
@@ -18,6 +19,7 @@ type projectFlags struct {
 	VersionTemplate    string `mapstructure:"version-template"`
 	SkipPush           bool   `mapstructure:"skip-push"`
 	ConvetionalCommits bool   `mapstructure:"conventional-commits"`
+	BranchTemplate     string `mapstructure:"branch-template"`
 }
 
 var versionTemplateInfo = `the version go temmplate string.
@@ -41,6 +43,7 @@ func createProjectCmd() *cobra.Command {
 	addStringFlag(cmd, "version-template", "t", "{{ .Version }}-rc.{{ .Count }}", versionTemplateInfo)
 	addBoolFlag(cmd, "skip-push", "", false, "skip git push changes")
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
+	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
 	addChildCmd(cmd, createProjectVersionCmd())
 	addChildCmd(cmd, createProjectNameCmd())
@@ -54,13 +57,14 @@ func createProjectCmd() *cobra.Command {
 
 // Project common project interface
 type Project struct {
-	name    string
-	tag     string
-	count   string
-	hash    string
-	branch  string
-	version *semver.Version
-	release *semver.Version
+	name        string
+	tag         string
+	count       string
+	hash        string
+	branch      string
+	patchBranch bool
+	version     *semver.Version
+	release     *semver.Version
 }
 
 // Name project name
@@ -92,6 +96,10 @@ func (g Project) Tag() string {
 	return g.tag
 }
 
+func (g Project) IsPatchBranch() bool {
+	return g.patchBranch
+}
+
 func loadProject(flags projectFlags) *Project {
 
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
@@ -108,52 +116,60 @@ func loadProject(flags projectFlags) *Project {
 	if len(tmp) > 0 && tmp != "." && tmp != "/" {
 		name = tmp
 	}
-	branch := tools.GitBranch()
 
-	tag, count, hash := tools.GitDescribe()
+	describe := tools.GitDescribeInfo()
+
+	branch := tools.GitBranch()
+	isPatchBranch := false
 
 	version := flags.FirstVersion
 
 	// check for empty repository
-	if len(tag) > 0 {
+	if len(describe.Tag) > 0 {
+
+		ver := tools.CreateSemVer(describe.Tag)
+		patchBranch := createPatchBranchName(ver, flags)
+		isPatchBranch = branch == patchBranch
+		log.WithFields(log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch}).Debug("Branch")
+
 		// commit + tag
-		if count == "0" {
+		if describe.Count == "0" {
 			// next version is current tag
-			version = tag
-			// exdcute git describe withou current tag to get old tag + count + hash
-			t, c, h := tools.GitDescribeExclude(tag)
-			tag = t
-			count = c
-			hash = h
+			version = describe.Tag
+			// exdcute git describe without current tag to get old tag + count + hash
+			describe = tools.GitDescribeExclude(describe.Tag)
 		} else {
 			if flags.ConvetionalCommits {
-				// TODO: patch branch
-				version = createNextVersionConvetionalCommits(tag)
+				version = createNextVersionConvetionalCommits(ver, isPatchBranch)
 			} else {
-				version = createNextVersion(tag, flags.ReleaseMajor, flags.ReleasePatch)
+				version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, isPatchBranch)
 			}
 		}
 	}
 
-	result := &Project{
-		name:    name,
-		tag:     tag,
-		count:   count,
-		hash:    hash,
-		branch:  branch,
-		version: createVersion(tag, version, count, hash, branch, flags.VersionTemplate),
-		release: tools.CreateSemVer(version),
+	return &Project{
+		name:        name,
+		tag:         describe.Tag,
+		count:       describe.Count,
+		hash:        describe.Hash,
+		branch:      branch,
+		patchBranch: isPatchBranch,
+		version:     createVersion(version, branch, flags.VersionTemplate, describe),
+		release:     tools.CreateSemVer(version),
 	}
-	return result
 }
 
-func createVersion(tag, version, count, hash, branch, template string) *semver.Version {
+func createPatchBranchName(version *semver.Version, flags projectFlags) string {
+	return tools.Template(version, flags.BranchTemplate)
+}
+
+func createVersion(version, branch, template string, describe tools.GitDescribe) *semver.Version {
 	data := struct {
 		Tag, Hash, Count, Branch, Version string
 	}{
-		Tag:     tag,
-		Hash:    hash,
-		Count:   count,
+		Tag:     describe.Tag,
+		Hash:    describe.Hash,
+		Count:   describe.Count,
 		Branch:  branch,
 		Version: version,
 	}
@@ -162,9 +178,9 @@ func createVersion(tag, version, count, hash, branch, template string) *semver.V
 	return tools.CreateSemVer(tmp)
 }
 
-func createNextVersion(tag string, major, patch bool) string {
-	ver := tools.CreateSemVer(tag)
-	if patch || ver.Patch() != 0 {
+func createNextVersion(ver *semver.Version, major, patch, patchBranch bool) string {
+
+	if patchBranch || patch || ver.Patch() != 0 {
 		tmp := ver.IncPatch()
 		return tmp.String()
 	}
@@ -179,7 +195,39 @@ func createNextVersion(tag string, major, patch bool) string {
 	return tmp.String()
 }
 
-func createNextVersionConvetionalCommits(tag string) string {
+func createNextVersionConvetionalCommits(ver *semver.Version, patchBranch bool) string {
 
-	return tag
+	// for patch branch we can ignore conventional commits
+	if patchBranch {
+		tmp := ver.IncPatch()
+		return tmp.String()
+	}
+
+	commits := tools.GitLogMessages(ver.String(), "HEAD")
+	commit := findConvCommit(commits)
+	if commit.Major {
+		tmp := ver.IncMajor()
+		return tmp.String()
+	}
+	tmp := ver.IncMinor()
+	return tmp.String()
+}
+
+func findConvCommit(commits []string) *cc.ConventionalCommit {
+	var result *cc.ConventionalCommit
+	for _, commit := range commits {
+		item := cc.ParseConventionalCommit(strings.TrimPrefix(strings.TrimSuffix(commit, `"`), `"`))
+		log.WithField("commit", item).Debug("Commit")
+		if item.Major {
+			return item
+		}
+		if result == nil {
+			result = item
+		} else {
+			if !result.Minor {
+				result = item
+			}
+		}
+	}
+	return result
 }

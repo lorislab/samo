@@ -24,6 +24,7 @@ require (
 	github.com/mitchellh/mapstructure v1.4.2 // indirect
 	github.com/spf13/cast v1.4.1 // indirect
 	github.com/subosito/gotenv v1.2.0 // indirect
+	gitlab.com/digitalxero/go-conventional-commit v1.0.7
 	golang.org/x/sys v0.0.0-20211007075335-d3039528d8ac // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/ini.v1 v1.63.2 // indirect

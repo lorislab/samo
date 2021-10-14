@@ -7,9 +7,8 @@ import (
 )
 
 type projectPatchFlags struct {
-	Project        projectFlags `mapstructure:",squash"`
-	Tag            string       `mapstructure:"tag"`
-	BranchTemplate string       `mapstructure:"branch-template"`
+	Project projectFlags `mapstructure:",squash"`
+	Tag     string       `mapstructure:"tag"`
 }
 
 func createProjectPatchCmd() *cobra.Command {
@@ -28,7 +27,6 @@ func createProjectPatchCmd() *cobra.Command {
 	}
 
 	addStringFlagReq(cmd, "tag", "", "", "create patch branch for the release tag")
-	addStringFlag(cmd, "branch-template", "", "{{ .Major }}.{{ .Minor }}", "patch-branch name template. Values: Major,Minor,Patch")
 
 	return cmd
 }
@@ -41,7 +39,7 @@ func patch(project *Project, flags projectPatchFlags) {
 		log.WithField("tag", tagVer.Original()).Fatal("Can not created patch-branch from the patch tag!")
 	}
 
-	branch := tools.Template(tagVer, flags.BranchTemplate)
+	branch := createPatchBranchName(tagVer, flags.Project)
 	tools.Git("checkout", "-b", branch, flags.Tag)
 	log.WithField("branch", branch).Debug("Patch branch created")
 
