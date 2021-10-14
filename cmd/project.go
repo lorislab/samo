@@ -112,14 +112,14 @@ func loadProject(flags projectFlags) *Project {
 
 	tag, count, hash := tools.GitDescribe()
 
-	nextVersion := flags.FirstVersion
+	version := flags.FirstVersion
 
 	// check for empty repository
 	if len(tag) > 0 {
 		// commit + tag
 		if count == "0" {
 			// next version is current tag
-			nextVersion = tag
+			version = tag
 			// exdcute git describe withou current tag to get old tag + count + hash
 			t, c, h := tools.GitDescribeExclude(tag)
 			tag = t
@@ -128,9 +128,9 @@ func loadProject(flags projectFlags) *Project {
 		} else {
 			if flags.ConvetionalCommits {
 				// TODO: patch branch
-				nextVersion = createNextVersionConvetionalCommits(tag)
+				version = createNextVersionConvetionalCommits(tag)
 			} else {
-				nextVersion = createNextVersion(tag, flags.ReleaseMajor, flags.ReleasePatch)
+				version = createNextVersion(tag, flags.ReleaseMajor, flags.ReleasePatch)
 			}
 		}
 	}
@@ -141,13 +141,13 @@ func loadProject(flags projectFlags) *Project {
 		count:   count,
 		hash:    hash,
 		branch:  branch,
-		version: createVersion(tag, nextVersion, count, hash, branch, flags.VersionTemplate),
-		release: tools.CreateSemVer(nextVersion),
+		version: createVersion(tag, version, count, hash, branch, flags.VersionTemplate),
+		release: tools.CreateSemVer(version),
 	}
 	return result
 }
 
-func createVersion(tag, nextVersion, count, hash, branch, template string) *semver.Version {
+func createVersion(tag, version, count, hash, branch, template string) *semver.Version {
 	data := struct {
 		Tag, Hash, Count, Branch, Version string
 	}{
@@ -155,7 +155,7 @@ func createVersion(tag, nextVersion, count, hash, branch, template string) *semv
 		Hash:    hash,
 		Count:   count,
 		Branch:  branch,
-		Version: nextVersion,
+		Version: version,
 	}
 
 	tmp := tools.Template(data, template)
