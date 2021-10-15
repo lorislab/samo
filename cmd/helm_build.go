@@ -3,18 +3,11 @@ package cmd
 import (
 	"io/ioutil"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/lorislab/samo/tools"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-)
-
-var (
-	regexProjectName    = regexp.MustCompile(`\$\{project\.name\}`)
-	regexProjectName2   = regexp.MustCompile(`\$\{project\.artifactId\}`)
-	regexProjectVersion = regexp.MustCompile(`\$\{project\.version\}`)
 )
 
 type helmBuildFlags struct {

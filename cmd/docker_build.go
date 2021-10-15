@@ -61,7 +61,7 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	dockerImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	tags := dockerTags(dockerImage, project, flags.Docker)
 
-	log.WithFields(log.Fields{"image": flags.Docker.Registry, "tags": tags}).Info("Build docker image")
+	log.WithFields(log.Fields{"image": dockerImage, "tags": tags}).Info("Build docker image")
 
 	var command []string
 	command = append(command, "build")

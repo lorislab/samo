@@ -23,6 +23,7 @@ type helmFlags struct {
 	RepositoryURL        string       `mapstructure:"repo-url"`
 	Clean                bool         `mapstructure:"clean"`
 	PushURL              string       `mapstructure:"push-url"`
+	PushType             string       `mapstructure:"push-type"`
 	Dir                  string       `mapstructure:"dir"`
 	ChartFilterTemplate  string       `mapstructure:"chart-template-list"`
 	ValuesFilterTemplate string       `mapstructure:"values-template-list"`
@@ -43,6 +44,7 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "repo-username", "u", "", "helm repository username")
 	addStringFlag(cmd, "repo-password", "p", "", "helm repository password")
 	addStringFlag(cmd, "push-url", "", "", "helm repository push URL")
+	addStringFlag(cmd, "push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
 	addStringFlag(cmd, "chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
 	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
 	Example: version={{ .Release }},appVersion={{ .Release }}`)
@@ -118,7 +120,16 @@ func helmPush(version string, project *Project, flags helmFlags) {
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "-u", flags.RepoUsername+`:`+flags.RepoPassword)
 	}
-	command = append(command, flags.PushURL, "--upload-file", filename)
+
+	switch flags.PushType {
+	case "upload":
+		command = append(command, flags.PushURL, "--upload-file", filename)
+	case "harbor":
+		command = append(command, "-F", `"chart=@`+filename+`"`, flags.PushURL)
+	default:
+		log.WithField("push-type", flags.PushType).Fatal("Not supported helm push type")
+	}
+
 	tools.ExecCmd("curl", command...)
 }
 
