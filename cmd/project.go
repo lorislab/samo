@@ -20,6 +20,8 @@ type projectFlags struct {
 	SkipPush           bool   `mapstructure:"skip-push"`
 	ConvetionalCommits bool   `mapstructure:"conventional-commits"`
 	BranchTemplate     string `mapstructure:"branch-template"`
+	SkipLabels         bool   `mapstructure:"skip-default-labels"`
+	LabelTemplate      string `mapstructure:"labels-template-list"`
 }
 
 var versionTemplateInfo = `the version go temmplate string.
@@ -41,9 +43,14 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "release-major", "", false, "create a major release")
 	addBoolFlag(cmd, "release-patch", "", false, "create a patch release")
 	addStringFlag(cmd, "version-template", "t", "{{ .Version }}-rc.{{ .Count }}", versionTemplateInfo)
-	addBoolFlag(cmd, "skip-push", "", false, "skip git push changes")
+	addBoolFlag(cmd, "skip-push", "", false, "skip push changes")
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
+
+	addBoolFlag(cmd, "skip-default-labels", "", false, "skip default labels/annotations samo.git.hash,samo.project.version,samo.project.name,samo.project.release")
+	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
+	Values: Hash,Branch,Tag,Count,Version,Release.
+	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	addChildCmd(cmd, createProjectVersionCmd())
 	addChildCmd(cmd, createProjectNameCmd())

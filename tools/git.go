@@ -7,24 +7,6 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GitRemoveAllTagsForCurrentCommit() {
-	// find all tags for the current commit
-	list := ExecCmdOutput("git", "--no-pager", "tag", "--points-at", "HEAD")
-	if len(list) <= 0 {
-		log.Debug("No tag found on current commit")
-		return
-	}
-	// could be multiple tags
-	tags := strings.Split(list, "\n")
-	log.WithField("tags", tags).Info("Remove git tags for current commit")
-
-	// delete the local tags
-	var cmd []string
-	cmd = append(cmd, "tag", "-d")
-	cmd = append(cmd, tags...)
-	Git(cmd...)
-}
-
 func GitBranch() string {
 	tmp, exists := os.LookupEnv("GITHUB_REF")
 	if exists && len(tmp) > 0 {

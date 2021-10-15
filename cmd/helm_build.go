@@ -38,17 +38,13 @@ func createHealmBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "source", "", "src/main/helm", "filter project helm chart source directory")
+	addStringFlag(cmd, "source", "", "", "filter project helm chart source directory")
 	addBoolFlag(cmd, "filter", "", false, "filter helm resources from soruce to output directory")
-	addStringFlag(cmd, "template-func", "", "maven", "template function to replace variables.")
+	addStringFlag(cmd, "template-func", "", "no-filter", "template function to replace variables. Funnctions: no-filter,maven")
 	return cmd
 }
 
 func helmBuild(project *Project, flags helmBuildFlags) {
-
-	if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
-		log.WithField("input", flags.Source).Fatal("Input helm directory does not exists!")
-	}
 
 	// clean helm dir
 	healmClean(flags.Helm)
@@ -60,8 +56,12 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 	// filter resources to output dir
 	buildHelmChart(flags, project)
 
+	updateHelmChart(project, flags.Helm)
+	updateHelmValues(project, flags.Helm)
+
 	// update helm dependencies
 	tools.ExecCmd("helm", "dependency", "update", flags.Helm.Dir)
+
 	// package helm chart
 	helmPackage(flags.Helm)
 }
@@ -69,52 +69,53 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 // Filter filter helm resources
 func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
-	templateF := emptyFilter
-	if flags.Filter {
-		if len(flags.TemplateFuc) == 0 {
-			log.WithField("template", flags.TemplateFuc).Warn("Template is empty! Switch back to maven template")
-			flags.TemplateFuc = "maven"
-		}
-		templateF = templateFunc(flags.TemplateFuc)
-	}
+	templateF := templateFunc(flags.TemplateFuc)
 
 	// get all files from the input directory
-	paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
-	if err != nil {
-		log.WithField("input", flags.Source).Panic(err)
-	}
+	if len(flags.Source) > 0 {
 
-	// filter helm resources
-	for _, path := range paths {
-		// load file
-		log.WithFields(log.Fields{"file": path}).Debug("Filter file")
-		result, err := ioutil.ReadFile(path)
-		if err != nil {
-			log.Panic(err)
+		if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
+			log.WithField("source", flags.Source).Fatal("Source helm directory does not exists!")
 		}
-		// replace values in the file
-		result = templateF(pro, result)
-		// write result to output directory
-		tools.WriteBytesToFile(strings.Replace(path, flags.Source, flags.Helm.Dir, -1), result)
-	}
 
+		paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
+		if err != nil {
+			log.WithField("source", flags.Source).Panic(err)
+		}
+
+		// filter helm resources
+		for _, path := range paths {
+			// load file
+			log.WithFields(log.Fields{"file": path}).Info("Filter file")
+			result, err := ioutil.ReadFile(path)
+			if err != nil {
+				log.Panic(err)
+			}
+			// replace values in the file
+			result = templateF(pro, result)
+			// write result to output directory
+			out := strings.Replace(path, flags.Source, flags.Helm.Dir, -1)
+			tools.WriteBytesToFile(out, result)
+			log.WithFields(log.Fields{"file": out}).Info("Create file")
+		}
+	}
 }
 
 type tf func(pro *Project, data []byte) []byte
 
 func templateFunc(template string) tf {
 	switch template {
+	case "", "no-filter":
+		return noFilter
 	case "maven":
-		return func(pro *Project, data []byte) []byte {
-			return templateMavenFilter(pro, data)
-		}
+		return templateMavenFilter
 	default:
-		log.WithField("template", template).Fatal("Not supported template!")
+		log.WithField("template", template).Warn("Not supported template! Switch back to no filter.")
 	}
-	return nil
+	return noFilter
 }
 
-func emptyFilter(pro *Project, data []byte) []byte {
+func noFilter(pro *Project, data []byte) []byte {
 	return data
 }
 

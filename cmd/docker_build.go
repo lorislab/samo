@@ -16,8 +16,6 @@ type dockerBuildFlags struct {
 	SkipPull        bool        `mapstructure:"pull-skip"`
 	BuildPush       bool        `mapstructure:"build-push"`
 	SkipRemoveBuild bool        `mapstructure:"remove-build-skip"`
-	SkipLabels      bool        `mapstructure:"default-labels-skip"`
-	LabelTemplate   string      `mapstructure:"labels-template"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -41,10 +39,6 @@ func createDockerBuildCmd() *cobra.Command {
 	addBoolFlag(cmd, "pull-skip", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "build-push", "", false, "push docker image after build")
 	addBoolFlag(cmd, "remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
-	addBoolFlag(cmd, "default-labels-skip", "", false, "skip add default label samo.git.hash,samo.project.version,samo.project.name,samo.project.release")
-	addStringFlag(cmd, "labels-template-list", "", "", `docker labels template list. 
-	Values: Hash,Branch,Tag,Count,Version,Release.
-	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	return cmd
 }
@@ -80,7 +74,7 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	}
 
 	// add labels
-	if !flags.SkipLabels {
+	if !flags.Docker.Project.SkipLabels {
 		command = append(command, "--label", "samo.git.hash="+project.Hash())
 		command = append(command, "--label", "samo.project.version="+project.Version())
 		command = append(command, "--label", "samo.project.name="+project.Name())
@@ -88,8 +82,8 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	}
 
 	// add custom labels
-	if len(flags.LabelTemplate) > 0 {
-		labelTemplate := tools.Template(project, flags.LabelTemplate)
+	if len(flags.Docker.Project.LabelTemplate) > 0 {
+		labelTemplate := tools.Template(project, flags.Docker.Project.LabelTemplate)
 		labels := strings.Split(labelTemplate, ",")
 		for _, label := range labels {
 			command = append(command, "--label", label)
