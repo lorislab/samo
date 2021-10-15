@@ -32,7 +32,7 @@ Version types:
 			case "version":
 				version = project.Version()
 			case "release":
-				version = project.ReleaseVersion()
+				version = project.Release()
 			}
 			fmt.Printf("%s\n", version)
 		},

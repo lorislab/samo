@@ -54,7 +54,7 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	// release docker registry
 	dockerPushImage := dockerImage(project, flags.ReleaseRegistry, flags.ReleaseGroup, flags.ReleaseRepo)
-	imagePush := dockerImageTag(dockerPushImage, project.ReleaseVersion())
+	imagePush := dockerImageTag(dockerPushImage, project.Release())
 	log.WithFields(log.Fields{"build": imagePull, "release": imagePush}).Info("Retag docker image")
 	tools.ExecCmd("docker", "tag", imagePull, imagePush)
 

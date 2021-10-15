@@ -75,10 +75,8 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 
 	// add labels
 	if !flags.Docker.Project.SkipLabels {
-		command = append(command, "--label", "samo.git.hash="+project.Hash())
+		command = append(command, "--label", "samo.project.hash="+project.Hash())
 		command = append(command, "--label", "samo.project.version="+project.Version())
-		command = append(command, "--label", "samo.project.name="+project.Name())
-		command = append(command, "--label", "samo.project.release="+project.ReleaseVersion())
 	}
 
 	// add custom labels

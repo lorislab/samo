@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/lorislab/samo/tools"
@@ -11,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
+
+var yamlKeyRegex = regexp.MustCompile(`^"|['"](\w+(?:\.\w+)*)['"]|(\w+)`)
 
 type helmFlags struct {
 	Project              projectFlags `mapstructure:",squash"`
@@ -21,8 +24,8 @@ type helmFlags struct {
 	Clean                bool         `mapstructure:"clean"`
 	PushURL              string       `mapstructure:"push-url"`
 	Dir                  string       `mapstructure:"dir"`
-	ChartFilterTemplate  string       `mapstructure:"chart-filter-template"`
-	ValuesFilterTemplate string       `mapstructure:"values-filter-template"`
+	ChartFilterTemplate  string       `mapstructure:"chart-template-list"`
+	ValuesFilterTemplate string       `mapstructure:"values-template-list"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -40,10 +43,10 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "repo-username", "u", "", "helm repository username")
 	addStringFlag(cmd, "repo-password", "p", "", "helm repository password")
 	addStringFlag(cmd, "push-url", "", "", "helm repository push URL")
-	addStringFlag(cmd, "chart-filter-template", "", "version={{ .Release }},appVersion={{ .Release }}", `list of key value to be replaced in the Chart.yaml
-	Values: Hash,Branch,Tag,Count,Version,Release. 
-	Example: version={{ .Version }},appVersion={{ .Hash }}`)
-	addStringFlag(cmd, "values-filter-template", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Release }}
+	addStringFlag(cmd, "chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
+	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
+	Example: version={{ .Release }},appVersion={{ .Release }}`)
+	addStringFlag(cmd, "values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
 	Values: Hash,Branch,Tag,Count,Version,Release.`)
 
 	addChildCmd(cmd, createHealmBuildCmd())
@@ -52,8 +55,8 @@ func createHelmCmd() *cobra.Command {
 	return cmd
 }
 
-func helmPackage(flags helmFlags) {
-	tools.ExecCmd("helm", "package", flags.Dir)
+func helmPackage(project *Project, flags helmFlags) {
+	tools.ExecCmd("helm", "package", helmDir(project, flags))
 }
 
 func healmClean(flags helmFlags) {
@@ -121,28 +124,27 @@ func helmPush(version string, project *Project, flags helmFlags) {
 
 // update helm version, appversion, annotations/labels in Chart.yaml
 func updateHelmValues(project *Project, flags helmFlags) {
+	if len(flags.ValuesFilterTemplate) < 1 {
+		return
+	}
 	data := map[string]string{}
-	if len(flags.ChartFilterTemplate) > 0 {
-		t := templateToMap(flags.ValuesFilterTemplate, project)
-		for k, v := range t {
-			data[k] = v
-		}
+	t := templateToMap(flags.ValuesFilterTemplate, project)
+	for k, v := range t {
+		data[k] = v
 	}
 	if len(data) > 0 {
-		file := filepath.FromSlash(flags.Dir + "/values.yaml")
+		file := filepath.FromSlash(helmDir(project, flags) + "/values.yaml")
 		replaceValueInYaml(file, data)
 	}
 }
 
 // update helm version, appversion, annotations/labels in Chart.yaml
-func updateHelmChart(project *Project, flags helmFlags) {
+func updateHelmChart(project *Project, flags helmFlags, chartTemplate string) {
 	data := map[string]string{}
 
 	if !flags.Project.SkipLabels {
-		data[`annotations."samo.git.hash"`] = project.Hash()
+		data[`annotations."samo.project.hash"`] = project.Hash()
 		data[`annotations."samo.project.version"`] = project.Version()
-		data[`annotations."samo.project.name"`] = project.Name()
-		data[`annotations."samo.project.release"`] = project.ReleaseVersion()
 	}
 	if len(flags.Project.LabelTemplate) > 0 {
 		t := templateToMap(flags.Project.LabelTemplate, project)
@@ -150,16 +152,21 @@ func updateHelmChart(project *Project, flags helmFlags) {
 			data[`annotations."`+k+`"`] = v
 		}
 	}
-	if len(flags.ChartFilterTemplate) > 0 {
-		t := templateToMap(flags.ChartFilterTemplate, project)
+	if len(chartTemplate) > 0 {
+		t := templateToMap(chartTemplate, project)
 		for k, v := range t {
 			data[k] = v
 		}
 	}
-	if len(data) > 0 {
-		file := filepath.FromSlash(flags.Dir + "/Chart.yaml")
-		replaceValueInYaml(file, data)
+	if len(data) < 1 {
+		return
 	}
+	file := filepath.FromSlash(helmDir(project, flags) + "/Chart.yaml")
+	replaceValueInYaml(file, data)
+}
+
+func helmDir(project *Project, flags helmFlags) string {
+	return flags.Dir + "/" + project.name
 }
 
 func templateToMap(template string, data interface{}) map[string]string {
@@ -202,13 +209,18 @@ func replaceValueInYaml(filename string, data map[string]string) {
 }
 
 func replace(obj map[interface{}]interface{}, k string, v string) {
-	keys := strings.Split(k, ".")
+	// keys := strings.Split(k, ".")
+
+	keys := yamlKeyRegex.FindAllString(k, -1)
+	// keys := yamlKeyRegex.FindAllStringSubmatch(k, -1)
+
 	var tmp interface{}
 	size := len(keys)
 
 	tmp = obj
 	for i := 0; i < size-1; i++ {
 		key := keys[i]
+		key = strings.TrimSuffix(strings.TrimPrefix(key, `"`), `"`)
 		a := tmp.(map[interface{}]interface{})[key]
 		if a == nil {
 			a = map[interface{}]interface{}{}
@@ -216,5 +228,7 @@ func replace(obj map[interface{}]interface{}, k string, v string) {
 		}
 		tmp = a
 	}
-	tmp.(map[interface{}]interface{})[keys[size-1]] = v
+	key := keys[size-1]
+	key = strings.TrimSuffix(strings.TrimPrefix(key, `"`), `"`)
+	tmp.(map[interface{}]interface{})[key] = v
 }

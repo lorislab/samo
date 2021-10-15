@@ -5,41 +5,54 @@ import (
 	"github.com/spf13/cobra"
 )
 
+type helmReleaseFlags struct {
+	Helm                 helmFlags `mapstructure:",squash"`
+	ChartReleaseTemplate string    `mapstructure:"chart-release-template-list"`
+}
+
 func createHealmReleaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "release",
 		Short: "Release helm chart",
 		Long:  `Download version of the helm chart and create final version`,
 		Run: func(cmd *cobra.Command, args []string) {
-			flags := helmFlags{}
+			flags := helmReleaseFlags{}
 			readOptions(&flags)
-			project := loadProject(flags.Project)
+			project := loadProject(flags.Helm.Project)
 			helmRelease(project, flags)
 		},
 		TraverseChildren: true,
 	}
 
+	addStringFlag(cmd, "chart-release-template-list", "", "version={{ .Release }},appVersion={{ .Release }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
+	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
+	Example: version={{ .Release }},appVersion={{ .Release }}`)
+
 	return cmd
 }
 
-func helmRelease(pro *Project, flags helmFlags) {
+func helmRelease(pro *Project, flags helmReleaseFlags) {
 	// clean helm dir
-	healmClean(flags)
+	healmClean(flags.Helm)
+
 	// add custom helm repo
-	healmAddRepo(flags)
+	healmAddRepo(flags.Helm)
+
 	// update helm repo
 	helmRepoUpdate()
+
 	// download build version
-	helmDownload(pro, flags)
+	helmDownload(pro, flags.Helm)
 
 	// update version to release version
-	updateHelmChart(pro, flags)
-	updateHelmValues(pro, flags)
+	updateHelmChart(pro, flags.Helm, flags.ChartReleaseTemplate)
+	updateHelmValues(pro, flags.Helm)
 
 	// package helm chart
-	helmPackage(flags)
+	helmPackage(pro, flags.Helm)
+
 	// upload helm chart with release version
-	helmPush(pro.ReleaseVersion(), pro, flags)
+	helmPush(pro.Release(), pro, flags.Helm)
 }
 
 func helmDownload(project *Project, flags helmFlags) {

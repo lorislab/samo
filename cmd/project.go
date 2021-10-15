@@ -47,9 +47,9 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
-	addBoolFlag(cmd, "skip-default-labels", "", false, "skip default labels/annotations samo.git.hash,samo.project.version,samo.project.name,samo.project.release")
+	addBoolFlag(cmd, "skip-default-labels", "", false, "skip default labels/annotations samo.project.hash,samo.project.version")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
-	Values: Hash,Branch,Tag,Count,Version,Release.
+	Values: Name,Hash,Branch,Tag,Count,Version,Release.
 	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	addChildCmd(cmd, createProjectVersionCmd())
@@ -83,7 +83,7 @@ func (g Project) Version() string {
 	return g.version.String()
 }
 
-func (g Project) ReleaseVersion() string {
+func (g Project) Release() string {
 	return g.release.String()
 }
 

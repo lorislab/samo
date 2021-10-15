@@ -56,14 +56,14 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 	// filter resources to output dir
 	buildHelmChart(flags, project)
 
-	updateHelmChart(project, flags.Helm)
+	updateHelmChart(project, flags.Helm, flags.Helm.ChartFilterTemplate)
 	updateHelmValues(project, flags.Helm)
 
 	// update helm dependencies
-	tools.ExecCmd("helm", "dependency", "update", flags.Helm.Dir)
+	tools.ExecCmd("helm", "dependency", "update", helmDir(project, flags.Helm))
 
 	// package helm chart
-	helmPackage(flags.Helm)
+	helmPackage(project, flags.Helm)
 }
 
 // Filter filter helm resources
