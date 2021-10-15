@@ -18,10 +18,8 @@ var (
 )
 
 type helmBuildFlags struct {
-	Helm        helmFlags `mapstructure:",squash"`
-	Source      string    `mapstructure:"source"`
-	Filter      bool      `mapstructure:"filter"`
-	TemplateFuc string    `mapstructure:"template-func"`
+	Helm   helmFlags `mapstructure:",squash"`
+	Source string    `mapstructure:"source"`
 }
 
 func createHealmBuildCmd() *cobra.Command {
@@ -39,8 +37,6 @@ func createHealmBuildCmd() *cobra.Command {
 	}
 
 	addStringFlag(cmd, "source", "", "", "filter project helm chart source directory")
-	addBoolFlag(cmd, "filter", "", false, "filter helm resources from soruce to output directory")
-	addStringFlag(cmd, "template-func", "", "no-filter", "template function to replace variables. Funnctions: no-filter,maven")
 	return cmd
 }
 
@@ -69,8 +65,6 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 // Filter filter helm resources
 func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
-	templateF := templateFunc(flags.TemplateFuc)
-
 	// get all files from the input directory
 	if len(flags.Source) > 0 {
 
@@ -80,48 +74,19 @@ func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
 		paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
 		if err != nil {
-			log.WithField("source", flags.Source).Panic(err)
+			log.WithField("source", flags.Source).Fatal(err)
 		}
 
-		// filter helm resources
 		for _, path := range paths {
 			// load file
-			log.WithFields(log.Fields{"file": path}).Info("Filter file")
 			result, err := ioutil.ReadFile(path)
 			if err != nil {
-				log.Panic(err)
+				log.WithField("file", path).Fatal(err)
 			}
-			// replace values in the file
-			result = templateF(pro, result)
 			// write result to output directory
 			out := strings.Replace(path, flags.Source, flags.Helm.Dir, -1)
 			tools.WriteBytesToFile(out, result)
-			log.WithFields(log.Fields{"file": out}).Info("Create file")
+			log.WithFields(log.Fields{"file": out}).Debug("Copy file")
 		}
 	}
-}
-
-type tf func(pro *Project, data []byte) []byte
-
-func templateFunc(template string) tf {
-	switch template {
-	case "", "no-filter":
-		return noFilter
-	case "maven":
-		return templateMavenFilter
-	default:
-		log.WithField("template", template).Warn("Not supported template! Switch back to no filter.")
-	}
-	return noFilter
-}
-
-func noFilter(pro *Project, data []byte) []byte {
-	return data
-}
-
-func templateMavenFilter(pro *Project, data []byte) []byte {
-	result := regexProjectName.ReplaceAll(data, []byte(pro.Name()))
-	result = regexProjectName2.ReplaceAll(result, []byte(pro.Name()))
-	result = regexProjectVersion.ReplaceAll(result, []byte(pro.Version()))
-	return result
 }
