@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	imagePull := dockerImageTag(dockerPullImage, project.Version())
-	log.WithField("image", dockerPullImage).Info("Pull docker image")
+	log.Info("Pull docker image", log.F("image", dockerPullImage))
 	tools.ExecCmd("docker", "pull", dockerPullImage)
 
 	// check the release configuration
@@ -55,13 +55,13 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 	// release docker registry
 	dockerPushImage := dockerImage(project, flags.ReleaseRegistry, flags.ReleaseGroup, flags.ReleaseRepo)
 	imagePush := dockerImageTag(dockerPushImage, project.Release())
-	log.WithFields(log.Fields{"build": imagePull, "release": imagePush}).Info("Retag docker image")
+	log.Info("Retag docker image", log.Fields{"build": imagePull, "release": imagePush})
 	tools.ExecCmd("docker", "tag", imagePull, imagePush)
 
 	if flags.Docker.Project.SkipPush {
-		log.WithField("image", imagePush).Info("Skip docker push for docker release image")
+		log.Info("Skip docker push for docker release image", log.F("image", imagePush))
 	} else {
 		tools.ExecCmd("docker", "push", imagePush)
-		log.WithField("image", imagePush).Info("Release docker image done!")
+		log.Info("Release docker image done!", log.F("image", imagePush))
 	}
 }

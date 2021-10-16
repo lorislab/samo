@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -62,24 +62,24 @@ func buildHelmChart(flags helmBuildFlags, pro *Project) {
 	if len(flags.Source) > 0 {
 
 		if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
-			log.WithField("source", flags.Source).Fatal("Source helm directory does not exists!")
+			log.Fatal("Source helm directory does not exists!", log.F("source", flags.Source))
 		}
 
 		paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
 		if err != nil {
-			log.WithField("source", flags.Source).Fatal(err)
+			log.Fatal("error read helm source directory", log.F("source", flags.Source).E(err))
 		}
 
 		for _, path := range paths {
 			// load file
 			result, err := ioutil.ReadFile(path)
 			if err != nil {
-				log.WithField("file", path).Fatal(err)
+				log.Fatal("error read file", log.F("file", path).E(err))
 			}
 			// write result to output directory
 			out := strings.Replace(path, flags.Source, flags.Helm.Dir, -1)
 			tools.WriteBytesToFile(out, result)
-			log.WithFields(log.Fields{"file": out}).Debug("Copy file")
+			log.Debug("Copy file", log.F("file", out))
 		}
 	}
 }

@@ -3,8 +3,8 @@ package cmd
 import (
 	"strings"
 
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -55,13 +55,13 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	}
 
 	if !tools.Exists(flags.File) {
-		log.WithFields(log.Fields{"file": dockerfile}).Fatal("Dockerfile does not exists!")
+		log.Fatal("Dockerfile does not exists!", log.F("file", dockerfile))
 	}
 
 	dockerImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	tags := dockerTags(dockerImage, project, flags.Docker)
 
-	log.WithFields(log.Fields{"image": dockerImage, "tags": tags}).Info("Build docker image")
+	log.Info("Build docker image", log.Fields{"image": dockerImage, "tags": tags})
 
 	var command []string
 	command = append(command, "build")
@@ -101,7 +101,7 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	// execute command
 	tools.ExecCmd("docker", command...)
 
-	log.WithFields(log.Fields{"image": dockerImage, "tags": tags}).Info("Docker build done!")
+	log.Info("Docker build done!", log.Fields{"image": dockerImage, "tags": tags})
 
 	if flags.BuildPush {
 		dockerImagePush(dockerImage, tags, flags.Docker.Project.SkipPush)

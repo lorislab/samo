@@ -7,8 +7,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v2"
 )
@@ -68,10 +68,10 @@ func healmClean(flags helmFlags) {
 		return
 	}
 	if _, err := os.Stat(flags.Dir); !os.IsNotExist(err) {
-		log.WithField("dir", flags.Dir).Debug("Clean directory")
+		log.Debug("Clean directory", log.F("dir", flags.Dir))
 		err := os.RemoveAll(flags.Dir)
 		if err != nil {
-			log.WithField("output", flags.Dir).Panic(err)
+			log.Panic("error delete directory", log.F("output", flags.Dir).E(err))
 		}
 	}
 }
@@ -101,18 +101,18 @@ func helmRepoUpdate() {
 func helmPush(version string, project *Project, flags helmFlags) {
 
 	if len(flags.PushURL) == 0 {
-		log.WithFields(log.Fields{"push-url": flags.PushURL, "version": version}).Fatal("Flag --push-url is mandatory!")
+		log.Fatal("Flag --push-url is mandatory!", log.Fields{"push-url": flags.PushURL, "version": version})
 	}
 
 	// upload helm chart
 	if flags.Project.SkipPush {
-		log.WithFields(log.Fields{"push-url": flags.PushURL, "version": version}).Info("Skip push release version of the helm chart")
+		log.Info("Skip push release version of the helm chart", log.Fields{"push-url": flags.PushURL, "version": version})
 		return
 	}
 
 	filename := project.Name() + `-` + version + `.tgz`
 	if !tools.Exists(filename) {
-		log.WithField("helm-file", filename).Fatal("Helm package file does not exists!")
+		log.Fatal("Helm package file does not exists!", log.F("helm-file", filename))
 	}
 
 	var command []string
@@ -127,7 +127,7 @@ func helmPush(version string, project *Project, flags helmFlags) {
 	case "harbor":
 		command = append(command, "-F", `"chart=@`+filename+`"`, flags.PushURL)
 	default:
-		log.WithField("push-type", flags.PushType).Fatal("Not supported helm push type")
+		log.Fatal("Not supported helm push type", log.F("push-type", flags.PushType))
 	}
 
 	tools.ExecCmd("curl", command...)
@@ -197,11 +197,11 @@ func replaceValueInYaml(filename string, data map[string]string) {
 
 	fileBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error read file", log.E(err).F("file", filename))
 	}
 	err = yaml.Unmarshal(fileBytes, &obj)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error unmarschal file", log.E(err).F("file", filename))
 	}
 	for k, v := range data {
 		replace(obj, k, v)
@@ -209,14 +209,14 @@ func replaceValueInYaml(filename string, data map[string]string) {
 
 	fileBytes, err = yaml.Marshal(&obj)
 	if err != nil {
-		log.Fatalf("error: %v", err)
+		log.Fatal("error marshal file", log.E(err).F("file", filename))
 	}
 
 	err = ioutil.WriteFile(filename, fileBytes, 0666)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error write file", log.E(err).F("file", filename))
 	}
-	log.WithFields(log.Fields{"file": filename}).Info("Update file")
+	log.Info("Update file", log.F("file", filename))
 }
 
 func replace(obj map[interface{}]interface{}, k string, v string) {

@@ -30,3 +30,5 @@ require (
 	gopkg.in/ini.v1 v1.63.2 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
+
+require github.com/rs/zerolog v1.25.0

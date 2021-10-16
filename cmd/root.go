@@ -1,12 +1,10 @@
 package cmd
 
 import (
-	"io"
-	"os"
 	"strings"
 
+	"github.com/lorislab/samo/log"
 	homedir "github.com/mitchellh/go-homedir"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,12 +20,9 @@ var (
 func Execute(version BuildVersion) {
 	bv = version
 
-	log.SetFormatter(&log.TextFormatter{
-		DisableTimestamp: true,
-	})
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("error execute commant", log.E(err))
 	}
 }
 
@@ -38,9 +33,7 @@ func init() {
 		Short: "samo build and release tool",
 		Long:  `Samo is semantic version release utility for git project.`,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			if err := setUpLogs(os.Stdout, v); err != nil {
-				return err
-			}
+			log.SetLevel(v)
 			return nil
 		},
 		TraverseChildren: true,
@@ -49,7 +42,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
-	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic")
+	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.DefaultLevel(), "Log level (debug, info, warn, error, fatal, panic)")
 
 	addChildCmd(rootCmd, createVersionCmd())
 	addChildCmd(rootCmd, createProjectCmd())
@@ -63,7 +56,7 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("error read home dir", log.E(err))
 		}
 
 		// Search confing in current directory
@@ -78,16 +71,6 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.WithField("file", viper.ConfigFileUsed()).Debug("Using config")
+		log.Debug("Using config", log.F("file", viper.ConfigFileUsed()))
 	}
-}
-
-func setUpLogs(out io.Writer, level string) error {
-	log.SetOutput(out)
-	lvl, err := log.ParseLevel(level)
-	if err != nil {
-		return err
-	}
-	log.SetLevel(lvl)
-	return nil
 }

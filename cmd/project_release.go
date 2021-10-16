@@ -1,8 +1,8 @@
 package cmd
 
 import (
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -47,9 +47,9 @@ func release(pro *Project, flags projectReleaseFlags) {
 
 	// push project to remote repository
 	if flags.Project.SkipPush {
-		log.WithField("tag", tag).Info("Skip git push for project release")
+		log.Info("Skip git push for project release", log.F("version", tag))
 	} else {
 		tools.Git("push", "--tags")
 	}
-	log.WithField("version", tag).Info("New release created.")
+	log.Info("New release created.", log.F("version", tag))
 }

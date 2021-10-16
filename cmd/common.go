@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	log "github.com/sirupsen/logrus"
+	"github.com/lorislab/samo/log"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -11,9 +11,9 @@ import (
 func readOptions(options interface{}) interface{} {
 	err := viper.Unmarshal(options)
 	if err != nil {
-		log.Panic(err)
+		log.Fatal("error unmarscahle options", log.E(err))
 	}
-	log.WithField("options", options).Debug("Load options")
+	log.Debug("Load options", log.F("options", options))
 	return options
 }
 
@@ -41,7 +41,7 @@ func addStringFlagReq(command *cobra.Command, name, shorthand string, value stri
 func markReq(command *cobra.Command, name string) {
 	err := command.MarkFlagRequired(name)
 	if err != nil {
-		log.WithField("name", name).Panic(err)
+		log.Panic("mark flag reuired", log.F("name", name).E(err))
 	}
 }
 
@@ -49,7 +49,7 @@ func addViper(command *cobra.Command, name string) *pflag.Flag {
 	f := command.Flags().Lookup(name)
 	err := viper.BindPFlag(name, f)
 	if err != nil {
-		log.WithField("name", name).Panic(err)
+		log.Panic("bind flag", log.F("name", name).E(err))
 	}
 	return f
 }

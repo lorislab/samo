@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/Masterminds/semver"
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	cc "gitlab.com/digitalxero/go-conventional-commit"
 )
@@ -110,7 +110,7 @@ func (g Project) IsPatchBranch() bool {
 func loadProject(flags projectFlags) *Project {
 
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
-		log.WithField("directory", ".git").Fatal("Missing git directory!")
+		log.Fatal("Missing git directory!", log.F("directory", ".git"))
 	}
 
 	name := "no-name"
@@ -137,7 +137,7 @@ func loadProject(flags projectFlags) *Project {
 		ver := tools.CreateSemVer(describe.Tag)
 		patchBranch := createPatchBranchName(ver, flags)
 		isPatchBranch = branch == patchBranch
-		log.WithFields(log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch}).Debug("Branch")
+		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch})
 
 		// commit + tag
 		if describe.Count == "0" {
@@ -193,7 +193,7 @@ func createNextVersion(ver *semver.Version, major, patch, patchBranch bool) stri
 	}
 	if major {
 		if ver.Patch() != 0 {
-			log.WithField("version", ver.String()).Fatal("Can not created major release from the patch version!")
+			log.Fatal("Can not created major release from the patch version!", log.F("version", ver.String()))
 		}
 		tmp := ver.IncMajor()
 		return tmp.String()
@@ -224,7 +224,7 @@ func findConvCommit(commits []string) *cc.ConventionalCommit {
 	var result *cc.ConventionalCommit
 	for _, commit := range commits {
 		item := cc.ParseConventionalCommit(strings.TrimPrefix(strings.TrimSuffix(commit, `"`), `"`))
-		log.WithField("commit", item).Debug("Commit")
+		log.Debug("Commit", log.F("commit", item))
 		if item.Major {
 			return item
 		}

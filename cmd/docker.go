@@ -3,8 +3,8 @@ package cmd
 import (
 	"strings"
 
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -68,13 +68,13 @@ func dockerImageTag(dockerImage, tag string) string {
 }
 
 func dockerImagePush(image string, tags []string, skip bool) {
-	log.WithFields(log.Fields{"image": image, "tags": tags}).Info("Push docker image tags")
+	log.Info("Push docker image tags", log.Fields{"image": image, "tags": tags})
 	if skip {
-		log.WithField("image", image).Info("Skip docker push")
+		log.Info("Skip docker push", log.F("image", image))
 	} else {
 		for _, tag := range tags {
 			tools.ExecCmd("docker", "push", tag)
 		}
 	}
-	log.WithFields(log.Fields{"image": image, "tags": tags}).Info("Push docker image done!")
+	log.Info("Push docker image done!", log.Fields{"image": image, "tags": tags})
 }
