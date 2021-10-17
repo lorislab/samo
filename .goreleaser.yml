@@ -22,10 +22,10 @@ dockers:
   goos: linux
   goarch: amd64
   image_templates:
-    - "ghcr.io/lorislab/{{ .ProjectName }}:{{ if .IsSnapshot }}latest{{ else }}{{ .Version }}{{ end }}"
+    - '{{ if index .Env "CI" }}ghcr.io/{{ .Env.GITHUB_REPOSITORY }}{{ else }}{{ .ProjectName }}{{ end }}:{{ .Version }}'
   build_flag_templates:
     - "--pull"
-    - "--label=org.opencontainers.image.source=https://github.com/lorislab/{{.ProjectName}}"
+    - '--label=org.opencontainers.image.source={{ if index .Env "CI" }}{{ .Env.GITHUB_SERVER_URL }}/{{ .Env.GITHUB_REPOSITORY }}{{ else }}{{.ProjectName}}{{ end }}'
     - "--label=org.opencontainers.image.created={{.Date}}"
     - "--label=org.opencontainers.image.title={{.ProjectName}}"
     - "--label=org.opencontainers.image.revision={{.FullCommit}}"
@@ -33,7 +33,7 @@ dockers:
 checksum:
   name_template: 'checksums.txt'
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "latest"
 changelog:
   sort: asc
   filters:

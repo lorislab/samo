@@ -18,6 +18,8 @@ jobs:
         uses: golangci/golangci-lint-action@v2
         with:
           version: v1.40
+      - name: Docker login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Build
         run: go build .
       - name: Tests.
@@ -30,7 +32,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
       - name: Docker push
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-          docker image ls
-          docker push ghcr.io/lorislab/samo:latest
+        run: docker push ghcr.io/${GITHUB_REPOSITORY}:latest
