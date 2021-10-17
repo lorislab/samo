@@ -1,21 +1,18 @@
-name: Release
+name: Build and Test
 on:
   push:
-    branches-ignore:
+    branches:
+      - 'master'
+    tags-ignore:
       - '**'
-    tags:
-      - '**'
+  pull_request:
 jobs:
-  release:
-    name: Release on GitHub
+  build:
+    name: build
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Set up Go
-        uses: actions/setup-go@v2
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
         with:
           go-version: 1.17
       - name: golangci-lint
@@ -24,10 +21,16 @@ jobs:
           version: v1.40
       - name: Docker login
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build
+        run: go build .
+      - name: Tests.
+        run: go test
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
           version: latest
-          args: release --rm-dist
+          args: release --rm-dist --snapshot
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}          
+      - name: Docker push
+        run: docker push ghcr.io/lorislab/samo:latest

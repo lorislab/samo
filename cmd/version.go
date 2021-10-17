@@ -3,92 +3,35 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/lorislab/samo/project"
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	goVersion "go.hein.dev/go-version"
 )
-
-type versionFlags struct {
-	Project     commonFlags `mapstructure:",squash"`
-	OutputValue bool        `mapstructure:"value-only"`
-	All         bool        `mapstructure:"all"`
-}
 
 var (
-	projectVersionCmd = &cobra.Command{
-		Use:   "version",
-		Short: "Show the project version",
-		Long: `Show the project version.
-
-Version types:
-  version  current project version
-  build    build version base on the template <project_version>-<template>. 
-           Default template: <project_version>-rc<git_count>.<git_hash>
-  hash     hash version <project_version>-<git_hash>
-  branch   branch version <project_version>-<git_branch>  
-  release  release/final version of the project
-  latest   latest verison for the docker image
-  dev	   local developer version for the docker image without repository
-  'custom' custom version which could will be use`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readVersionOptions()
-			ver := op.Project.Versions
-			if op.All {
-				ver = project.VersionsList()
-			}
-			versions := createVersionsFrom(p, op.Project, ver)
-			if !versions.IsEmpty() {
-				for k, v := range versions.Versions() {
-					if op.OutputValue {
-						fmt.Printf("%s\n", v)
-					} else {
-						fmt.Printf("%7s: %s\n", k, v)
-					}
-				}
-			}
-			if versions.IsCustom() {
-				for _, v := range versions.Custom() {
-					if op.OutputValue {
-						fmt.Printf("%s\n", v)
-					} else {
-						fmt.Printf("%7s: %s\n", "custom", v)
-					}
-				}
-			}
-		},
-		TraverseChildren: true,
-	}
-	setVersionCmd = &cobra.Command{
-		Use:   "set",
-		Short: "Set the version to the project",
-		Long:  `Change the version of the project to the new version`,
-		Run: func(cmd *cobra.Command, args []string) {
-			op, p := readProjectOptions()
-			versions := createVersions(p, op.Project)
-			versions.CheckUnique()
-
-			version := p.Version()
-			p.SetVersion(versions.Unique())
-
-			log.WithFields(log.Fields{
-				"file": p.Filename(),
-				"old":  version,
-				"new":  versions.Unique(),
-			}).Info("Change the version of the project to the new version")
-		},
-		TraverseChildren: true,
-	}
+	shortened = false
+	output    = "json"
+	bv        BuildVersion
 )
 
-func initVersion() {
-	addChildCmd(projectCmd, projectVersionCmd)
-	addBoolFlag(projectVersionCmd, "value-only", "", false, "write only the value to the console")
-	addBoolFlag(projectVersionCmd, "all", "", false, "show all versions")
-	addChildCmd(projectVersionCmd, setVersionCmd)
+type BuildVersion struct {
+	Version string
+	Commit  string
+	Date    string
 }
 
-func readVersionOptions() (versionFlags, project.Project) {
-	options := versionFlags{}
-	readOptions(&options)
-	return options, loadProject(options.Project)
+func createVersionCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "version",
+		Short: "Version will output the current build information",
+		Long:  ``,
+		Run: func(_ *cobra.Command, _ []string) {
+			resp := goVersion.FuncWithOutput(shortened, bv.Version, bv.Commit, bv.Date, output)
+			fmt.Print(resp)
+		},
+	}
+
+	cmd.Flags().BoolVarP(&shortened, "short", "s", false, "Print just the version number.")
+	cmd.Flags().StringVarP(&output, "output", "o", "json", "Output format. One of 'yaml' or 'json'.")
+
+	return cmd
 }

@@ -6,19 +6,20 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var (
-	nameCmd = &cobra.Command{
+func createProjectNameCmd() *cobra.Command {
+	cmd := &cobra.Command{
 		Use:   "name",
 		Short: "Show the project name",
 		Long:  `Tasks to show the maven project name`,
 		Run: func(cmd *cobra.Command, args []string) {
-			_, p := readProjectOptions()
-			fmt.Printf("%s\n", p.Name())
+
+			flags := projectFlags{}
+			readOptions(&flags)
+			project := loadProject(flags)
+
+			fmt.Printf("%s\n", project.Name())
 		},
 		TraverseChildren: true,
 	}
-)
-
-func initName() {
-	projectCmd.AddCommand(nameCmd)
+	return cmd
 }

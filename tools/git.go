@@ -2,7 +2,6 @@ package tools
 
 import (
 	"os"
-	"strconv"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
@@ -29,35 +28,58 @@ func Git(arg ...string) {
 	}
 }
 
-// GitCommit get the git commit
-func GitCommit(length int, firstVer string) (string, string, string) {
-	// search for latest annotated tag
-	lastTag, err := cmdOutputErr("git", "describe", "--abbrev=0")
-	log.WithField("tag", lastTag).Debug("Last tag")
+type GitDescribe struct {
+	Tag, Count, Hash string
+}
+
+func GitDescribeInfo() GitDescribe {
+	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100")
 	if err == nil {
-		// get metadata from the git describe
-		describe, err := cmdOutputErr("git", "describe", "--long", "--abbrev="+strconv.Itoa(length))
-		if err == nil {
-			describe = strings.TrimPrefix(describe, lastTag+"-")
-			items := strings.Split(describe, "-")
-			return lastTag, items[0], items[1]
+		items := strings.Split(output, "-")
+		return GitDescribe{
+			Tag:   items[0],
+			Count: items[1],
+			Hash:  strings.TrimPrefix(items[2], "g"),
 		}
 	}
-	// not tag found in the git repository
-	lastTag = firstVer
+
 	count := "0"
-	// git commit hash
-	hash, err := cmdOutputErr("git", "rev-parse", "--short="+strconv.Itoa(length), "HEAD")
-	if err != nil {
-		hash = Lpad("", "0", length)
-	} else {
-		// git commit count in the branch
-		tmp, err := cmdOutputErr("git", "rev-list", "HEAD", "--count")
+	hash := ""
+	tmp, err := CmdOutputErr("git", "rev-list", "--max-count=1", "HEAD")
+	if err == nil {
+		hash = tmp
+		c, err := CmdOutputErr("git", "rev-list", "--count", "HEAD")
 		if err == nil {
-			count = tmp
+			count = c
 		}
 	}
-	// git describe add 'g' prefix for the commit hash
-	hash = "g" + hash
-	return lastTag, count, hash
+	return GitDescribe{
+		Tag:   "",
+		Count: count,
+		Hash:  hash,
+	}
+}
+
+func GitDescribeExclude(tag string) GitDescribe {
+	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100", "--exclude", tag)
+	if err != nil {
+		log.WithField("tag", tag).Fatal("Error execute git discribe with exclude tag")
+	}
+	items := strings.Split(output, "-")
+	return GitDescribe{
+		Tag:   items[0],
+		Count: items[1],
+		Hash:  strings.TrimPrefix(items[2], "g"),
+	}
+}
+
+func GitLogMessages(from, to string) []string {
+	output, err := CmdOutputErr("git", "--no-pager", "log", `--pretty=format:"%s"`, from+"..."+to)
+	if err != nil {
+		log.WithFields(log.Fields{"from": from, "to": to}).Fatal("Error execute git log messages")
+	}
+	if len(output) < 1 {
+		return []string{}
+	}
+	return strings.Split(output, "\n")
 }
