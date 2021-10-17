@@ -20,22 +20,11 @@ The main commands:
 * `samo project release` - release project
 * `samo project patch` - create patch branch for the release
 
-Version types:
-* `version` - current project version
-* `build` - build version base on the template `<project_version>-<template>`.   
-Default template: `<project_version>-rc<git_count>.<git_hash>`
-* `hash` - hash version `<project_version>-<git_hash>`
-* `branch` - branch version `<project_version>-<git_branch>`
-* `release` - release/final version of the project
-* `latest` - latest verison for the docker image
-* `dev` - local developer version for the docker image without repository
-* `<custom_version>` - custom version which could will be use
-
 
 For example to build docker image of the project only with a build-version tag:
 ```shell
-❯ samo project docker build --version build
-INFO Build docker image                     image= tags="[release-notes:3.1.0-rc001.g2a5d0e7c5fcb]"
-INFO docker build --pull -t release-notes:3.1.0-rc001.g2a5d0e7c5fcb -f src/main/docker/Dockerfile . 
+❯ samo project docker build
+INFO Build docker image                     image= tags="[release-notes:3.1.0-rc.1]"
+INFO docker build --pull -t release-notes:3.1.0-rc.1 -f src/main/docker/Dockerfile . 
 INFO Docker build done!                     image=release-notes
 ```

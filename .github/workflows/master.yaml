@@ -1,0 +1,32 @@
+name: Build and Test
+on:
+  push:
+    branches:
+      - 'master'
+    tags-ignore:
+      - '**'
+  pull_request:
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: 1.17
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.40
+      - name: Build
+        run: go build .
+      - name: Tests.
+        run: go test
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v2
+        with:
+          version: latest
+          args: release --rm-dist --skip-publish
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}      

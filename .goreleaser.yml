@@ -17,6 +17,19 @@ archives:
     linux: Linux
     windows: Windows
     amd64: x86_64
+dockers:
+- id: linux
+  goos: linux
+  goarch: amd64
+  image_templates:
+    - "ghcr.io/lorislab/{{ .ProjectName }}:{{ if .IsSnapshot }}latest{{ else }}{{ .Version }}{{ end }}"
+  build_flag_templates:
+    - "--pull"
+    - "--label=org.opencontainers.image.source=https://github.com/lorislab/{{.ProjectName}}"
+    - "--label=org.opencontainers.image.created={{.Date}}"
+    - "--label=org.opencontainers.image.title={{.ProjectName}}"
+    - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+    - "--label=org.opencontainers.image.version={{.Version}}"
 checksum:
   name_template: 'checksums.txt'
 snapshot:
