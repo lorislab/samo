@@ -28,3 +28,23 @@ INFO Build docker image                     image= tags="[release-notes:3.1.0-rc
 INFO docker build --pull -t release-notes:3.1.0-rc.1 -f src/main/docker/Dockerfile . 
 INFO Docker build done!                     image=release-notes
 ```
+
+## Development
+
+### Local build
+```
+go install
+samo version
+{"Version":"dev","Commit":"none","Date":"unknown"}
+```
+
+### Local docker build
+```
+go build
+docker build -t samo .
+``` 
+
+### Test release pacakges
+```
+goreleaser release --snapshot --rm-dist
+```

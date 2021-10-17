@@ -1,8 +1,8 @@
 name: Build and Test
 on:
   push:
-    branches:
-      - '**'
+    branches-ignore:
+      - 'master'
     tags-ignore:
       - '**'
   pull_request:
@@ -17,6 +17,8 @@ jobs:
           go-version: 1.17
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v2
+      - name: Docker login
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin        
         with:
           version: v1.33
       - name: Build
