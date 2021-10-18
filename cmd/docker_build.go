@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"strings"
+	"time"
 
 	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
@@ -9,13 +10,14 @@ import (
 )
 
 type dockerBuildFlags struct {
-	Docker          dockerFlags `mapstructure:",squash"`
-	File            string      `mapstructure:"file"`
-	Profile         string      `mapstructure:"profile"`
-	Context         string      `mapstructure:"context"`
-	SkipPull        bool        `mapstructure:"pull-skip"`
-	BuildPush       bool        `mapstructure:"build-push"`
-	SkipRemoveBuild bool        `mapstructure:"remove-build-skip"`
+	Docker                   dockerFlags `mapstructure:",squash"`
+	File                     string      `mapstructure:"file"`
+	Profile                  string      `mapstructure:"profile"`
+	Context                  string      `mapstructure:"context"`
+	SkipPull                 bool        `mapstructure:"pull-skip"`
+	BuildPush                bool        `mapstructure:"build-push"`
+	SkipRemoveBuild          bool        `mapstructure:"remove-build-skip"`
+	SkipOpencontainersLabels bool        `mapstructure:"skip-opencontainers-labels"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -33,6 +35,7 @@ func createDockerBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
+	addBoolFlag(cmd, "skip-opencontainers-labels", "", false, "skip opencontainers labels ")
 	addStringFlag(cmd, "file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
 	addStringFlag(cmd, "profile", "p", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "context", "", ".", "the docker build context")
@@ -77,6 +80,16 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	if !flags.Docker.Project.SkipLabels {
 		command = append(command, "--label", "samo.project.hash="+project.Hash())
 		command = append(command, "--label", "samo.project.version="+project.Version())
+		command = append(command, "--label", "samo.project.created="+time.Now().String())
+	}
+
+	// add opencontainers labels
+	if !flags.SkipOpencontainersLabels {
+		command = append(command, "--label", "org.opencontainers.image.created="+time.Now().String())
+		command = append(command, "--label", "org.opencontainers.image.title="+project.Name())
+		command = append(command, "--label", "org.opencontainers.image.revision="+project.Hash())
+		command = append(command, "--label", "org.opencontainers.image.version="+project.Version())
+		command = append(command, "--label", "org.opencontainers.image.source="+project.Source())
 	}
 
 	// add custom labels

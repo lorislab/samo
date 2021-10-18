@@ -1,13 +1,14 @@
-FROM debian:10.7-slim AS builder
+FROM alpine/helm:3.7.1 as helm
+
+FROM debian:10.11-slim
+
+COPY --from=helm /usr/bin/helm /usr/bin/helm
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl ca-certificates
+    && apt-get install -y apt-transport-https ca-certificates curl gnupg2 software-properties-common curl ca-certificates \
+    && curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add - \
+    && add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/debian $(lsb_release -cs) stable" \
+    && apt-get update \
+    && apt-get install -y docker-ce
 
-FROM debian:10.7-slim
-
-LABEL org.opencontainers.image.source https://github.com/lorislab/samo
-
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY samo /opt/samo
-
-ENTRYPOINT ["/opt/samo"]
+COPY samo /usr/bin/samo

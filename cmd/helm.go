@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
@@ -156,6 +157,7 @@ func updateHelmChart(project *Project, flags helmFlags, chartTemplate string) {
 	if !flags.Project.SkipLabels {
 		data[`annotations."samo.project.hash"`] = project.Hash()
 		data[`annotations."samo.project.version"`] = project.Version()
+		data[`annotations."samo.project.created"`] = time.Now().String()
 	}
 	if len(flags.Project.LabelTemplate) > 0 {
 		t := templateToMap(flags.Project.LabelTemplate, project)

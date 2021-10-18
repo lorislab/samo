@@ -20,7 +20,7 @@ type projectFlags struct {
 	SkipPush           bool   `mapstructure:"skip-push"`
 	ConvetionalCommits bool   `mapstructure:"conventional-commits"`
 	BranchTemplate     string `mapstructure:"branch-template"`
-	SkipLabels         bool   `mapstructure:"skip-default-labels"`
+	SkipLabels         bool   `mapstructure:"skip-samo-labels"`
 	LabelTemplate      string `mapstructure:"labels-template-list"`
 }
 
@@ -47,7 +47,7 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
-	addBoolFlag(cmd, "skip-default-labels", "", false, "skip default labels/annotations samo.project.hash,samo.project.version")
+	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.hash,samo.project.version,samo.project.created")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
 	Values: Name,Hash,Branch,Tag,Count,Version,Release.
 	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
@@ -69,6 +69,7 @@ type Project struct {
 	count       string
 	hash        string
 	branch      string
+	source      string
 	patchBranch bool
 	version     *semver.Version
 	release     *semver.Version
@@ -77,6 +78,10 @@ type Project struct {
 // Name project name
 func (g Project) Name() string {
 	return g.name
+}
+
+func (g Project) Source() string {
+	return g.source
 }
 
 func (g Project) Version() string {
@@ -118,6 +123,7 @@ func loadProject(flags projectFlags) *Project {
 	if err != nil {
 		tmp = tools.ExecCmdOutput("git", "rev-parse", "--show-toplevel")
 	}
+	source := tmp
 	tmp = strings.TrimSuffix(tmp, ".git")
 	tmp = filepath.Base(tmp)
 	if len(tmp) > 0 && tmp != "." && tmp != "/" {
@@ -160,6 +166,7 @@ func loadProject(flags projectFlags) *Project {
 		count:       describe.Count,
 		hash:        describe.Hash,
 		branch:      branch,
+		source:      source,
 		patchBranch: isPatchBranch,
 		version:     createVersion(version, branch, flags.VersionTemplate, describe),
 		release:     tools.CreateSemVer(version),
