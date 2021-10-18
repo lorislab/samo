@@ -12,7 +12,8 @@ import (
 
 type helmBuildFlags struct {
 	Helm   helmFlags `mapstructure:",squash"`
-	Source string    `mapstructure:"helm-source"`
+	Source string    `mapstructure:"helm-source-dir"`
+	Copy   bool      `mapstructure:"helm-source-copy"`
 }
 
 func createHealmBuildCmd() *cobra.Command {
@@ -29,7 +30,8 @@ func createHealmBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "helm-source", "", "", "filter project helm chart source directory")
+	addStringFlag(cmd, "helm-source-dir", "", "", "project helm chart source directory")
+	addBoolFlag(cmd, "helm-source-copy", "", false, "copy helm source to helm directory")
 	return cmd
 }
 
@@ -59,7 +61,7 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
 	// get all files from the input directory
-	if len(flags.Source) > 0 {
+	if flags.Copy && len(flags.Source) > 0 {
 
 		if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
 			log.Fatal("Source helm directory does not exists!", log.F("source", flags.Source))
