@@ -26,9 +26,9 @@ func createProjectReleaseCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 	addStringFlag(cmd, "message-template", "", "{{ .Version }}", `the annotated tag message template.
-	Values: Hash,Branch,Tag,Count,Version,Release.`)
+	Values: Hash,Branch,Tag,Count,Version,Release,Name.`)
 	addStringFlag(cmd, "tag-template", "", "{{ .Version }}", `the release tag template. 
-	Values: Hash,Project.Branch,Tag,Count,Version,Release.`)
+	Values: Hash,Project,Branch,Tag,Count,Version,Release,Name.`)
 
 	return cmd
 }

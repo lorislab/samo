@@ -26,7 +26,7 @@ func createProjectPatchCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlagReq(cmd, "tag", "", "", "create patch branch for the release tag")
+	addStringFlagReq(cmd, "tag", "", "", "create patch branch from the release version")
 
 	return cmd
 }

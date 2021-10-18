@@ -49,7 +49,7 @@ func createProjectCmd() *cobra.Command {
 
 	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.hash,samo.project.version,samo.project.created")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
-	Values: Name,Hash,Branch,Tag,Count,Version,Release.
+	Values: Name,Hash,Branch,Tag,Count,Version,Release,Name.
 	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	addChildCmd(cmd, createProjectVersionCmd())
