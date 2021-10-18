@@ -12,7 +12,7 @@ import (
 
 type helmBuildFlags struct {
 	Helm   helmFlags `mapstructure:",squash"`
-	Source string    `mapstructure:"source"`
+	Source string    `mapstructure:"helm-source"`
 }
 
 func createHealmBuildCmd() *cobra.Command {
@@ -29,7 +29,7 @@ func createHealmBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "source", "", "", "filter project helm chart source directory")
+	addStringFlag(cmd, "helm-source", "", "", "filter project helm chart source directory")
 	return cmd
 }
 

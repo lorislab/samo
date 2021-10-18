@@ -7,7 +7,7 @@ import (
 
 type helmReleaseFlags struct {
 	Helm                 helmFlags `mapstructure:",squash"`
-	ChartReleaseTemplate string    `mapstructure:"chart-release-template-list"`
+	ChartReleaseTemplate string    `mapstructure:"helm-chart-release-template-list"`
 }
 
 func createHealmReleaseCmd() *cobra.Command {
@@ -24,7 +24,7 @@ func createHealmReleaseCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "chart-release-template-list", "", "version={{ .Release }},appVersion={{ .Release }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
+	addStringFlag(cmd, "helm-chart-release-template-list", "", "version={{ .Release }},appVersion={{ .Release }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
 	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
 	Example: version={{ .Release }},appVersion={{ .Release }}`)
 

@@ -18,16 +18,16 @@ var yamlKeyRegex = regexp.MustCompile(`^"|['"](\w+(?:\.\w+)*)['"]|(\w+)`)
 
 type helmFlags struct {
 	Project              projectFlags `mapstructure:",squash"`
-	Repo                 string       `mapstructure:"repo"`
-	RepoUsername         string       `mapstructure:"repo-username"`
-	RepoPassword         string       `mapstructure:"repo-password"`
-	RepositoryURL        string       `mapstructure:"repo-url"`
-	Clean                bool         `mapstructure:"clean"`
-	PushURL              string       `mapstructure:"push-url"`
-	PushType             string       `mapstructure:"push-type"`
-	Dir                  string       `mapstructure:"dir"`
-	ChartFilterTemplate  string       `mapstructure:"chart-template-list"`
-	ValuesFilterTemplate string       `mapstructure:"values-template-list"`
+	Repo                 string       `mapstructure:"helm-repo"`
+	RepoUsername         string       `mapstructure:"helm-repo-username"`
+	RepoPassword         string       `mapstructure:"helm-repo-password"`
+	RepositoryURL        string       `mapstructure:"helm-repo-url"`
+	Clean                bool         `mapstructure:"helm-clean"`
+	PushURL              string       `mapstructure:"helm-push-url"`
+	PushType             string       `mapstructure:"helm-push-type"`
+	Dir                  string       `mapstructure:"helm-dir"`
+	ChartFilterTemplate  string       `mapstructure:"helm-chart-template-list"`
+	ValuesFilterTemplate string       `mapstructure:"helm-values-template-list"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -38,18 +38,18 @@ func createHelmCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addBoolFlag(cmd, "clean", "", false, "clean output directory before filter")
-	addStringFlag(cmd, "dir", "", "target/helm", "filter project helm chart output directory")
-	addStringFlag(cmd, "repo", "", "", "helm repository name")
-	addStringFlag(cmd, "repo-url", "", "", "helm repository URL")
-	addStringFlag(cmd, "repo-username", "u", "", "helm repository username")
-	addStringFlag(cmd, "repo-password", "p", "", "helm repository password")
-	addStringFlag(cmd, "push-url", "", "", "helm repository push URL")
-	addStringFlag(cmd, "push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
-	addStringFlag(cmd, "chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
+	addBoolFlag(cmd, "helm-clean", "", false, "clean output directory before filter")
+	addStringFlag(cmd, "helm-dir", "", "target/helm", "filter project helm chart output directory")
+	addStringFlag(cmd, "helm-repo", "", "", "helm repository name")
+	addStringFlag(cmd, "helm-repo-url", "", "", "helm repository URL")
+	addStringFlag(cmd, "helm-repo-username", "u", "", "helm repository username")
+	addStringFlag(cmd, "helm-repo-password", "p", "", "helm repository password")
+	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL")
+	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
+	addStringFlag(cmd, "helm-chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
 	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
 	Example: version={{ .Release }},appVersion={{ .Release }}`)
-	addStringFlag(cmd, "values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
+	addStringFlag(cmd, "helm-values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
 	Values: Hash,Branch,Tag,Count,Version,Release.`)
 
 	addChildCmd(cmd, createHealmBuildCmd())

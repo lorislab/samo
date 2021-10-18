@@ -11,13 +11,13 @@ import (
 
 type dockerBuildFlags struct {
 	Docker                   dockerFlags `mapstructure:",squash"`
-	File                     string      `mapstructure:"file"`
-	Profile                  string      `mapstructure:"profile"`
-	Context                  string      `mapstructure:"context"`
-	SkipPull                 bool        `mapstructure:"pull-skip"`
-	BuildPush                bool        `mapstructure:"build-push"`
-	SkipRemoveBuild          bool        `mapstructure:"remove-build-skip"`
-	SkipOpencontainersLabels bool        `mapstructure:"skip-opencontainers-labels"`
+	File                     string      `mapstructure:"docker-file"`
+	Profile                  string      `mapstructure:"docker-profile"`
+	Context                  string      `mapstructure:"docker-context"`
+	SkipPull                 bool        `mapstructure:"docker-pull-skip"`
+	BuildPush                bool        `mapstructure:"docker-build-push"`
+	SkipRemoveBuild          bool        `mapstructure:"docker-remove-build-skip"`
+	SkipOpencontainersLabels bool        `mapstructure:"docker-skip-opencontainers-labels"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -35,13 +35,13 @@ func createDockerBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addBoolFlag(cmd, "skip-opencontainers-labels", "", false, "skip opencontainers labels ")
-	addStringFlag(cmd, "file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
-	addStringFlag(cmd, "profile", "p", "", "profile of the Dockerfile.<profile>")
-	addStringFlag(cmd, "context", "", ".", "the docker build context")
-	addBoolFlag(cmd, "pull-skip", "", false, "skip docker pull new images for the build")
-	addBoolFlag(cmd, "build-push", "", false, "push docker image after build")
-	addBoolFlag(cmd, "remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
+	addBoolFlag(cmd, "docker-skip-opencontainers-labels", "", false, "skip opencontainers labels ")
+	addStringFlag(cmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
+	addStringFlag(cmd, "docker-profile", "p", "", "profile of the Dockerfile.<profile>")
+	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
+	addBoolFlag(cmd, "docker-pull-skip", "", false, "skip docker pull new images for the build")
+	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
+	addBoolFlag(cmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
 
 	return cmd
 }

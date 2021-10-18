@@ -10,10 +10,10 @@ import (
 
 type dockerFlags struct {
 	Project         projectFlags `mapstructure:",squash"`
-	Registry        string       `mapstructure:"registry"`
-	Group           string       `mapstructure:"group"`
-	Repo            string       `mapstructure:"repository"`
-	TagListTemplate string       `mapstructure:"tag-template-list"`
+	Registry        string       `mapstructure:"docker-registry"`
+	Group           string       `mapstructure:"docker-group"`
+	Repo            string       `mapstructure:"docker-repository"`
+	TagListTemplate string       `mapstructure:"docker-tag-template-list"`
 }
 
 func createDockerCmd() *cobra.Command {
@@ -24,10 +24,10 @@ func createDockerCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "registry", "", "", "the docker registry")
-	addStringFlag(cmd, "group", "", "", "the docker repository group")
-	addStringFlag(cmd, "repository", "", "", "the docker repository. Default value is the project name.")
-	addStringFlag(cmd, "tag-template-list", "", "{{ .Version }}", `docker tag list template. 
+	addStringFlag(cmd, "docker-registry", "", "", "the docker registry")
+	addStringFlag(cmd, "docker-group", "", "", "the docker repository group")
+	addStringFlag(cmd, "docker-repository", "", "", "the docker repository. Default value is the project name.")
+	addStringFlag(cmd, "docker-tag-template-list", "", "{{ .Version }}", `docker tag list template. 
 	Values: Hash,Branch,Tag,Count,Version,Release. 
 	Example: {{ .Version }},latest,{{ .Hash }}`)
 

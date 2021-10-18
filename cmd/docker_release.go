@@ -8,9 +8,9 @@ import (
 
 type dockerReleaseFlags struct {
 	Docker          dockerFlags `mapstructure:",squash"`
-	ReleaseRegistry string      `mapstructure:"release-registry"`
-	ReleaseGroup    string      `mapstructure:"release-group"`
-	ReleaseRepo     string      `mapstructure:"release-repository"`
+	ReleaseRegistry string      `mapstructure:"docker-release-registry"`
+	ReleaseGroup    string      `mapstructure:"docker-release-group"`
+	ReleaseRepo     string      `mapstructure:"docker-release-repository"`
 }
 
 func createDockerReleaseCmd() *cobra.Command {
@@ -27,9 +27,9 @@ func createDockerReleaseCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addStringFlag(cmd, "release-registry", "", "", "the docker release registry")
-	addStringFlag(cmd, "release-group", "", "", "the docker release repository group")
-	addStringFlag(cmd, "release-repository", "", "", "the docker release repository. Default value project name.")
+	addStringFlag(cmd, "docker-release-registry", "", "", "the docker release registry")
+	addStringFlag(cmd, "docker-release-group", "", "", "the docker release repository group")
+	addStringFlag(cmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 
 	return cmd
 }
