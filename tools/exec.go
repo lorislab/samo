@@ -6,37 +6,29 @@ import (
 	"os/exec"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/lorislab/samo/log"
 )
 
 // ExecCmdOutput execute command with output
 func ExecCmdOutput(name string, arg ...string) string {
-	log.Debug(name+" ", strings.Join(arg, " "))
+	log.Debug(name, log.F("args", strings.Join(arg, " ")))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output: ", string(out))
+	log.Debug("Output: " + string(out))
 	if err != nil {
-		log.Error(string(out))
-		log.WithFields(log.Fields{
-			"cmd":   name,
-			"args":  arg,
-			"error": err,
-		}).Fatal("Error execute command")
+		log.Fatal("Error execute command", log.Fields{"cmd": name, "args": arg, "output": string(out)}.E(err))
 	}
 	return string(bytes.TrimRight(out, "\n"))
 }
 
 // ExecCmd execute command
 func ExecCmd(name string, arg ...string) {
-	log.Info(name+" ", strings.Join(arg, " "))
+	log.Debug(name, log.F("args", strings.Join(arg, " ")))
 	cmd := exec.Command(name, arg...)
 
 	// enable always error log for the command
 	errorReader, err := cmd.StderrPipe()
 	if err != nil {
-		log.WithFields(log.Fields{
-			"name": name,
-			"args": arg,
-		}).Panic(err)
+		log.Panic("error setup error pipe", log.Fields{"name": name, "args": arg}.E(err))
 	}
 	scannerError := bufio.NewScanner(errorReader)
 	go func() {
@@ -46,11 +38,11 @@ func ExecCmd(name string, arg ...string) {
 	}()
 
 	// enable info log for the command
-	if log.GetLevel() == log.DebugLevel {
+	if log.IsDebugLevel() {
 		// create a pipe for the output of the script
 		cmdReader, err := cmd.StdoutPipe()
 		if err != nil {
-			log.Panic(err)
+			log.Panic("error setup output pipe", log.Fields{"name": name, "args": arg}.E(err))
 		}
 
 		scanner := bufio.NewScanner(cmdReader)
@@ -63,33 +55,28 @@ func ExecCmd(name string, arg ...string) {
 
 	err = cmd.Start()
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error start command", log.Fields{"name": name, "args": arg}.E(err))
 	}
 
 	err = cmd.Wait()
 	if err != nil {
-		log.WithField("error", err).Fatal("Error execute command")
+		log.Fatal("Error execute command", log.E(err))
 	}
 }
 
 func execCmdErr(name string, arg ...string) error {
-	log.Debug(name+" ", strings.Join(arg, " "))
+	log.Debug(name, log.F("args", strings.Join(arg, " ")))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output: ", string(out))
+	log.Debug("Output: " + string(out))
 	if err != nil {
-		log.Error(string(out))
-		log.WithFields(log.Fields{
-			"cmd":   name,
-			"args":  arg,
-			"error": err,
-		}).Fatal("Error execute command")
+		log.Fatal("Error execute command", log.Fields{"cmd": name, "args": arg, "output": string(out)}.E(err))
 	}
 	return err
 }
 
 func CmdOutputErr(name string, arg ...string) (string, error) {
-	log.Debug(name+" ", strings.Join(arg, " "))
+	log.Debug(name, log.F("args", strings.Join(arg, " ")))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output: ", string(out))
+	log.Debug("Output: " + string(out))
 	return string(bytes.TrimRight(out, "\n")), err
 }

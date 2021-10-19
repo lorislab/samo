@@ -40,6 +40,10 @@ func SetLevel(level string) {
 	logger = logger.Level(lvl)
 }
 
+func IsDebugLevel() bool {
+	return logger.GetLevel() == zerolog.DebugLevel
+}
+
 func Fatal(msg string, fields ...map[string]interface{}) {
 	sendEvent(logger.Fatal(), msg, fields...)
 }

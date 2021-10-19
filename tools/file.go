@@ -6,12 +6,12 @@ import (
 	"os"
 	"path/filepath"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/lorislab/samo/log"
 )
 
 func Exists(file string) bool {
 	if _, err := os.Stat(file); os.IsNotExist(err) {
-		log.WithField("file", file).Debug("File does not exists!")
+		log.Debug("File does not exists!", log.F("file", file))
 		return false
 	}
 	return true
@@ -69,13 +69,13 @@ func WriteToFile(filename, data string) {
 func ReplaceTextInFile(filename, text string, b, e int64) {
 	buf, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error read test file", log.E(err).F("filename", filename))
 	}
 	result := string(buf)
 	result = result[:b] + text + result[e:]
 	err = ioutil.WriteFile(filename, []byte(result), 0666)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error write data to file", log.E(err).F("filename", filename))
 	}
 }
 

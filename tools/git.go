@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/lorislab/samo/log"
 )
 
 func GitBranch() string {
@@ -63,7 +63,7 @@ func GitDescribeInfo() GitDescribe {
 func GitDescribeExclude(tag string) GitDescribe {
 	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100", "--exclude", tag)
 	if err != nil {
-		log.WithField("tag", tag).Fatal("Error execute git discribe with exclude tag")
+		log.Fatal("Error execute git discribe with exclude tag", log.F("tag", tag))
 	}
 	items := strings.Split(output, "-")
 	return GitDescribe{
@@ -76,7 +76,7 @@ func GitDescribeExclude(tag string) GitDescribe {
 func GitLogMessages(from, to string) []string {
 	output, err := CmdOutputErr("git", "--no-pager", "log", `--pretty=format:"%s"`, from+"..."+to)
 	if err != nil {
-		log.WithFields(log.Fields{"from": from, "to": to}).Fatal("Error execute git log messages")
+		log.Fatal("Error execute git log messages", log.Fields{"from": from, "to": to})
 	}
 	if len(output) < 1 {
 		return []string{}

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"text/template"
 
-	log "github.com/sirupsen/logrus"
+	"github.com/lorislab/samo/log"
 )
 
 func Template(obj interface{}, data string) string {
@@ -16,13 +16,13 @@ func Template(obj interface{}, data string) string {
 
 	t, err := template.Funcs(f).Parse(data)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error parse template data", log.E(err))
 	}
 
 	var tpl bytes.Buffer
 	err = t.Execute(&tpl, obj)
 	if err != nil {
-		log.Panic(err)
+		log.Panic("error execute template", log.E(err))
 	}
 	return tpl.String()
 }
