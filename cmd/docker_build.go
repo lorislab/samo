@@ -14,6 +14,7 @@ type dockerBuildFlags struct {
 	File                     string      `mapstructure:"docker-file"`
 	Profile                  string      `mapstructure:"docker-profile"`
 	Context                  string      `mapstructure:"docker-context"`
+	SkipDevBuild             bool        `mapstructure:"docker-skip-dev"`
 	SkipPull                 bool        `mapstructure:"docker-pull-skip"`
 	BuildPush                bool        `mapstructure:"docker-build-push"`
 	SkipRemoveBuild          bool        `mapstructure:"docker-remove-build-skip"`
@@ -41,6 +42,7 @@ func createDockerBuildCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
 	addBoolFlag(cmd, "docker-pull-skip", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
+	addBoolFlag(cmd, "docker-skip-dev", "", false, "skip build image {{ .Name }}:latest")
 	addBoolFlag(cmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
 
 	return cmd
@@ -63,6 +65,10 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 
 	dockerImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	tags := dockerTags(dockerImage, project, flags.Docker)
+
+	if !flags.SkipDevBuild {
+		tags = append(tags, project.Name()+":latest")
+	}
 
 	log.Info("Build docker image", log.Fields{"image": dockerImage, "tags": tags})
 
