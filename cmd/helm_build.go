@@ -11,9 +11,11 @@ import (
 )
 
 type helmBuildFlags struct {
-	Helm   helmFlags `mapstructure:",squash"`
-	Source string    `mapstructure:"helm-source-dir"`
-	Copy   bool      `mapstructure:"helm-source-copy"`
+	Helm                 helmFlags `mapstructure:",squash"`
+	Source               string    `mapstructure:"helm-source-dir"`
+	Copy                 bool      `mapstructure:"helm-source-copy"`
+	ChartFilterTemplate  string    `mapstructure:"helm-chart-template-list"`
+	ValuesFilterTemplate string    `mapstructure:"helm-values-template-list"`
 }
 
 func createHealmBuildCmd() *cobra.Command {
@@ -32,6 +34,12 @@ func createHealmBuildCmd() *cobra.Command {
 
 	addStringFlag(cmd, "helm-source-dir", "", "", "project helm chart source directory")
 	addBoolFlag(cmd, "helm-source-copy", "", false, "copy helm source to helm directory")
+	addStringFlag(cmd, "helm-chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
+	Values: `+templateValues+`
+	Example: version={{ .Release }},appVersion={{ .Release }}`)
+	addStringFlag(cmd, "helm-values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
+	Values: `+templateValues)
+
 	return cmd
 }
 
@@ -47,8 +55,8 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 	// filter resources to output dir
 	buildHelmChart(flags, project)
 
-	updateHelmChart(project, flags.Helm, flags.Helm.ChartFilterTemplate)
-	updateHelmValues(project, flags.Helm)
+	updateHelmChart(project, flags.Helm, flags.ChartFilterTemplate)
+	updateHelmValues(project, flags.Helm, flags.ValuesFilterTemplate)
 
 	// update helm dependencies
 	tools.ExecCmd("helm", "dependency", "update", helmDir(project, flags.Helm))

@@ -17,17 +17,15 @@ import (
 var yamlKeyRegex = regexp.MustCompile(`^"|['"](\w+(?:\.\w+)*)['"]|(\w+)`)
 
 type helmFlags struct {
-	Project              projectFlags `mapstructure:",squash"`
-	Repo                 string       `mapstructure:"helm-repo"`
-	RepoUsername         string       `mapstructure:"helm-repo-username" yaml:"-"`
-	RepoPassword         string       `mapstructure:"helm-repo-password" yaml:"-"`
-	RepositoryURL        string       `mapstructure:"helm-repo-url"`
-	Clean                bool         `mapstructure:"helm-clean"`
-	PushURL              string       `mapstructure:"helm-push-url"`
-	PushType             string       `mapstructure:"helm-push-type"`
-	Dir                  string       `mapstructure:"helm-dir"`
-	ChartFilterTemplate  string       `mapstructure:"helm-chart-template-list"`
-	ValuesFilterTemplate string       `mapstructure:"helm-values-template-list"`
+	Project       projectFlags `mapstructure:",squash"`
+	Repo          string       `mapstructure:"helm-repo"`
+	RepoUsername  string       `mapstructure:"helm-repo-username" yaml:"-"`
+	RepoPassword  string       `mapstructure:"helm-repo-password" yaml:"-"`
+	RepositoryURL string       `mapstructure:"helm-repo-url"`
+	Clean         bool         `mapstructure:"helm-clean"`
+	PushURL       string       `mapstructure:"helm-push-url"`
+	PushType      string       `mapstructure:"helm-push-type"`
+	Dir           string       `mapstructure:"helm-dir"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -46,11 +44,6 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "helm-repo-password", "p", "", "helm repository password")
 	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL")
 	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
-	addStringFlag(cmd, "helm-chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
-	Values: `+templateValues+`
-	Example: version={{ .Release }},appVersion={{ .Release }}`)
-	addStringFlag(cmd, "helm-values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
-	Values: `+templateValues)
 
 	addChildCmd(cmd, createHealmBuildCmd())
 	addChildCmd(cmd, createHealmPushCmd())
@@ -140,12 +133,12 @@ func helmPush(version string, project *Project, flags helmFlags) {
 }
 
 // update helm version, appversion, annotations/labels in Chart.yaml
-func updateHelmValues(project *Project, flags helmFlags) {
-	if len(flags.ValuesFilterTemplate) < 1 {
+func updateHelmValues(project *Project, flags helmFlags, valuesTemplate string) {
+	if len(valuesTemplate) < 1 {
 		return
 	}
 	data := map[string]string{}
-	t := templateToMap(flags.ValuesFilterTemplate, project)
+	t := templateToMap(valuesTemplate, project)
 	for k, v := range t {
 		data[k] = v
 	}
