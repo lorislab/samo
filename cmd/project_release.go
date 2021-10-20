@@ -35,14 +35,8 @@ func createProjectReleaseCmd() *cobra.Command {
 
 // CreateRelease create project release
 func release(pro *Project, flags projectReleaseFlags) {
-
-	data := struct {
-		Project *Project
-	}{
-		Project: pro,
-	}
-	tag := tools.Template(data, flags.TagTemplate)
-	msg := tools.Template(data, flags.MessageTemplate)
+	tag := tools.Template(pro, flags.TagTemplate)
+	msg := tools.Template(pro, flags.MessageTemplate)
 	tools.Git("tag", "-a", tag, "-m", msg)
 
 	// push project to remote repository
