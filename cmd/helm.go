@@ -83,16 +83,19 @@ func healmAddRepo(flags helmFlags) {
 	}
 
 	// add repository
-	var command []string
+	command := []string{}
+	exclude := []int{}
 	command = append(command, "repo", "add")
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "--password", flags.RepoPassword)
+		exclude = append(exclude, len(command)-1)
 	}
 	if len(flags.RepoUsername) > 0 {
 		command = append(command, "--username", flags.RepoUsername)
+		exclude = append(exclude, len(command)-1)
 	}
 	command = append(command, flags.Repo, flags.RepositoryURL)
-	tools.ExecCmd("helm", command...)
+	tools.ExecCmdAdv(exclude, "helm", command...)
 }
 
 func helmRepoUpdate() {
@@ -121,7 +124,7 @@ func helmPush(version string, project *Project, flags helmFlags) {
 	command = append(command, "-fis", "--show-error")
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "-u", flags.RepoUsername+`:`+flags.RepoPassword)
-		exclude = append(exclude, 3)
+		exclude = append(exclude, len(command)-1)
 	}
 
 	switch flags.PushType {
