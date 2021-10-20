@@ -3,7 +3,6 @@ package tools
 import (
 	"bufio"
 	"bytes"
-	"fmt"
 	"os/exec"
 	"strings"
 
@@ -35,7 +34,6 @@ func ExecCmdAdv(exclude []int, name string, arg ...string) {
 		}
 	}
 	log.Debug(name, log.F("args", strings.Join(args, " ")))
-	fmt.Println(arg)
 	cmd := exec.Command(name, arg...)
 
 	// enable always error log for the command
