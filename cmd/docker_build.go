@@ -15,7 +15,7 @@ type dockerBuildFlags struct {
 	Profile                  string      `mapstructure:"docker-profile"`
 	Context                  string      `mapstructure:"docker-context"`
 	SkipDevBuild             bool        `mapstructure:"docker-skip-dev"`
-	SkipPull                 bool        `mapstructure:"docker-pull-skip"`
+	SkipPull                 bool        `mapstructure:"docker-skip-pull"`
 	BuildPush                bool        `mapstructure:"docker-build-push"`
 	SkipRemoveBuild          bool        `mapstructure:"docker-remove-build-skip"`
 	SkipOpencontainersLabels bool        `mapstructure:"docker-skip-opencontainers-labels"`
@@ -38,9 +38,9 @@ func createDockerBuildCmd() *cobra.Command {
 
 	addBoolFlag(cmd, "docker-skip-opencontainers-labels", "", false, "skip opencontainers labels ")
 	addStringFlag(cmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
-	addStringFlag(cmd, "docker-profile", "p", "", "profile of the Dockerfile.<profile>")
+	addStringFlag(cmd, "docker-profile", "", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
-	addBoolFlag(cmd, "docker-pull-skip", "", false, "skip docker pull new images for the build")
+	addBoolFlag(cmd, "docker-skip-pull", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
 	addBoolFlag(cmd, "docker-skip-dev", "", false, "skip build image {{ .Name }}:latest")
 	addBoolFlag(cmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
@@ -82,16 +82,17 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 		command = append(command, "--rm")
 	}
 
+	created := time.Now().Format(time.RFC3339)
 	// add labels
 	if !flags.Docker.Project.SkipLabels {
 		command = append(command, "--label", "samo.project.revision="+project.Hash())
 		command = append(command, "--label", "samo.project.version="+project.Version())
-		command = append(command, "--label", "samo.project.created="+time.Now().Format(time.RFC3339))
+		command = append(command, "--label", "samo.project.created="+created)
 	}
 
 	// add opencontainers labels
 	if !flags.SkipOpencontainersLabels {
-		command = append(command, "--label", "org.opencontainers.image.created="+time.Now().String())
+		command = append(command, "--label", "org.opencontainers.image.created="+created)
 		command = append(command, "--label", "org.opencontainers.image.title="+project.Name())
 		command = append(command, "--label", "org.opencontainers.image.revision="+project.Hash())
 		command = append(command, "--label", "org.opencontainers.image.version="+project.Version())
