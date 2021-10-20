@@ -8,8 +8,8 @@ import (
 
 type projectReleaseFlags struct {
 	Project         projectFlags `mapstructure:",squash"`
-	MessageTemplate string       `mapstructure:"message-template"`
-	TagTemplate     string       `mapstructure:"tag-template"`
+	MessageTemplate string       `mapstructure:"release-message-template"`
+	TagTemplate     string       `mapstructure:"release-tag-template"`
 }
 
 func createProjectReleaseCmd() *cobra.Command {
@@ -25,9 +25,9 @@ func createProjectReleaseCmd() *cobra.Command {
 		},
 		TraverseChildren: true,
 	}
-	addStringFlag(cmd, "message-template", "", "{{ .Release }}", `the annotated tag message template.
+	addStringFlag(cmd, "release-message-template", "", "{{ .Release }}", `the annotated tag message template.
 	Values: `+templateValues)
-	addStringFlag(cmd, "tag-template", "", "{{ .Release }}", `the release tag template. 
+	addStringFlag(cmd, "release-tag-template", "", "{{ .Release }}", `the release tag template. 
 	Values: `+templateValues)
 
 	return cmd
