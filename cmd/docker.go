@@ -28,8 +28,9 @@ func createDockerCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-group", "", "", "the docker repository group")
 	addStringFlag(cmd, "docker-repository", "", "", "the docker repository. Default value is the project name.")
 	addStringFlag(cmd, "docker-tag-template-list", "", "{{ .Version }}", `docker tag list template. 
-	Values: Hash,Branch,Tag,Count,Version,Release. 
-	Example: {{ .Version }},latest,{{ .Hash }}`)
+	Values: `+templateValues+`
+	Example: {{ .Version }},latest,{{ .Hash }}
+	`)
 
 	addChildCmd(cmd, createDockerBuildCmd())
 	addChildCmd(cmd, createDockerPushCmd())

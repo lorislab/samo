@@ -47,10 +47,10 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL")
 	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
 	addStringFlag(cmd, "helm-chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
-	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
+	Values: `+templateValues+`
 	Example: version={{ .Release }},appVersion={{ .Release }}`)
 	addStringFlag(cmd, "helm-values-template-list", "", "", `list of key value to be replaced in the values.yaml Example: image.tag={{ .Version }}
-	Values: Hash,Branch,Tag,Count,Version,Release.`)
+	Values: `+templateValues)
 
 	addChildCmd(cmd, createHealmBuildCmd())
 	addChildCmd(cmd, createHealmPushCmd())

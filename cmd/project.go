@@ -24,11 +24,7 @@ type projectFlags struct {
 	LabelTemplate      string `mapstructure:"labels-template-list"`
 }
 
-var versionTemplateInfo = `the version go temmplate string.
-values: Tag,Hash,Count,Branch,Version
-functions:  trunc <lenght>
-For example: {{ .Tag }}-{{ trunc 10 .Hash }}
-`
+var templateValues = `Name,Tag,Hash,Count,Branch,Version,Release,Major,Minor,Patch,Prerelease`
 
 func createProjectCmd() *cobra.Command {
 
@@ -42,14 +38,17 @@ func createProjectCmd() *cobra.Command {
 	addStringFlag(cmd, "first-version", "", "0.0.0", "the first version of the project")
 	addBoolFlag(cmd, "release-major", "", false, "create a major release")
 	addBoolFlag(cmd, "release-patch", "", false, "create a patch release")
-	addStringFlag(cmd, "version-template", "t", "{{ .Version }}-rc.{{ .Count }}", versionTemplateInfo)
+	addStringFlag(cmd, "version-template", "t", "{{ .Version }}-rc.{{ .Count }}", `the version go template string.
+	values: `+templateValues+`
+	functions:  trunc <lenght>
+	For example: {{ .Tag }}-{{ trunc 10 .Hash }}`)
 	addBoolFlag(cmd, "skip-push", "", false, "skip push changes")
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
 	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.hash,samo.project.version,samo.project.created")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
-	Values: Name,Hash,Branch,Tag,Count,Version,Release,Name.
+	Values: `+templateValues+`
 	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	addChildCmd(cmd, createProjectVersionCmd())
@@ -82,6 +81,22 @@ func (g Project) Name() string {
 
 func (g Project) Source() string {
 	return g.source
+}
+
+func (g Project) Major() int64 {
+	return g.version.Major()
+}
+
+func (g Project) Minor() int64 {
+	return g.version.Minor()
+}
+
+func (g Project) Patch() int64 {
+	return g.version.Patch()
+}
+
+func (g Project) Prerelease() string {
+	return g.version.Prerelease()
 }
 
 func (g Project) Version() string {

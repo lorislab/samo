@@ -25,7 +25,7 @@ func createHealmReleaseCmd() *cobra.Command {
 	}
 
 	addStringFlag(cmd, "helm-chart-release-template-list", "", "version={{ .Release }},appVersion={{ .Release }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
-	Values: Name,Hash,Branch,Tag,Count,Version,Release. 
+	Values: `+templateValues+`
 	Example: version={{ .Release }},appVersion={{ .Release }}`)
 
 	return cmd
