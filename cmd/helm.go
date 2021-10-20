@@ -197,6 +197,10 @@ func replaceValueInYaml(filename string, data map[string]string) {
 
 	obj := make(map[interface{}]interface{})
 
+	if !tools.Exists(filename) {
+		log.Fatal("Helm yaml file does not exists!", log.F("file", filename))
+	}
+
 	fileBytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		log.Panic("error read file", log.E(err).F("file", filename))
