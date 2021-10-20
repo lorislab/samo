@@ -102,7 +102,7 @@ func helmRepoUpdate() {
 func helmPush(version string, project *Project, flags helmFlags) {
 
 	if len(flags.PushURL) == 0 {
-		log.Fatal("Flag --push-url is mandatory!", log.Fields{"push-url": flags.PushURL, "version": version})
+		log.Fatal("Flag --helm-push-url is mandatory!", log.Fields{"--helm-push-url": flags.PushURL, "version": version})
 	}
 
 	// upload helm chart
@@ -126,7 +126,7 @@ func helmPush(version string, project *Project, flags helmFlags) {
 	case "upload":
 		command = append(command, flags.PushURL, "--upload-file", filename)
 	case "harbor":
-		command = append(command, "-F", `"chart=@`+filename+`"`, flags.PushURL)
+		command = append(command, "-F", `chart=@`+filename, flags.PushURL)
 	default:
 		log.Fatal("Not supported helm push type", log.F("push-type", flags.PushType))
 	}
