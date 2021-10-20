@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/lorislab/samo/log"
+	"gopkg.in/yaml.v2"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -13,7 +14,8 @@ func readOptions(options interface{}) interface{} {
 	if err != nil {
 		log.Fatal("error unmarscahle options", log.E(err))
 	}
-	log.Debug("Load options", log.F("options", options))
+	d, _ := yaml.Marshal(options)
+	log.Debug("Configuration:\n" + string(d))
 	return options
 }
 

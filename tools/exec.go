@@ -3,6 +3,7 @@ package tools
 import (
 	"bufio"
 	"bytes"
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -20,9 +21,21 @@ func ExecCmdOutput(name string, arg ...string) string {
 	return string(bytes.TrimRight(out, "\n"))
 }
 
-// ExecCmd execute command
 func ExecCmd(name string, arg ...string) {
-	log.Debug(name, log.F("args", strings.Join(arg, " ")))
+	ExecCmdAdv(nil, name, arg...)
+}
+
+// ExecCmd execute command
+func ExecCmdAdv(exclude []int, name string, arg ...string) {
+	args := []string{}
+	args = append(args, arg...)
+	if len(exclude) > 0 {
+		for _, i := range exclude {
+			args[i] = "*****"
+		}
+	}
+	log.Debug(name, log.F("args", strings.Join(args, " ")))
+	fmt.Println(arg)
 	cmd := exec.Command(name, arg...)
 
 	// enable always error log for the command

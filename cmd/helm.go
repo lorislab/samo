@@ -19,8 +19,8 @@ var yamlKeyRegex = regexp.MustCompile(`^"|['"](\w+(?:\.\w+)*)['"]|(\w+)`)
 type helmFlags struct {
 	Project              projectFlags `mapstructure:",squash"`
 	Repo                 string       `mapstructure:"helm-repo"`
-	RepoUsername         string       `mapstructure:"helm-repo-username"`
-	RepoPassword         string       `mapstructure:"helm-repo-password"`
+	RepoUsername         string       `mapstructure:"helm-repo-username" yaml:"-"`
+	RepoPassword         string       `mapstructure:"helm-repo-password" yaml:"-"`
 	RepositoryURL        string       `mapstructure:"helm-repo-url"`
 	Clean                bool         `mapstructure:"helm-clean"`
 	PushURL              string       `mapstructure:"helm-push-url"`
@@ -116,10 +116,12 @@ func helmPush(version string, project *Project, flags helmFlags) {
 		log.Fatal("Helm package file does not exists!", log.F("helm-file", filename))
 	}
 
-	var command []string
+	command := []string{}
+	exclude := []int{}
 	command = append(command, "-fis", "--show-error")
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "-u", flags.RepoUsername+`:`+flags.RepoPassword)
+		exclude = append(exclude, 3)
 	}
 
 	switch flags.PushType {
@@ -131,7 +133,7 @@ func helmPush(version string, project *Project, flags helmFlags) {
 		log.Fatal("Not supported helm push type", log.F("push-type", flags.PushType))
 	}
 
-	tools.ExecCmd("curl", command...)
+	tools.ExecCmdAdv(exclude, "curl", command...)
 }
 
 // update helm version, appversion, annotations/labels in Chart.yaml
