@@ -33,7 +33,15 @@ type GitDescribe struct {
 }
 
 func GitDescribeInfo() GitDescribe {
-	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100")
+	return gitDescribe("")
+}
+
+func gitDescribe(exclude string) GitDescribe {
+	args := []string{"describe", "--long", "--abbrev=100"}
+	if len(exclude) > 0 {
+		args = append(args, "--exclude", exclude)
+	}
+	output, err := CmdOutputErr("git", args...)
 	if err == nil {
 		items := strings.Split(output, "-")
 		return GitDescribe{
@@ -61,16 +69,7 @@ func GitDescribeInfo() GitDescribe {
 }
 
 func GitDescribeExclude(tag string) GitDescribe {
-	output, err := CmdOutputErr("git", "describe", "--long", "--abbrev=100", "--exclude", tag)
-	if err != nil {
-		log.Fatal("Error execute git discribe with exclude tag", log.F("tag", tag))
-	}
-	items := strings.Split(output, "-")
-	return GitDescribe{
-		Tag:   items[0],
-		Count: items[1],
-		Hash:  strings.TrimPrefix(items[2], "g"),
-	}
+	return gitDescribe(tag)
 }
 
 func GitLogMessages(from, to string) []string {
