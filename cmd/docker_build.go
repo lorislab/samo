@@ -84,9 +84,9 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 
 	// add labels
 	if !flags.Docker.Project.SkipLabels {
-		command = append(command, "--label", "samo.project.hash="+project.Hash())
+		command = append(command, "--label", "samo.project.revision="+project.Hash())
 		command = append(command, "--label", "samo.project.version="+project.Version())
-		command = append(command, "--label", "samo.project.created="+time.Now().String())
+		command = append(command, "--label", "samo.project.created="+time.Now().Format(time.RFC3339))
 	}
 
 	// add opencontainers labels

@@ -155,9 +155,9 @@ func updateHelmChart(project *Project, flags helmFlags, chartTemplate string) {
 	data := map[string]string{}
 
 	if !flags.Project.SkipLabels {
-		data[`annotations."samo.project.hash"`] = project.Hash()
+		data[`annotations."samo.project.revision"`] = project.Hash()
 		data[`annotations."samo.project.version"`] = project.Version()
-		data[`annotations."samo.project.created"`] = time.Now().String()
+		data[`annotations."samo.project.created"`] = time.Now().Format(time.RFC3339)
 	}
 	if len(flags.Project.LabelTemplate) > 0 {
 		t := templateToMap(flags.Project.LabelTemplate, project)

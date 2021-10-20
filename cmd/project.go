@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -23,6 +24,8 @@ type projectFlags struct {
 	SkipLabels         bool   `mapstructure:"skip-samo-labels"`
 	LabelTemplate      string `mapstructure:"labels-template-list"`
 }
+
+var sourceLinkRegex = `\/\/.*@`
 
 var templateValues = `Name,Tag,Hash,Count,Branch,Version,Release,Major,Minor,Patch,Prerelease`
 
@@ -46,7 +49,7 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
-	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.hash,samo.project.version,samo.project.created")
+	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.revision,samo.project.version,samo.project.created")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
 	Values: `+templateValues+`
 	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
@@ -139,6 +142,10 @@ func loadProject(flags projectFlags) *Project {
 		tmp = tools.ExecCmdOutput("git", "rev-parse", "--show-toplevel")
 	}
 	source := tmp
+	reg, _ := regexp.Compile(sourceLinkRegex)
+	source = reg.ReplaceAllString(source, `//`)
+	log.Debug("Project", log.F("source", source))
+
 	tmp = strings.TrimSuffix(tmp, ".git")
 	tmp = filepath.Base(tmp)
 	if len(tmp) > 0 && tmp != "." && tmp != "/" {
