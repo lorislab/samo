@@ -170,7 +170,8 @@ func loadProject(flags projectFlags) *Project {
 		// commit + tag
 		if describe.Count == "0" {
 			// next version is current tag
-			version = describe.Tag
+			version = createNextFirstVersion(ver, isPatchBranch)
+
 			// exdcute git describe without current tag to get old tag + count + hash
 			describe = tools.GitDescribeExclude(describe.Tag)
 		} else {
@@ -229,6 +230,15 @@ func createNextVersion(ver *semver.Version, major, patch, patchBranch bool) stri
 	}
 	tmp := ver.IncMinor()
 	return tmp.String()
+}
+
+func createNextFirstVersion(ver *semver.Version, patchBranch bool) string {
+	// for patch branch we can ignore conventional commits
+	if patchBranch {
+		tmp := ver.IncPatch()
+		return tmp.String()
+	}
+	return ver.String()
 }
 
 func createNextVersionConvetionalCommits(ver *semver.Version, patchBranch bool) string {
