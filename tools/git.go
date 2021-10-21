@@ -12,7 +12,7 @@ func GitBranch() string {
 	if exists && len(tmp) > 0 {
 		return strings.TrimPrefix(tmp, "refs/heads/")
 	}
-	tmp, exists = os.LookupEnv("CI_COMMIT_REF_SLUG")
+	tmp, exists = os.LookupEnv("CI_COMMIT_REF_NAME")
 	if exists && len(tmp) > 0 {
 		return tmp
 	}
