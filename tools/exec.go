@@ -86,8 +86,14 @@ func execCmdErr(name string, arg ...string) error {
 }
 
 func CmdOutputErr(name string, arg ...string) (string, error) {
+	return CmdOutputErrAdv(true, name, arg...)
+}
+
+func CmdOutputErrAdv(output bool, name string, arg ...string) (string, error) {
 	log.Debug(name, log.F("args", strings.Join(arg, " ")))
 	out, err := exec.Command(name, arg...).CombinedOutput()
-	log.Debug("Output: " + string(out))
+	if output {
+		log.Debug("Output: " + string(out))
+	}
 	return string(bytes.TrimRight(out, "\n")), err
 }

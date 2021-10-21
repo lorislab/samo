@@ -37,7 +37,7 @@ func createDockerReleaseCmd() *cobra.Command {
 func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
-	imagePull := dockerImageTag(dockerPullImage, project.Version())
+	imagePull := dockerImageTag(dockerPullImage, project.lastRC())
 	log.Info("Pull docker image", log.F("image", imagePull))
 	tools.ExecCmd("docker", "pull", imagePull)
 

@@ -62,7 +62,7 @@ func helmDownload(project *Project, flags helmFlags) {
 	var command []string
 	command = append(command, "pull")
 	command = append(command, flags.Repo+"/"+project.Name())
-	command = append(command, "--version", project.Version())
+	command = append(command, "--version", project.lastRC())
 	command = append(command, "--untar", "--untardir", flags.Dir)
 	tools.ExecCmd("helm", command...)
 }

@@ -67,13 +67,13 @@ func createProjectCmd() *cobra.Command {
 // Project common project interface
 type Project struct {
 	name        string
-	tag         string
-	count       string
-	hash        string
+	describe    tools.GitDescribe
+	rc          tools.GitDescribe
 	branch      string
 	source      string
 	patchBranch bool
 	version     *semver.Version
+	rcVersion   *semver.Version
 	release     *semver.Version
 }
 
@@ -106,12 +106,16 @@ func (g Project) Version() string {
 	return g.version.String()
 }
 
+func (g Project) lastRC() string {
+	return g.rcVersion.String()
+}
+
 func (g Project) Release() string {
 	return g.release.String()
 }
 
 func (g Project) Hash() string {
-	return g.hash
+	return g.describe.Hash
 }
 
 func (g Project) Branch() string {
@@ -119,11 +123,11 @@ func (g Project) Branch() string {
 }
 
 func (g Project) Count() string {
-	return g.count
+	return g.describe.Count
 }
 
 func (g Project) Tag() string {
-	return g.tag
+	return g.describe.Tag
 }
 
 func (g Project) IsPatchBranch() bool {
@@ -136,16 +140,20 @@ func loadProject(flags projectFlags) *Project {
 		log.Fatal("Missing git directory!", log.F("directory", ".git"))
 	}
 
-	name := "no-name"
+	// read repot git url or directory name
 	tmp, err := tools.CmdOutputErr("git", "config", "remote.origin.url")
 	if err != nil {
 		tmp = tools.ExecCmdOutput("git", "rev-parse", "--show-toplevel")
 	}
+
+	// create project source
 	source := tmp
 	reg, _ := regexp.Compile(sourceLinkRegex)
 	source = reg.ReplaceAllString(source, `//`)
 	log.Debug("Project", log.F("source", source))
 
+	// create project name
+	name := "no-name"
 	tmp = strings.TrimSuffix(tmp, ".git")
 	tmp = filepath.Base(tmp)
 	if len(tmp) > 0 && tmp != "." && tmp != "/" {
@@ -153,47 +161,56 @@ func loadProject(flags projectFlags) *Project {
 	}
 
 	describe := tools.GitDescribeInfo()
+	rc := describe
 
 	branch := tools.GitBranch()
 	isPatchBranch := false
 
 	version := flags.FirstVersion
+	lastRC := version
 
 	// check for empty repository
 	if len(describe.Tag) > 0 {
-
 		ver := tools.CreateSemVer(describe.Tag)
 		patchBranch := createPatchBranchName(ver, flags)
 		isPatchBranch = branch == patchBranch
-		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch})
+		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch, "count": describe.Count})
 
-		// commit + tag
+		// check last rc version
 		if describe.Count == "0" {
-			// next version is current tag
-			version = createNextFirstVersion(ver, isPatchBranch)
 
-			// exdcute git describe without current tag to get old tag + count + hash
-			describe = tools.GitDescribeExclude(describe.Tag)
-		} else {
-			if flags.ConvetionalCommits {
-				version = createNextVersionConvetionalCommits(ver, isPatchBranch)
-			} else {
-				version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, isPatchBranch)
+			// find last tag before release
+			rc = tools.GitDescribeExclude(describe.Tag)
+			if len(rc.Tag) > 0 {
+				rcver := tools.CreateSemVer(rc.Tag)
+				if flags.ConvetionalCommits {
+					lastRC = createNextVersionConvetionalCommits(rcver, isPatchBranch, rc)
+				} else {
+					lastRC = createNextVersion(rcver, false, false, isPatchBranch)
+				}
 			}
+		}
+
+		if flags.ConvetionalCommits {
+			version = createNextVersionConvetionalCommits(ver, isPatchBranch, describe)
+		} else {
+			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, isPatchBranch)
 		}
 	}
 
-	return &Project{
+	p := &Project{
 		name:        name,
-		tag:         describe.Tag,
-		count:       describe.Count,
-		hash:        describe.Hash,
+		describe:    describe,
 		branch:      branch,
 		source:      source,
 		patchBranch: isPatchBranch,
+		rc:          rc,
+		rcVersion:   createVersion(lastRC, branch, flags.VersionTemplate, rc),
 		version:     createVersion(version, branch, flags.VersionTemplate, describe),
 		release:     tools.CreateSemVer(version),
 	}
+	log.Debug("Versions", log.Fields{"version": p.Version(), "release": p.Release(), "rcVersion": p.rcVersion})
+	return p
 }
 
 func createPatchBranchName(version *semver.Version, flags projectFlags) string {
@@ -232,20 +249,16 @@ func createNextVersion(ver *semver.Version, major, patch, patchBranch bool) stri
 	return tmp.String()
 }
 
-func createNextFirstVersion(ver *semver.Version, patchBranch bool) string {
+func createNextVersionConvetionalCommits(ver *semver.Version, patchBranch bool, describe tools.GitDescribe) string {
+
 	// for patch branch we can ignore conventional commits
 	if patchBranch {
 		tmp := ver.IncPatch()
 		return tmp.String()
 	}
-	return ver.String()
-}
 
-func createNextVersionConvetionalCommits(ver *semver.Version, patchBranch bool) string {
-
-	// for patch branch we can ignore conventional commits
-	if patchBranch {
-		tmp := ver.IncPatch()
+	if describe.Count == "0" {
+		tmp := ver.IncMinor()
 		return tmp.String()
 	}
 
@@ -263,8 +276,8 @@ func findConvCommit(commits []string) *cc.ConventionalCommit {
 	var result *cc.ConventionalCommit
 	for _, commit := range commits {
 		item := cc.ParseConventionalCommit(strings.TrimPrefix(strings.TrimSuffix(commit, `"`), `"`))
-		log.Debug("Commit", log.F("commit", item))
 		if item.Major {
+			log.Debug("Major", log.F("commit", item))
 			return item
 		}
 		if result == nil {

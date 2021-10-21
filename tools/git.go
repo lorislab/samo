@@ -73,10 +73,11 @@ func GitDescribeExclude(tag string) GitDescribe {
 }
 
 func GitLogMessages(from, to string) []string {
-	output, err := CmdOutputErr("git", "--no-pager", "log", `--pretty=format:"%s"`, from+"..."+to)
+	output, err := CmdOutputErrAdv(false, "git", "--no-pager", "log", `--pretty=format:"%s"`, from+"..."+to)
 	if err != nil {
 		log.Fatal("Error execute git log messages", log.Fields{"from": from, "to": to})
 	}
+	log.Debug("git log result", log.F("commmits", len(output)))
 	if len(output) < 1 {
 		return []string{}
 	}
