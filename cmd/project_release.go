@@ -35,6 +35,12 @@ func createProjectReleaseCmd() *cobra.Command {
 
 // CreateRelease create project release
 func release(pro *Project, flags projectReleaseFlags) {
+
+	if pro.Count() == "0" {
+		log.Fatal("Can not created release. No new commits for new release!",
+			log.Fields{"version": pro.Version(), "hash": pro.Hash(), "count": pro.Count(), "tag": pro.Tag()})
+	}
+
 	tag := tools.Template(pro, flags.TagTemplate)
 	msg := tools.Template(pro, flags.MessageTemplate)
 	tools.Git("tag", "-a", tag, "-m", msg)
