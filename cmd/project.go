@@ -199,6 +199,8 @@ func loadProject(flags projectFlags) *Project {
 					lastRC = createNextVersion(rcver, false, false, patchBuild)
 				}
 			}
+		} else {
+			lastRC = version
 		}
 	}
 
