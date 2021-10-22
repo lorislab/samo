@@ -66,15 +66,15 @@ func createProjectCmd() *cobra.Command {
 
 // Project common project interface
 type Project struct {
-	name        string
-	describe    tools.GitDescribe
-	rc          tools.GitDescribe
-	branch      string
-	source      string
-	patchBranch bool
-	version     *semver.Version
-	rcVersion   *semver.Version
-	release     *semver.Version
+	name       string
+	describe   tools.GitDescribe
+	rc         tools.GitDescribe
+	branch     string
+	source     string
+	patchBuild bool
+	version    *semver.Version
+	rcVersion  *semver.Version
+	release    *semver.Version
 }
 
 // Name project name
@@ -130,8 +130,8 @@ func (g Project) Tag() string {
 	return g.describe.Tag
 }
 
-func (g Project) IsPatchBranch() bool {
-	return g.patchBranch
+func (g Project) IsPatchBuild() bool {
+	return g.patchBuild
 }
 
 func loadProject(flags projectFlags) *Project {
@@ -164,7 +164,7 @@ func loadProject(flags projectFlags) *Project {
 	rc := describe
 
 	branch := tools.GitBranch()
-	isPatchBranch := false
+	patchBuild := false
 
 	version := flags.FirstVersion
 	lastRC := version
@@ -173,8 +173,11 @@ func loadProject(flags projectFlags) *Project {
 	if len(describe.Tag) > 0 {
 		ver := tools.CreateSemVer(describe.Tag)
 		patchBranch := createPatchBranchName(ver, flags)
-		isPatchBranch = branch == patchBranch
-		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "isPatchBranch": isPatchBranch, "count": describe.Count})
+
+		// branch name is patch branch or version is patch
+		patchBuild = (branch == patchBranch) || ver.Patch() > 0
+
+		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "patchBuild": patchBuild, "count": describe.Count})
 
 		// check last rc version
 		if describe.Count == "0" {
@@ -184,30 +187,30 @@ func loadProject(flags projectFlags) *Project {
 			if len(rc.Tag) > 0 {
 				rcver := tools.CreateSemVer(rc.Tag)
 				if flags.ConvetionalCommits {
-					lastRC = createNextVersionConvetionalCommits(rcver, isPatchBranch, rc)
+					lastRC = createNextVersionConvetionalCommits(rcver, patchBuild, rc)
 				} else {
-					lastRC = createNextVersion(rcver, false, false, isPatchBranch)
+					lastRC = createNextVersion(rcver, false, false, patchBuild)
 				}
 			}
 		}
 
 		if flags.ConvetionalCommits {
-			version = createNextVersionConvetionalCommits(ver, isPatchBranch, describe)
+			version = createNextVersionConvetionalCommits(ver, patchBuild, describe)
 		} else {
-			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, isPatchBranch)
+			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, patchBuild)
 		}
 	}
 
 	p := &Project{
-		name:        name,
-		describe:    describe,
-		branch:      branch,
-		source:      source,
-		patchBranch: isPatchBranch,
-		rc:          rc,
-		rcVersion:   createVersion(lastRC, branch, flags.VersionTemplate, rc),
-		version:     createVersion(version, branch, flags.VersionTemplate, describe),
-		release:     tools.CreateSemVer(version),
+		name:       name,
+		describe:   describe,
+		branch:     branch,
+		source:     source,
+		patchBuild: patchBuild,
+		rc:         rc,
+		rcVersion:  createVersion(lastRC, branch, flags.VersionTemplate, rc),
+		version:    createVersion(version, branch, flags.VersionTemplate, describe),
+		release:    tools.CreateSemVer(version),
 	}
 	log.Debug("Versions", log.Fields{"version": p.Version(), "release": p.Release(), "rcVersion": p.rcVersion})
 	return p
