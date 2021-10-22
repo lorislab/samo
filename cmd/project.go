@@ -107,10 +107,6 @@ func (g Project) Version() string {
 	return g.version.String()
 }
 
-func (g Project) lastRC() string {
-	return g.rcVersion.String()
-}
-
 func (g Project) Release() string {
 	return g.release.String()
 }
@@ -217,7 +213,7 @@ func loadProject(flags projectFlags) *Project {
 		version:    createVersion(version, branch, flags.VersionTemplate, describe),
 		release:    tools.CreateSemVer(version),
 	}
-	log.Debug("Versions", log.Fields{"version": p.Version(), "release": p.Release(), "rcVersion": p.rcVersion})
+	log.Debug("Versions", log.Fields{"version": p.Version(), "release": p.Release(), "rcVersion": p.rcVersion.String(), "rcRelease": p.rcRelease.String()})
 	return p
 }
 
