@@ -179,6 +179,13 @@ func loadProject(flags projectFlags) *Project {
 
 		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "patchBuild": patchBuild, "count": describe.Count})
 
+		// create version
+		if flags.ConvetionalCommits {
+			version = createNextVersionConvetionalCommits(ver, patchBuild, describe)
+		} else {
+			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, patchBuild)
+		}
+
 		// check last rc version
 		if describe.Count == "0" {
 
@@ -192,12 +199,6 @@ func loadProject(flags projectFlags) *Project {
 					lastRC = createNextVersion(rcver, false, false, patchBuild)
 				}
 			}
-		}
-
-		if flags.ConvetionalCommits {
-			version = createNextVersionConvetionalCommits(ver, patchBuild, describe)
-		} else {
-			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, patchBuild)
 		}
 	}
 
