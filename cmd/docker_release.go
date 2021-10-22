@@ -42,8 +42,7 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 	}
 
 	// switch back to rc version
-	project.version = project.rcVersion
-	project.release = project.rcRelease
+	project.switchBackToReleaseCandidate()
 	log.Info("Create docker release", log.Fields{"version": project.Version(), "release": project.Release()})
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)

@@ -43,8 +43,7 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 	}
 
 	// switch back to rc version
-	pro.version = pro.rcVersion
-	pro.release = pro.rcRelease
+	pro.switchBackToReleaseCandidate()
 	log.Info("Create helm release", log.Fields{"version": pro.Version(), "release": pro.Release()})
 
 	// clean helm dir

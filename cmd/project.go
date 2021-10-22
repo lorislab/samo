@@ -131,6 +131,11 @@ func (g Project) IsPatchBuild() bool {
 	return g.patchBuild
 }
 
+func (g *Project) switchBackToReleaseCandidate() {
+	g.version = g.rcVersion
+	g.release = g.rcRelease
+}
+
 func loadProject(flags projectFlags) *Project {
 
 	if _, err := os.Stat(".git"); os.IsNotExist(err) {
