@@ -42,6 +42,11 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 			log.Fields{"version": pro.Version(), "hash": pro.Hash(), "count": pro.Count(), "tag": pro.Tag()})
 	}
 
+	// switch back to rc version
+	pro.version = pro.rcVersion
+	pro.release = pro.rcRelease
+	log.Info("Create helm release", log.Fields{"version": pro.Version(), "release": pro.Release()})
+
 	// clean helm dir
 	healmClean(flags.Helm)
 
@@ -62,14 +67,14 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 	helmPackage(pro, flags.Helm)
 
 	// upload helm chart with release version
-	helmPush(pro.Tag(), pro, flags.Helm)
+	helmPush(pro.Release(), pro, flags.Helm)
 }
 
 func helmDownload(project *Project, flags helmFlags) {
 	var command []string
 	command = append(command, "pull")
 	command = append(command, flags.Repo+"/"+project.Name())
-	command = append(command, "--version", project.lastRC())
+	command = append(command, "--version", project.Version())
 	command = append(command, "--untar", "--untardir", flags.Dir)
 	tools.ExecCmd("helm", command...)
 }
