@@ -75,6 +75,7 @@ type Project struct {
 	version    *semver.Version
 	rcVersion  *semver.Version
 	release    *semver.Version
+	rcRelease  *semver.Version
 }
 
 // Name project name
@@ -212,6 +213,7 @@ func loadProject(flags projectFlags) *Project {
 		patchBuild: patchBuild,
 		rc:         rc,
 		rcVersion:  createVersion(lastRC, branch, flags.VersionTemplate, rc),
+		rcRelease:  tools.CreateSemVer(lastRC),
 		version:    createVersion(version, branch, flags.VersionTemplate, describe),
 		release:    tools.CreateSemVer(version),
 	}

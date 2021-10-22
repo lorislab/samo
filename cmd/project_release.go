@@ -10,6 +10,7 @@ type projectReleaseFlags struct {
 	Project         projectFlags `mapstructure:",squash"`
 	MessageTemplate string       `mapstructure:"release-message-template"`
 	TagTemplate     string       `mapstructure:"release-tag-template"`
+	Revision        string       `mapstructure:"release-revision"`
 }
 
 func createProjectReleaseCmd() *cobra.Command {
@@ -25,6 +26,7 @@ func createProjectReleaseCmd() *cobra.Command {
 		},
 		TraverseChildren: true,
 	}
+	addStringFlag(cmd, "release-revision", "", "", `optional release revision (git commit hash)`)
 	addStringFlag(cmd, "release-message-template", "", "{{ .Release }}", `the annotated tag message template.
 	Values: `+templateValues)
 	addStringFlag(cmd, "release-tag-template", "", "{{ .Release }}", `the release tag template. 
@@ -43,7 +45,11 @@ func release(pro *Project, flags projectReleaseFlags) {
 
 	tag := tools.Template(pro, flags.TagTemplate)
 	msg := tools.Template(pro, flags.MessageTemplate)
-	tools.Git("tag", "-a", tag, "-m", msg)
+	cmd := []string{"tag", "-a", tag, "-m", msg}
+	if len(flags.Revision) > 0 {
+		cmd = append(cmd, flags.Revision)
+	}
+	tools.Git(cmd...)
 
 	// push project to remote repository
 	if flags.Project.SkipPush {
