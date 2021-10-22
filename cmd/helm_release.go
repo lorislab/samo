@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
 	"github.com/spf13/cobra"
 )
@@ -35,6 +36,12 @@ func createHealmReleaseCmd() *cobra.Command {
 }
 
 func helmRelease(pro *Project, flags helmReleaseFlags) {
+
+	if pro.Count() != "0" || len(pro.Tag()) == 0 {
+		log.Fatal("Can not created healm release. Missing tag on current commit",
+			log.Fields{"version": pro.Version(), "hash": pro.Hash(), "count": pro.Count(), "tag": pro.Tag()})
+	}
+
 	// clean helm dir
 	healmClean(flags.Helm)
 
@@ -55,7 +62,7 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 	helmPackage(pro, flags.Helm)
 
 	// upload helm chart with release version
-	helmPush(pro.Release(), pro, flags.Helm)
+	helmPush(pro.Tag(), pro, flags.Helm)
 }
 
 func helmDownload(project *Project, flags helmFlags) {
