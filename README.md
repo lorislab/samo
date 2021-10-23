@@ -18,7 +18,7 @@ The main commands:
 * `samo project docker` - project docker build,push,release
 * `samo project helm` - project helm build,push,release
 * `samo project release` - release project
-* `samo project patch` - create patch branch for the release
+* `samo project patch` - create patch branch
 
 
 For example to build docker image of the project only with a build-version tag:
@@ -44,7 +44,7 @@ go build
 docker build -t samo .
 ``` 
 
-### Test release pacakges
+### Test release packages
 ```
 goreleaser release --snapshot --rm-dist
 ```
