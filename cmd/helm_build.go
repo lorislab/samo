@@ -67,29 +67,33 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 
 // Filter filter helm resources
 func buildHelmChart(flags helmBuildFlags, pro *Project) {
-
+	if !flags.Copy {
+		log.Debug("helm chart copy is disabled")
+		return
+	}
+	if len(flags.Source) < 1 {
+		log.Debug("no helm chart source directory configured")
+		return
+	}
 	// get all files from the input directory
-	if flags.Copy && len(flags.Source) > 0 {
+	if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
+		log.Fatal("source helm directory does not exists!", log.F("source", flags.Source))
+	}
 
-		if _, err := os.Stat(flags.Source); os.IsNotExist(err) {
-			log.Fatal("Source helm directory does not exists!", log.F("source", flags.Source))
-		}
+	paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
+	if err != nil {
+		log.Fatal("error read helm source directory", log.F("source", flags.Source).E(err))
+	}
 
-		paths, err := tools.GetAllFilePathsInDirectory(flags.Source)
+	for _, path := range paths {
+		// load file
+		result, err := ioutil.ReadFile(path)
 		if err != nil {
-			log.Fatal("error read helm source directory", log.F("source", flags.Source).E(err))
+			log.Fatal("error read file", log.F("file", path).E(err))
 		}
-
-		for _, path := range paths {
-			// load file
-			result, err := ioutil.ReadFile(path)
-			if err != nil {
-				log.Fatal("error read file", log.F("file", path).E(err))
-			}
-			// write result to output directory
-			out := strings.Replace(path, flags.Source, flags.Helm.Dir, -1)
-			tools.WriteBytesToFile(out, result)
-			log.Debug("Copy file", log.F("file", out))
-		}
+		// write result to output directory
+		out := strings.Replace(path, flags.Source, flags.Helm.Dir+"/"+pro.name, -1)
+		tools.WriteBytesToFile(out, result)
+		log.Debug("Copy file", log.F("out", out).F("in", path))
 	}
 }
