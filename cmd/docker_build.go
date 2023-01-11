@@ -18,7 +18,7 @@ type dockerBuildFlags struct {
 	SkipPull                 bool        `mapstructure:"docker-skip-pull"`
 	BuildPush                bool        `mapstructure:"docker-build-push"`
 	SkipRemoveBuild          bool        `mapstructure:"docker-remove-build-skip"`
-	SkipOpencontainersLabels bool        `mapstructure:"docker-skip-opencontainers-labels"`
+	SkipOpenContainersLabels bool        `mapstructure:"docker-skip-opencontainers-labels"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -36,7 +36,7 @@ func createDockerBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addBoolFlag(cmd, "docker-skip-opencontainers-labels", "", false, "skip opencontainers labels ")
+	addBoolFlag(cmd, "docker-skip-open-containers-labels", "", false, "skip open containers labels ")
 	addStringFlag(cmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
 	addStringFlag(cmd, "docker-profile", "", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
@@ -91,7 +91,7 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	}
 
 	// add opencontainers labels
-	if !flags.SkipOpencontainersLabels {
+	if !flags.SkipOpenContainersLabels {
 		command = append(command, "--label", "org.opencontainers.image.created="+created)
 		command = append(command, "--label", "org.opencontainers.image.title="+project.Name())
 		command = append(command, "--label", "org.opencontainers.image.revision="+project.Hash())

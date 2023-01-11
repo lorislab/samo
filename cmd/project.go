@@ -14,15 +14,15 @@ import (
 )
 
 type projectFlags struct {
-	FirstVersion       string `mapstructure:"first-version"`
-	ReleaseMajor       bool   `mapstructure:"release-major"`
-	ReleasePatch       bool   `mapstructure:"release-patch"`
-	VersionTemplate    string `mapstructure:"version-template"`
-	SkipPush           bool   `mapstructure:"skip-push"`
-	ConvetionalCommits bool   `mapstructure:"conventional-commits"`
-	BranchTemplate     string `mapstructure:"branch-template"`
-	SkipLabels         bool   `mapstructure:"skip-samo-labels"`
-	LabelTemplate      string `mapstructure:"labels-template-list"`
+	FirstVersion        string `mapstructure:"first-version"`
+	ReleaseMajor        bool   `mapstructure:"release-major"`
+	ReleasePatch        bool   `mapstructure:"release-patch"`
+	VersionTemplate     string `mapstructure:"version-template"`
+	SkipPush            bool   `mapstructure:"skip-push"`
+	ConventionalCommits bool   `mapstructure:"conventional-commits"`
+	BranchTemplate      string `mapstructure:"branch-template"`
+	SkipLabels          bool   `mapstructure:"skip-samo-labels"`
+	LabelTemplate       string `mapstructure:"labels-template-list"`
 }
 
 var sourceLinkRegex = `\/\/.*@`
@@ -43,7 +43,7 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "release-patch", "", false, "create a patch release")
 	addStringFlag(cmd, "version-template", "t", "{{ .Version }}-rc.{{ .Count }}", `the version go template string.
 	values: `+templateValues+`
-	functions:  trunc <lenght>
+	functions:  trunc <length>
 	For example: {{ .Tag }}-{{ trunc 10 .Hash }}`)
 	addBoolFlag(cmd, "skip-push", "", false, "skip push changes")
 	addBoolFlag(cmd, "conventional-commits", "c", false, "determine the project version based on the conventional commits")
@@ -52,7 +52,7 @@ func createProjectCmd() *cobra.Command {
 	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.revision,samo.project.version,samo.project.created")
 	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
 	Values: `+templateValues+`
-	Example: my-labe={{ .Branch }},my-const=123,my-count={{ .Count }}`)
+	Example: my-label={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
 	addChildCmd(cmd, createProjectVersionCmd())
 	addChildCmd(cmd, createProjectNameCmd())
@@ -142,7 +142,7 @@ func loadProject(flags projectFlags) *Project {
 		log.Fatal("Missing git directory!", log.F("directory", ".git"))
 	}
 
-	// read repot git url or directory name
+	// read repository git url or directory name
 	tmp, err := tools.CmdOutputErr("git", "config", "remote.origin.url")
 	if err != nil {
 		tmp = tools.ExecCmdOutput("git", "rev-parse", "--show-toplevel")
@@ -182,8 +182,8 @@ func loadProject(flags projectFlags) *Project {
 		log.Debug("Branch", log.Fields{"branch": branch, "patchBranch": patchBranch, "patchBuild": patchBuild, "count": describe.Count})
 
 		// create version
-		if flags.ConvetionalCommits {
-			version = createNextVersionConvetionalCommits(ver, patchBuild, describe)
+		if flags.ConventionalCommits {
+			version = createNextVersionConventionalCommits(ver, patchBuild, describe)
 		} else {
 			version = createNextVersion(ver, flags.ReleaseMajor, flags.ReleasePatch, patchBuild)
 		}
@@ -194,11 +194,11 @@ func loadProject(flags projectFlags) *Project {
 			// find last tag before release
 			rc = tools.GitDescribeExclude(describe.Tag)
 			if len(rc.Tag) > 0 {
-				rcver := tools.CreateSemVer(rc.Tag)
-				if flags.ConvetionalCommits {
-					lastRC = createNextVersionConvetionalCommits(rcver, patchBuild, rc)
+				rcVer := tools.CreateSemVer(rc.Tag)
+				if flags.ConventionalCommits {
+					lastRC = createNextVersionConventionalCommits(rcVer, patchBuild, rc)
 				} else {
-					lastRC = createNextVersion(rcver, false, false, patchBuild)
+					lastRC = createNextVersion(rcVer, false, false, patchBuild)
 				}
 			}
 		} else {
@@ -258,7 +258,7 @@ func createNextVersion(ver *semver.Version, major, patch, patchBranch bool) stri
 	return tmp.String()
 }
 
-func createNextVersionConvetionalCommits(ver *semver.Version, patchBranch bool, describe tools.GitDescribe) string {
+func createNextVersionConventionalCommits(ver *semver.Version, patchBranch bool, describe tools.GitDescribe) string {
 
 	// for patch branch we can ignore conventional commits
 	if patchBranch {

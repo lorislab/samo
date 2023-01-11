@@ -12,7 +12,7 @@ import (
 func readOptions(options interface{}) interface{} {
 	err := viper.Unmarshal(options)
 	if err != nil {
-		log.Fatal("error unmarscahle options", log.E(err))
+		log.Fatal("error unmarshal options", log.E(err))
 	}
 	d, _ := yaml.Marshal(options)
 	log.Debug("Configuration:\n" + string(d))
@@ -43,7 +43,7 @@ func addStringFlagReq(command *cobra.Command, name, shorthand string, value stri
 func markReq(command *cobra.Command, name string) {
 	err := command.MarkFlagRequired(name)
 	if err != nil {
-		log.Panic("mark flag reuired", log.F("name", name).E(err))
+		log.Panic("mark flag required", log.F("name", name).E(err))
 	}
 }
 

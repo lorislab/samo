@@ -2,7 +2,6 @@ package tools
 
 import (
 	"bufio"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -67,13 +66,13 @@ func WriteToFile(filename, data string) {
 
 // ReplaceTextInFile replaces test in the file at the position b and e
 func ReplaceTextInFile(filename, text string, b, e int64) {
-	buf, err := ioutil.ReadFile(filename)
+	buf, err := os.ReadFile(filename)
 	if err != nil {
 		log.Panic("error read test file", log.E(err).F("filename", filename))
 	}
 	result := string(buf)
 	result = result[:b] + text + result[e:]
-	err = ioutil.WriteFile(filename, []byte(result), 0666)
+	err = os.WriteFile(filename, []byte(result), 0666)
 	if err != nil {
 		log.Panic("error write data to file", log.E(err).F("filename", filename))
 	}

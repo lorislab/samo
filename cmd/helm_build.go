@@ -18,7 +18,7 @@ type helmBuildFlags struct {
 	ValuesFilterTemplate string    `mapstructure:"helm-values-template-list"`
 }
 
-func createHealmBuildCmd() *cobra.Command {
+func createHelmBuildCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "Build helm chart",
@@ -46,11 +46,9 @@ func createHealmBuildCmd() *cobra.Command {
 func helmBuild(project *Project, flags helmBuildFlags) {
 
 	// clean helm dir
-	healmClean(flags.Helm)
-	// add custom helm repo
-	healmAddRepo(flags.Helm)
-	// update helm repo
-	helmRepoUpdate()
+	helmClean(flags.Helm)
+	// add and update custom helm repo
+	helmAddRepo(flags.Helm)
 
 	// filter resources to output dir
 	buildHelmChart(flags, project)

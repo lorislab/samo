@@ -56,10 +56,6 @@ func Info(msg string, fields ...map[string]interface{}) {
 	sendEvent(logger.Info(), msg, fields...)
 }
 
-func Warn(msg string, fields ...map[string]interface{}) {
-	sendEvent(logger.Warn(), msg, fields...)
-}
-
 func Error(msg string, fields ...map[string]interface{}) {
 	sendEvent(logger.Error(), msg, fields...)
 }

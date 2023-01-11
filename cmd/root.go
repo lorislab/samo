@@ -22,7 +22,7 @@ func Execute(version BuildVersion) {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal("error execute commant", log.E(err))
+		log.Fatal("error execute command", log.E(err))
 	}
 }
 
@@ -59,7 +59,7 @@ func initConfig() {
 			log.Fatal("error read home dir", log.E(err))
 		}
 
-		// Search confing in current directory
+		// Search config in current directory
 		viper.AddConfigPath(".")
 		// Search config in home directory with name ".samo" (without extension).
 		viper.AddConfigPath(home)

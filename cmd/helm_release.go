@@ -12,7 +12,7 @@ type helmReleaseFlags struct {
 	ValuesReleaseTemplate string    `mapstructure:"helm-values-release-template-list"`
 }
 
-func createHealmReleaseCmd() *cobra.Command {
+func createHelmReleaseCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "release",
 		Short: "Release helm chart",
@@ -38,7 +38,7 @@ func createHealmReleaseCmd() *cobra.Command {
 func helmRelease(pro *Project, flags helmReleaseFlags) {
 
 	if pro.Count() != "0" || len(pro.Tag()) == 0 {
-		log.Fatal("Can not created healm release. Missing tag on current commit",
+		log.Fatal("Can not created helm release. Missing tag on current commit",
 			log.Fields{"version": pro.Version(), "hash": pro.Hash(), "count": pro.Count(), "tag": pro.Tag()})
 	}
 
@@ -47,13 +47,10 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 	log.Info("Create helm release", log.Fields{"version": pro.Version(), "release": pro.Release()})
 
 	// clean helm dir
-	healmClean(flags.Helm)
+	helmClean(flags.Helm)
 
-	// add custom helm repo
-	healmAddRepo(flags.Helm)
-
-	// update helm repo
-	helmRepoUpdate()
+	// add and update custom helm repo
+	helmAddRepo(flags.Helm)
 
 	// download build version
 	helmDownload(pro, flags.Helm)
@@ -70,6 +67,21 @@ func helmRelease(pro *Project, flags helmReleaseFlags) {
 }
 
 func helmDownload(project *Project, flags helmFlags) {
+
+	if len(flags.Registry) == 0 {
+		helmDownloadRepository(project, flags)
+	}
+
+	var command []string
+	command = append(command, "pull")
+	command = append(command, flags.Registry+"/"+project.Name())
+	command = append(command, "--version", project.Version())
+	command = append(command, "--untar", "--untardir", flags.Dir)
+	tools.ExecCmd("helm", command...)
+}
+
+// deprecated
+func helmDownloadRepository(project *Project, flags helmFlags) {
 	var command []string
 	command = append(command, "pull")
 	command = append(command, flags.Repo+"/"+project.Name())
