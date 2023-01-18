@@ -1,4 +1,4 @@
-FROM alpine/helm:3.7.1 as helm
+FROM alpine/helm:3.10.2 as helm
 
 FROM debian:10.11-slim
 
