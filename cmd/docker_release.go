@@ -37,7 +37,7 @@ func createDockerReleaseCmd() *cobra.Command {
 func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	if project.Count() != "0" || len(project.Tag()) == 0 {
-		log.Fatal("Can not created helm release. Missing tag on current commit",
+		log.Fatal("Can not created docker release. Missing tag on current commit",
 			log.Fields{"version": project.Version(), "hash": project.Hash(), "count": project.Count(), "tag": project.Tag()})
 	}
 

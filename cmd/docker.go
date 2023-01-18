@@ -45,6 +45,9 @@ func dockerImage(project *Project, registry, group, repository string) string {
 		dockerImage = project.Name()
 	}
 	if len(group) > 0 {
+		if !strings.HasSuffix(group, `/`) {
+			group = group + "/"
+		}
 		dockerImage = group + dockerImage
 	}
 	if len(registry) > 0 {
