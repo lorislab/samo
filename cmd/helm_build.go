@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -85,7 +84,7 @@ func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
 	for _, path := range paths {
 		// load file
-		result, err := ioutil.ReadFile(path)
+		result, err := os.ReadFile(path)
 		if err != nil {
 			log.Fatal("error read file", log.F("file", path).E(err))
 		}

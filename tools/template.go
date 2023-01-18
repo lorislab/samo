@@ -8,13 +8,13 @@ import (
 )
 
 func Template(obj interface{}, data string) string {
-	template := template.New("template")
+	temp := template.New("template")
 
 	f := map[string]interface{}{
 		"trunc": trunc,
 	}
 
-	t, err := template.Funcs(f).Parse(data)
+	t, err := temp.Funcs(f).Parse(data)
 	if err != nil {
 		log.Panic("error parse template data", log.E(err))
 	}

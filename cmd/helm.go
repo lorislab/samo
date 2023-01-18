@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -153,7 +152,7 @@ func helmPushRepository(filename string, version string, project *Project, flags
 	tools.ExecCmdAdv(exclude, "curl", command...)
 }
 
-// update helm version, appversion, annotations/labels in Chart.yaml
+// update helm version, app-version, annotations/labels in Chart.yaml
 func updateHelmValues(project *Project, flags helmFlags, valuesTemplate string) {
 	if len(valuesTemplate) < 1 {
 		return
@@ -220,13 +219,13 @@ func replaceValueInYaml(filename string, data map[string]string) {
 		log.Fatal("Helm yaml file does not exists!", log.F("file", filename))
 	}
 
-	fileBytes, err := ioutil.ReadFile(filename)
+	fileBytes, err := os.ReadFile(filename)
 	if err != nil {
 		log.Panic("error read file", log.E(err).F("file", filename))
 	}
 	err = yaml.Unmarshal(fileBytes, &obj)
 	if err != nil {
-		log.Panic("error unmarschal file", log.E(err).F("file", filename))
+		log.Panic("error unmarshal file", log.E(err).F("file", filename))
 	}
 	for k, v := range data {
 		replace(obj, k, v)
@@ -237,7 +236,7 @@ func replaceValueInYaml(filename string, data map[string]string) {
 		log.Fatal("error marshal file", log.E(err).F("file", filename))
 	}
 
-	err = ioutil.WriteFile(filename, fileBytes, 0666)
+	err = os.WriteFile(filename, fileBytes, 0666)
 	if err != nil {
 		log.Panic("error write file", log.E(err).F("file", filename))
 	}
