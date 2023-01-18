@@ -41,7 +41,7 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .samo.yaml or $HOME/.samo.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.DefaultLevel(), "Log level (debug, info, warn, error, fatal, panic)")
 
 	addChildCmd(rootCmd, createVersionCmd())
@@ -64,6 +64,7 @@ func initConfig() {
 		// Search config in home directory with name ".samo" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".samo")
+		viper.SetConfigType("yaml")
 	}
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -71,6 +72,11 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.Debug("Using config", log.F("file", viper.ConfigFileUsed()))
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Info("Configuration file not found", log.F("file", viper.ConfigFileUsed()), log.E(err))
+		} else {
+			log.Info("Using config", log.F("file", viper.ConfigFileUsed()))
+		}
 	}
+
 }
