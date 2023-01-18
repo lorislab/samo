@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -26,6 +25,7 @@ type helmFlags struct {
 	PushURL       string       `mapstructure:"helm-push-url"`
 	PushType      string       `mapstructure:"helm-push-type"`
 	Dir           string       `mapstructure:"helm-dir"`
+	Registry      string       `mapstructure:"helm-registry"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -38,16 +38,17 @@ func createHelmCmd() *cobra.Command {
 
 	addBoolFlag(cmd, "helm-clean", "", false, "clean output directory before filter")
 	addStringFlag(cmd, "helm-dir", "", "target/helm", "filter project helm chart output directory")
-	addStringFlag(cmd, "helm-repo", "", "", "helm repository name")
-	addStringFlag(cmd, "helm-repo-url", "", "", "helm repository URL")
-	addStringFlag(cmd, "helm-repo-username", "u", "", "helm repository username")
-	addStringFlag(cmd, "helm-repo-password", "p", "", "helm repository password")
-	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL")
-	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor")
+	addStringFlag(cmd, "helm-repo", "", "", "helm repository name [deprecated]")
+	addStringFlag(cmd, "helm-repo-url", "", "", "helm repository URL [deprecated]")
+	addStringFlag(cmd, "helm-repo-username", "u", "", "helm repository username [deprecated]")
+	addStringFlag(cmd, "helm-repo-password", "p", "", "helm repository password [deprecated]")
+	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL [deprecated]")
+	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor [deprecated]")
+	addStringFlag(cmd, "helm-registry", "", "", "helm OCI registry")
 
-	addChildCmd(cmd, createHealmBuildCmd())
-	addChildCmd(cmd, createHealmPushCmd())
-	addChildCmd(cmd, createHealmReleaseCmd())
+	addChildCmd(cmd, createHelmBuildCmd())
+	addChildCmd(cmd, createHelmPushCmd())
+	addChildCmd(cmd, createHelmReleaseCmd())
 	return cmd
 }
 
@@ -55,7 +56,7 @@ func helmPackage(project *Project, flags helmFlags) {
 	tools.ExecCmd("helm", "package", helmDir(project, flags))
 }
 
-func healmClean(flags helmFlags) {
+func helmClean(flags helmFlags) {
 	// clean output directory
 	if !flags.Clean {
 		log.Debug("Helm clean disabled.")
@@ -70,14 +71,15 @@ func healmClean(flags helmFlags) {
 	}
 }
 
-func healmAddRepo(flags helmFlags) {
+// deprecated
+func helmAddRepo(flags helmFlags) {
 	if len(flags.Repo) == 0 {
 		return
 	}
 
 	// add repository
-	command := []string{}
-	exclude := []int{}
+	var command []string
+	var exclude []int
 	command = append(command, "repo", "add")
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "--password", flags.RepoPassword)
@@ -89,31 +91,49 @@ func healmAddRepo(flags helmFlags) {
 	}
 	command = append(command, flags.Repo, flags.RepositoryURL)
 	tools.ExecCmdAdv(exclude, "helm", command...)
-}
 
-func helmRepoUpdate() {
+	// update index of the added repository
 	tools.ExecCmd("helm", "repo", "update")
 }
 
 func helmPush(version string, project *Project, flags helmFlags) {
-
-	if len(flags.PushURL) == 0 {
-		log.Fatal("Flag --helm-push-url is mandatory!", log.Fields{"--helm-push-url": flags.PushURL, "version": version})
-	}
-
-	// upload helm chart
-	if flags.Project.SkipPush {
-		log.Info("Skip push release version of the helm chart", log.Fields{"push-url": flags.PushURL, "version": version})
-		return
-	}
 
 	filename := project.Name() + `-` + version + `.tgz`
 	if !tools.Exists(filename) {
 		log.Fatal("Helm package file does not exists!", log.F("helm-file", filename))
 	}
 
-	command := []string{}
-	exclude := []int{}
+	// upload helm chart
+	if flags.Project.SkipPush {
+		log.Info("Skip push release version of the helm chart", log.Fields{"push-registry": flags.Registry, "version": version, "push-url": flags.PushURL})
+		return
+	}
+
+	// push helm repository
+	if len(flags.Registry) == 0 {
+		helmPushRepository(filename, version, project, flags)
+		return
+	}
+
+	var command []string
+	var exclude []int
+
+	command = append(command, "push")
+	command = append(command, filename)
+	command = append(command, flags.Registry)
+	tools.ExecCmdAdv(exclude, "helm", command...)
+}
+
+// deprecated
+func helmPushRepository(filename string, version string, project *Project, flags helmFlags) {
+
+	var command []string
+	var exclude []int
+
+	if len(flags.PushURL) == 0 {
+		log.Fatal("Flag --helm-push-url is mandatory!", log.Fields{"--helm-push-url": flags.PushURL, "version": version})
+	}
+
 	command = append(command, "-fis", "--show-error")
 	if len(flags.RepoPassword) > 0 {
 		command = append(command, "-u", flags.RepoUsername+`:`+flags.RepoPassword)
@@ -132,7 +152,7 @@ func helmPush(version string, project *Project, flags helmFlags) {
 	tools.ExecCmdAdv(exclude, "curl", command...)
 }
 
-// update helm version, appversion, annotations/labels in Chart.yaml
+// update helm version, app-version, annotations/labels in Chart.yaml
 func updateHelmValues(project *Project, flags helmFlags, valuesTemplate string) {
 	if len(valuesTemplate) < 1 {
 		return
@@ -148,7 +168,7 @@ func updateHelmValues(project *Project, flags helmFlags, valuesTemplate string) 
 	}
 }
 
-// update helm version, appversion, annotations/labels in Chart.yaml
+// update helm version, app version, annotations/labels in Chart.yaml
 func updateHelmChart(project *Project, flags helmFlags, chartTemplate string) {
 	data := map[string]string{}
 
@@ -199,13 +219,13 @@ func replaceValueInYaml(filename string, data map[string]string) {
 		log.Fatal("Helm yaml file does not exists!", log.F("file", filename))
 	}
 
-	fileBytes, err := ioutil.ReadFile(filename)
+	fileBytes, err := os.ReadFile(filename)
 	if err != nil {
 		log.Panic("error read file", log.E(err).F("file", filename))
 	}
 	err = yaml.Unmarshal(fileBytes, &obj)
 	if err != nil {
-		log.Panic("error unmarschal file", log.E(err).F("file", filename))
+		log.Panic("error unmarshal file", log.E(err).F("file", filename))
 	}
 	for k, v := range data {
 		replace(obj, k, v)
@@ -216,7 +236,7 @@ func replaceValueInYaml(filename string, data map[string]string) {
 		log.Fatal("error marshal file", log.E(err).F("file", filename))
 	}
 
-	err = ioutil.WriteFile(filename, fileBytes, 0666)
+	err = os.WriteFile(filename, fileBytes, 0666)
 	if err != nil {
 		log.Panic("error write file", log.E(err).F("file", filename))
 	}
@@ -224,10 +244,7 @@ func replaceValueInYaml(filename string, data map[string]string) {
 }
 
 func replace(obj map[interface{}]interface{}, k string, v string) {
-	// keys := strings.Split(k, ".")
-
 	keys := yamlKeyRegex.FindAllString(k, -1)
-	// keys := yamlKeyRegex.FindAllStringSubmatch(k, -1)
 
 	var tmp interface{}
 	size := len(keys)

@@ -24,9 +24,9 @@ func ExecCmd(name string, arg ...string) {
 	ExecCmdAdv(nil, name, arg...)
 }
 
-// ExecCmd execute command
+// ExecCmdAdv ExecCmd execute command
 func ExecCmdAdv(exclude []int, name string, arg ...string) {
-	args := []string{}
+	var args []string
 	args = append(args, arg...)
 	if len(exclude) > 0 {
 		for _, i := range exclude {

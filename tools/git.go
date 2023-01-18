@@ -77,7 +77,7 @@ func GitLogMessages(from, to string) []string {
 	if err != nil {
 		log.Fatal("Error execute git log messages", log.Fields{"from": from, "to": to})
 	}
-	log.Debug("git log result", log.F("commmits", len(output)))
+	log.Debug("git log result", log.F("commits", len(output)))
 	if len(output) < 1 {
 		return []string{}
 	}

@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -18,7 +17,7 @@ type helmBuildFlags struct {
 	ValuesFilterTemplate string    `mapstructure:"helm-values-template-list"`
 }
 
-func createHealmBuildCmd() *cobra.Command {
+func createHelmBuildCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "build",
 		Short: "Build helm chart",
@@ -46,11 +45,9 @@ func createHealmBuildCmd() *cobra.Command {
 func helmBuild(project *Project, flags helmBuildFlags) {
 
 	// clean helm dir
-	healmClean(flags.Helm)
-	// add custom helm repo
-	healmAddRepo(flags.Helm)
-	// update helm repo
-	helmRepoUpdate()
+	helmClean(flags.Helm)
+	// add and update custom helm repo
+	helmAddRepo(flags.Helm)
 
 	// filter resources to output dir
 	buildHelmChart(flags, project)
@@ -87,7 +84,7 @@ func buildHelmChart(flags helmBuildFlags, pro *Project) {
 
 	for _, path := range paths {
 		// load file
-		result, err := ioutil.ReadFile(path)
+		result, err := os.ReadFile(path)
 		if err != nil {
 			log.Fatal("error read file", log.F("file", path).E(err))
 		}

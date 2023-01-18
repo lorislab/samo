@@ -37,7 +37,7 @@ func createDockerReleaseCmd() *cobra.Command {
 func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	if project.Count() != "0" || len(project.Tag()) == 0 {
-		log.Fatal("Can not created healm release. Missing tag on current commit",
+		log.Fatal("Can not created helm release. Missing tag on current commit",
 			log.Fields{"version": project.Version(), "hash": project.Hash(), "count": project.Count(), "tag": project.Tag()})
 	}
 
@@ -64,7 +64,7 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 	// release docker registry
 	dockerPushImage := dockerImage(project, flags.ReleaseRegistry, flags.ReleaseGroup, flags.ReleaseRepo)
 	imagePush := dockerImageTag(dockerPushImage, project.Release())
-	log.Info("Retag docker image", log.Fields{"build": imagePull, "release": imagePush})
+	log.Info("Re-tag docker image", log.Fields{"build": imagePull, "release": imagePush})
 	tools.ExecCmd("docker", "tag", imagePull, imagePush)
 
 	if flags.Docker.Project.SkipPush {

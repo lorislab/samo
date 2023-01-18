@@ -5,7 +5,7 @@ import (
 	"github.com/lorislab/samo/log"
 )
 
-// SemVer create SemVer version for the project
+// CreateSemVer create SemVer version for the project
 func CreateSemVer(version string) *semver.Version {
 	result, e := semver.NewVersion(version)
 	if e != nil {

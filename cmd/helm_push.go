@@ -4,7 +4,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func createHealmPushCmd() *cobra.Command {
+func createHelmPushCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "push",
 		Short: "Push helm chart",

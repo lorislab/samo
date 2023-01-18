@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/lorislab/samo/log"
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -22,7 +22,7 @@ func Execute(version BuildVersion) {
 
 	err := rootCmd.Execute()
 	if err != nil {
-		log.Fatal("error execute commant", log.E(err))
+		log.Fatal("error execute command", log.E(err))
 	}
 }
 
@@ -41,7 +41,7 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.samo.yaml)")
+	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .samo.yaml or $HOME/.samo.yaml)")
 	rootCmd.PersistentFlags().StringVarP(&v, "verbosity", "v", log.DefaultLevel(), "Log level (debug, info, warn, error, fatal, panic)")
 
 	addChildCmd(rootCmd, createVersionCmd())
@@ -59,11 +59,12 @@ func initConfig() {
 			log.Fatal("error read home dir", log.E(err))
 		}
 
-		// Search confing in current directory
+		// Search config in current directory
 		viper.AddConfigPath(".")
 		// Search config in home directory with name ".samo" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".samo")
+		viper.SetConfigType("yaml")
 	}
 
 	viper.SetEnvKeyReplacer(strings.NewReplacer("-", "_"))
@@ -71,6 +72,11 @@ func initConfig() {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err == nil {
-		log.Debug("Using config", log.F("file", viper.ConfigFileUsed()))
+		if _, ok := err.(viper.ConfigFileNotFoundError); ok {
+			log.Info("Configuration file not found", log.F("file", viper.ConfigFileUsed()), log.E(err))
+		} else {
+			log.Info("Using config", log.F("file", viper.ConfigFileUsed()))
+		}
 	}
+
 }
