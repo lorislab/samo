@@ -15,9 +15,7 @@ jobs:
         with:
           go-version: 1.19
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.50.1
+        uses: golangci/golangci-lint-action@v3
       - name: Docker login
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
       - name: Run GoReleaser
