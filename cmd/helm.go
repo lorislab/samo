@@ -26,6 +26,7 @@ type helmFlags struct {
 	PushType      string       `mapstructure:"helm-push-type"`
 	Dir           string       `mapstructure:"helm-dir"`
 	Registry      string       `mapstructure:"helm-registry"`
+	AbsoluteDir   bool         `mapstructure:"helm-absolute-dir"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -45,6 +46,7 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "helm-push-url", "", "", "helm repository push URL [deprecated]")
 	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor [deprecated]")
 	addStringFlag(cmd, "helm-registry", "", "", "helm OCI registry")
+	addBoolFlag(cmd, "helm-absolute-dir", "", false, "helm chart absolute directory (skip add project name in path)")
 
 	addChildCmd(cmd, createHelmBuildCmd())
 	addChildCmd(cmd, createHelmPushCmd())
@@ -197,6 +199,9 @@ func updateHelmChart(project *Project, flags helmFlags, chartTemplate string) {
 }
 
 func helmDir(project *Project, flags helmFlags) string {
+	if flags.AbsoluteDir {
+		return flags.Dir
+	}
 	return flags.Dir + "/" + project.name
 }
 
