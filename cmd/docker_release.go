@@ -11,6 +11,7 @@ type dockerReleaseFlags struct {
 	ReleaseRegistry string      `mapstructure:"docker-release-registry"`
 	ReleaseGroup    string      `mapstructure:"docker-release-group"`
 	ReleaseRepo     string      `mapstructure:"docker-release-repository"`
+	ReleaseTags     string      `mapstructure:"docker-release-tags"`
 }
 
 func createDockerReleaseCmd() *cobra.Command {
@@ -30,6 +31,7 @@ func createDockerReleaseCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-release-registry", "", "", "the docker release registry")
 	addStringFlag(cmd, "docker-release-group", "", "", "the docker release repository group")
 	addStringFlag(cmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
+	addStringFlag(cmd, "docker-release-tags", "", "{{ .Release }}", "the docker release tags. Default value release version.")
 
 	return cmd
 }
@@ -63,14 +65,17 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	// release docker registry
 	dockerPushImage := dockerImage(project, flags.ReleaseRegistry, flags.ReleaseGroup, flags.ReleaseRepo)
-	imagePush := dockerImageTag(dockerPushImage, project.Release())
-	log.Info("Re-tag docker image", log.Fields{"build": imagePull, "release": imagePush})
-	tools.ExecCmd("docker", "tag", imagePull, imagePush)
+	dockerPushImageTags := dockerTags(dockerPushImage, project, flags.ReleaseTags)
+
+	for _, imagePush := range dockerPushImageTags {
+		log.Info("Re-tag docker image", log.Fields{"build": imagePull, "release": imagePush})
+		tools.ExecCmd("docker", "tag", imagePull, imagePush)
+	}
 
 	if flags.Docker.Project.SkipPush {
-		log.Info("Skip docker push for docker release image", log.F("image", imagePush))
+		log.Info("Skip docker push for docker release image", log.Fields{"image": dockerPushImage, "tags": dockerPushImageTags})
 	} else {
-		tools.ExecCmd("docker", "push", imagePush)
-		log.Info("Release docker image done!", log.F("image", imagePush))
+		dockerImagePush(dockerPushImage, dockerPushImageTags, flags.Docker.Project.SkipPush)
+		log.Info("Release docker image done!", log.F("image", dockerPushImage))
 	}
 }

@@ -1,24 +1,20 @@
 package cmd
 
 import (
-	"strings"
-	"time"
-
 	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
 	"github.com/spf13/cobra"
 )
 
 type dockerBuildFlags struct {
-	Docker                   dockerFlags `mapstructure:",squash"`
-	File                     string      `mapstructure:"docker-file"`
-	Profile                  string      `mapstructure:"docker-profile"`
-	Context                  string      `mapstructure:"docker-context"`
-	SkipDevBuild             bool        `mapstructure:"docker-skip-dev"`
-	SkipPull                 bool        `mapstructure:"docker-skip-pull"`
-	BuildPush                bool        `mapstructure:"docker-build-push"`
-	SkipRemoveBuild          bool        `mapstructure:"docker-remove-build-skip"`
-	SkipOpenContainersLabels bool        `mapstructure:"docker-skip-opencontainers-labels"`
+	Docker          dockerFlags `mapstructure:",squash"`
+	File            string      `mapstructure:"docker-file"`
+	Profile         string      `mapstructure:"docker-profile"`
+	Context         string      `mapstructure:"docker-context"`
+	SkipDevBuild    bool        `mapstructure:"docker-skip-dev"`
+	SkipPull        bool        `mapstructure:"docker-skip-pull"`
+	BuildPush       bool        `mapstructure:"docker-build-push"`
+	SkipRemoveBuild bool        `mapstructure:"docker-remove-build-skip"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -36,7 +32,6 @@ func createDockerBuildCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addBoolFlag(cmd, "docker-skip-open-containers-labels", "", false, "skip open containers labels ")
 	addStringFlag(cmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
 	addStringFlag(cmd, "docker-profile", "", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
@@ -64,7 +59,7 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	}
 
 	dockerImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
-	tags := dockerTags(dockerImage, project, flags.Docker)
+	tags := dockerTags(dockerImage, project, flags.Docker.TagListTemplate)
 
 	if !flags.SkipDevBuild {
 		tags = append(tags, project.Name()+":latest")
@@ -82,30 +77,10 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 		command = append(command, "--rm")
 	}
 
-	created := time.Now().Format(time.RFC3339)
-	// add labels
-	if !flags.Docker.Project.SkipLabels {
-		command = append(command, "--label", "samo.project.revision="+project.Hash())
-		command = append(command, "--label", "samo.project.version="+project.Version())
-		command = append(command, "--label", "samo.project.created="+created)
-	}
-
-	// add opencontainers labels
-	if !flags.SkipOpenContainersLabels {
-		command = append(command, "--label", "org.opencontainers.image.created="+created)
-		command = append(command, "--label", "org.opencontainers.image.title="+project.Name())
-		command = append(command, "--label", "org.opencontainers.image.revision="+project.Hash())
-		command = append(command, "--label", "org.opencontainers.image.version="+project.Version())
-		command = append(command, "--label", "org.opencontainers.image.source="+project.Source())
-	}
-
-	// add custom labels
-	if len(flags.Docker.Project.LabelTemplate) > 0 {
-		labelTemplate := tools.Template(project, flags.Docker.Project.LabelTemplate)
-		labels := strings.Split(labelTemplate, ",")
-		for _, label := range labels {
-			command = append(command, "--label", label)
-		}
+	// create labels
+	labels := dockerLabels(project, flags.Docker.Project.SkipLabels, flags.Docker.SkipOpenContainersLabels, flags.Docker.Project.LabelTemplate)
+	for key, value := range labels {
+		command = append(command, "--label", key+"="+value)
 	}
 
 	// add tags

@@ -24,6 +24,6 @@ func createDockerPushCmd() *cobra.Command {
 
 func dockerPush(project *Project, flags dockerFlags) {
 	dockerImage := dockerImage(project, flags.Registry, flags.Group, flags.Repo)
-	tags := dockerTags(dockerImage, project, flags)
+	tags := dockerTags(dockerImage, project, flags.TagListTemplate)
 	dockerImagePush(dockerImage, tags, flags.Project.SkipPush)
 }
