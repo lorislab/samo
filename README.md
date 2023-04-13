@@ -46,5 +46,5 @@ docker build -t samo .
 
 ### Test release packages
 ```
-goreleaser release --snapshot --rm-dist
+goreleaser release --snapshot --clean
 ```
