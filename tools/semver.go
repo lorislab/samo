@@ -1,7 +1,7 @@
 package tools
 
 import (
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/lorislab/samo/log"
 )
 

@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/lorislab/samo/log"
 	"github.com/lorislab/samo/tools"
 	"github.com/spf13/cobra"
@@ -87,15 +87,15 @@ func (g Project) Source() string {
 	return g.source
 }
 
-func (g Project) Major() int64 {
+func (g Project) Major() uint64 {
 	return g.version.Major()
 }
 
-func (g Project) Minor() int64 {
+func (g Project) Minor() uint64 {
 	return g.version.Minor()
 }
 
-func (g Project) Patch() int64 {
+func (g Project) Patch() uint64 {
 	return g.version.Patch()
 }
 

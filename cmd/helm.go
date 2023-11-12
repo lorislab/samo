@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"helm.sh/helm/v3/pkg/chart"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -51,6 +52,8 @@ func createHelmCmd() *cobra.Command {
 	addChildCmd(cmd, createHelmBuildCmd())
 	addChildCmd(cmd, createHelmPushCmd())
 	addChildCmd(cmd, createHelmReleaseCmd())
+	addChildCmd(cmd, createHelmDepsValidateCmd())
+	addChildCmd(cmd, createHelmDepsUpdateCmd())
 	return cmd
 }
 
@@ -214,6 +217,55 @@ func templateToMap(template string, data interface{}) map[string]string {
 		r[v[0]] = v[1]
 	}
 	return r
+}
+
+func saveChart(project *Project, flags helmFlags, c *chart.Chart) {
+	filename := helmDir(project, flags) + "/Chart.yaml"
+	saveChartFile(filename, c)
+}
+
+func saveChartFile(filename string, c *chart.Chart) {
+
+	var fileBytes, err = yaml.Marshal(c.Metadata)
+	if err != nil {
+		log.Fatal("error marshal chart file", log.E(err).F("file", filename))
+	}
+
+	err = os.WriteFile(filename, fileBytes, 0666)
+	if err != nil {
+		log.Panic("error write chart file", log.E(err).F("file", filename))
+	}
+	log.Info("Save chart file", log.F("file", filename))
+}
+
+func loadChart(project *Project, flags helmFlags) *chart.Chart {
+	filename := helmDir(project, flags) + "/Chart.yaml"
+	return loadChartFile(filename)
+}
+
+func loadChartFile(filename string) *chart.Chart {
+
+	c := new(chart.Chart)
+	c.Metadata = new(chart.Metadata)
+
+	if !tools.Exists(filename) {
+		log.Fatal("Helm yaml file does not exists!", log.F("file", filename))
+	}
+
+	fileBytes, err := os.ReadFile(filename)
+	if err != nil {
+		log.Panic("error read file", log.E(err).F("file", filename))
+	}
+
+	if err := yaml.Unmarshal(fileBytes, c.Metadata); err != nil {
+		log.Panic("error read file", log.E(err).F("file", filename))
+	}
+
+	if c.Metadata.APIVersion == "" {
+		c.Metadata.APIVersion = chart.APIVersionV2
+	}
+
+	return c
 }
 
 func replaceValueInYaml(filename string, data map[string]string) {
