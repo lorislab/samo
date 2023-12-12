@@ -54,6 +54,7 @@ func createHelmCmd() *cobra.Command {
 	addChildCmd(cmd, createHelmReleaseCmd())
 	addChildCmd(cmd, createHelmDepsValidateCmd())
 	addChildCmd(cmd, createHelmDepsUpdateCmd())
+	addChildCmd(cmd, createHelmLockUpdateCmd())
 	return cmd
 }
 

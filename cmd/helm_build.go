@@ -12,6 +12,7 @@ import (
 type helmBuildFlags struct {
 	Helm                 helmFlags `mapstructure:",squash"`
 	Source               string    `mapstructure:"helm-source-dir"`
+	DepsCmd              string    `mapstructure:"helm-deps-cmd"`
 	Copy                 bool      `mapstructure:"helm-source-copy"`
 	ChartFilterTemplate  string    `mapstructure:"helm-chart-template-list"`
 	ValuesFilterTemplate string    `mapstructure:"helm-values-template-list"`
@@ -32,6 +33,7 @@ func createHelmBuildCmd() *cobra.Command {
 	}
 
 	addStringFlag(cmd, "helm-source-dir", "", "", "project helm chart source directory")
+	addStringFlag(cmd, "helm-deps-cmd", "", "build", "helm dependency command.")
 	addBoolFlag(cmd, "helm-source-copy", "", false, "copy helm source to helm directory")
 	addStringFlag(cmd, "helm-chart-template-list", "", "version={{ .Version }},appVersion={{ .Version }},name={{ .Name }}", `list of key value to be replaced in the Chart.yaml
 	Values: `+templateValues+`
@@ -56,7 +58,7 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 	updateHelmValues(project, flags.Helm, flags.ValuesFilterTemplate)
 
 	// update helm dependencies
-	tools.ExecCmd("helm", "dependency", "update", helmDir(project, flags.Helm))
+	tools.ExecCmd("helm", "dependency", flags.DepsCmd, helmDir(project, flags.Helm))
 
 	// package helm chart
 	helmPackage(project, flags.Helm)
