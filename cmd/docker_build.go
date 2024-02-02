@@ -101,6 +101,11 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	// add dockerfile and dockerfile profile
 	command = append(command, "-f", dockerfile)
 
+	// push images for buildx
+	if flags.BuildX && flags.BuildPush {
+		command = append(command, "--push")
+	}
+
 	// set docker context
 	command = append(command, flags.Context)
 	// execute command
@@ -108,7 +113,8 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 
 	log.Info("Docker build done!", log.Fields{"image": dockerImage, "tags": tags})
 
-	if flags.BuildPush {
+	// for none buildx we need to push it manually
+	if !flags.BuildX && flags.BuildPush {
 		dockerImagePush(dockerImage, tags, flags.Docker.Project.SkipPush)
 	}
 }
