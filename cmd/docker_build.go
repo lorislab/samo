@@ -11,6 +11,7 @@ type dockerBuildFlags struct {
 	File            string      `mapstructure:"docker-file"`
 	Profile         string      `mapstructure:"docker-profile"`
 	Context         string      `mapstructure:"docker-context"`
+	Platform        string      `mapstructure:"docker-platform"`
 	SkipDevBuild    bool        `mapstructure:"docker-skip-dev"`
 	SkipPull        bool        `mapstructure:"docker-skip-pull"`
 	BuildPush       bool        `mapstructure:"docker-build-push"`
@@ -35,6 +36,7 @@ func createDockerBuildCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-file", "d", "src/main/docker/Dockerfile", "path of the project Dockerfile")
 	addStringFlag(cmd, "docker-profile", "", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
+	addStringFlag(cmd, "docker-platform", "", "", "the docker build platform")
 	addBoolFlag(cmd, "docker-skip-pull", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
 	addBoolFlag(cmd, "docker-skip-dev", "", false, "skip build image {{ .Name }}:latest")
@@ -77,6 +79,9 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 		command = append(command, "--rm")
 	}
 
+	if len(flags.Platform) > 0 {
+		command = append(command, "--platform", flags.Platform)
+	}
 	// create labels
 	labels := dockerLabels(project, flags.Docker.Project.SkipLabels, flags.Docker.SkipOpenContainersLabels, flags.Docker.Project.LabelTemplate)
 	for key, value := range labels {

@@ -1,6 +1,8 @@
 module github.com/lorislab/samo
 
-go 1.19
+go 1.21
+
+toolchain go1.21.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
