@@ -12,6 +12,7 @@ type dockerReleaseFlags struct {
 	ReleaseGroup    string      `mapstructure:"docker-release-group"`
 	ReleaseRepo     string      `mapstructure:"docker-release-repository"`
 	ReleaseTags     string      `mapstructure:"docker-release-tags"`
+	ImageTools      bool        `mapstructure:"docker-release-image-tools"`
 }
 
 func createDockerReleaseCmd() *cobra.Command {
@@ -32,6 +33,7 @@ func createDockerReleaseCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-release-group", "", "", "the docker release repository group")
 	addStringFlag(cmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addStringFlag(cmd, "docker-release-tags", "", "{{ .Release }}", "the docker release tags. Default value release version.")
+	addBoolFlag(cmd, "docker-release-image-tools", "", false, "buildx imagetools create a new image based on source images")
 
 	return cmd
 }
@@ -49,8 +51,8 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
 	imagePull := dockerImageTag(dockerPullImage, project.Version())
-	log.Info("Pull docker image", log.F("image", imagePull))
-	tools.ExecCmd("docker", "pull", imagePull)
+
+	log.Info("Docker image", log.F("image", imagePull))
 
 	// check the release configuration
 	if len(flags.ReleaseRegistry) == 0 {
@@ -67,15 +69,52 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 	dockerPushImage := dockerImage(project, flags.ReleaseRegistry, flags.ReleaseGroup, flags.ReleaseRepo)
 	dockerPushImageTags := dockerTags(dockerPushImage, project, flags.ReleaseTags)
 
+	if flags.ImageTools {
+		dockerReleaseImageTools(flags.Docker.Project.SkipPush, imagePull, dockerPushImageTags)
+	} else {
+		dockerReleasePullPush(flags.Docker.Project.SkipPush, imagePull, dockerPushImage, dockerPushImageTags)
+	}
+}
+
+func dockerReleaseImageTools(skip bool, imagePull string, dockerPushImageTags []string) {
+
+	var command []string
+
+	// buildx imagetools create
+	command = append(command, "buildx", "imagetools", "create")
+
+	// dry run
+	if skip {
+		command = append(command, "--dry-run")
+	}
+
+	// add new tags
+	for _, imagePush := range dockerPushImageTags {
+		command = append(command, "-t", imagePush)
+	}
+
+	// add remote repository image
+	command = append(command, imagePull)
+
+	// execute command
+	tools.ExecCmd("docker", command...)
+}
+
+// deprecated
+func dockerReleasePullPush(skip bool, imagePull string, dockerPushImage string, dockerPushImageTags []string) {
+
+	// pull docker image
+	tools.ExecCmd("docker", "pull", imagePull)
+
 	for _, imagePush := range dockerPushImageTags {
 		log.Info("Re-tag docker image", log.Fields{"build": imagePull, "release": imagePush})
 		tools.ExecCmd("docker", "tag", imagePull, imagePush)
 	}
 
-	if flags.Docker.Project.SkipPush {
+	if skip {
 		log.Info("Skip docker push for docker release image", log.Fields{"image": dockerPushImage, "tags": dockerPushImageTags})
 	} else {
-		dockerImagePush(dockerPushImage, dockerPushImageTags, flags.Docker.Project.SkipPush)
+		dockerImagePush(dockerPushImage, dockerPushImageTags, skip)
 		log.Info("Release docker image done!", log.F("image", dockerPushImage))
 	}
 }
