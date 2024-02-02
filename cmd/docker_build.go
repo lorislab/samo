@@ -12,6 +12,7 @@ type dockerBuildFlags struct {
 	Profile         string      `mapstructure:"docker-profile"`
 	Context         string      `mapstructure:"docker-context"`
 	Platform        string      `mapstructure:"docker-platform"`
+	BuildX          bool        `mapstructure:"docker-buildx"`
 	SkipDevBuild    bool        `mapstructure:"docker-skip-dev"`
 	SkipPull        bool        `mapstructure:"docker-skip-pull"`
 	BuildPush       bool        `mapstructure:"docker-build-push"`
@@ -39,6 +40,7 @@ func createDockerBuildCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-platform", "", "", "the docker build platform")
 	addBoolFlag(cmd, "docker-skip-pull", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
+	addBoolFlag(cmd, "docker-buildx", "", false, "extended build capabilities with BuildKit")
 	addBoolFlag(cmd, "docker-skip-dev", "", false, "skip build image {{ .Name }}:latest")
 	addBoolFlag(cmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
 
@@ -70,6 +72,9 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	log.Info("Build docker image", log.Fields{"image": dockerImage, "tags": tags})
 
 	var command []string
+	if flags.BuildX {
+		command = append(command, "buildx")
+	}
 	command = append(command, "build")
 	if !flags.SkipPull {
 		command = append(command, "--pull")
