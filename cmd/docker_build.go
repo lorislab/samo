@@ -12,6 +12,7 @@ type dockerBuildFlags struct {
 	Profile         string      `mapstructure:"docker-profile"`
 	Context         string      `mapstructure:"docker-context"`
 	Platform        string      `mapstructure:"docker-platform"`
+	Provenance      string      `mapstructure:"docker-provenance"`
 	BuildX          bool        `mapstructure:"docker-buildx"`
 	SkipDevBuild    bool        `mapstructure:"docker-skip-dev"`
 	SkipPull        bool        `mapstructure:"docker-skip-pull"`
@@ -38,6 +39,7 @@ func createDockerBuildCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-profile", "", "", "profile of the Dockerfile.<profile>")
 	addStringFlag(cmd, "docker-context", "", ".", "the docker build context")
 	addStringFlag(cmd, "docker-platform", "", "", "the docker build platform")
+	addStringFlag(cmd, "docker-provenance", "", "", "the provenance attestations include facts about the build process, including details")
 	addBoolFlag(cmd, "docker-skip-pull", "", false, "skip docker pull new images for the build")
 	addBoolFlag(cmd, "docker-build-push", "", false, "push docker image after build")
 	addBoolFlag(cmd, "docker-buildx", "", false, "extended build capabilities with BuildKit")
@@ -79,11 +81,14 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	if !flags.SkipPull {
 		command = append(command, "--pull")
 	}
+
 	// Removing intermediate container
 	if !flags.SkipRemoveBuild {
 		command = append(command, "--rm")
 	}
-
+	if len(flags.Provenance) > 0 {
+		command = append(command, "--provenance", flags.Provenance)
+	}
 	if len(flags.Platform) > 0 {
 		command = append(command, "--platform", flags.Platform)
 	}
