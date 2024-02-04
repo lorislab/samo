@@ -12,6 +12,7 @@ type dockerReleaseFlags struct {
 	ReleaseGroup    string      `mapstructure:"docker-release-group"`
 	ReleaseRepo     string      `mapstructure:"docker-release-repository"`
 	ReleaseTags     string      `mapstructure:"docker-release-tags"`
+	ReleaseImageTag string      `mapstructure:"docker-release-image-tag"`
 	ImageTools      bool        `mapstructure:"docker-release-image-tools"`
 }
 
@@ -34,7 +35,7 @@ func createDockerReleaseCmd() *cobra.Command {
 	addStringFlag(cmd, "docker-release-repository", "", "", "the docker release repository. Default value project name.")
 	addStringFlag(cmd, "docker-release-tags", "", "{{ .Release }}", "the docker release tags. Default value release version.")
 	addBoolFlag(cmd, "docker-release-image-tools", "", false, "buildx imagetools create a new image based on source images")
-
+	addStringFlag(cmd, "docker-release-image-tag", "", "{{ .Version }}", "the docker image tag use for release. Default release candidate docker image tag.")
 	return cmd
 }
 
@@ -50,7 +51,7 @@ func dockerRelease(project *Project, flags dockerReleaseFlags) {
 	log.Info("Create docker release", log.Fields{"version": project.Version(), "release": project.Release()})
 
 	dockerPullImage := dockerImage(project, flags.Docker.Registry, flags.Docker.Group, flags.Docker.Repo)
-	imagePull := dockerImageTag(dockerPullImage, project.Version())
+	imagePull := dockerImageTagTemplate(project, dockerPullImage, flags.ReleaseImageTag)
 
 	log.Info("Docker image", log.F("image", imagePull))
 

@@ -92,6 +92,11 @@ func dockerImageTag(dockerImage, tag string) string {
 	return dockerImage + ":" + tag
 }
 
+func dockerImageTagTemplate(pro *Project, dockerImage, template string) string {
+	tagTemplate := tools.Template(pro, template)
+	return dockerImage + ":" + tagTemplate
+}
+
 func dockerImagePush(image string, tags []string, skip bool) {
 	log.Info("Push docker image tags", log.Fields{"image": image, "tags": tags})
 	if skip {
