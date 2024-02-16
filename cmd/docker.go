@@ -41,6 +41,7 @@ func createDockerCmd() *cobra.Command {
 	addChildCmd(cmd, createDockerReleaseCmd())
 	addChildCmd(cmd, createDockerTagsCmd())
 	addChildCmd(cmd, createDockerLabelsCmd())
+	addChildCmd(cmd, createDockerAnnotationsCmd())
 
 	return cmd
 }
