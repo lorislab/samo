@@ -23,6 +23,8 @@ type projectFlags struct {
 	BranchTemplate      string `mapstructure:"branch-template"`
 	SkipLabels          bool   `mapstructure:"skip-samo-labels"`
 	LabelTemplate       string `mapstructure:"labels-template-list"`
+	Description         string `mapstructure:"description"`
+	Url                 string `mapstructure:"url"`
 }
 
 var sourceLinkRegex = `\/\/.*@`
@@ -38,6 +40,8 @@ func createProjectCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
+	addStringFlag(cmd, "description", "", "", "project description")
+	addStringFlag(cmd, "url", "", "", "project url")
 	addStringFlag(cmd, "first-version", "", "0.0.0", "the first version of the project")
 	addBoolFlag(cmd, "release-major", "", false, "create a major release")
 	addBoolFlag(cmd, "release-patch", "", false, "create a patch release")
@@ -66,16 +70,18 @@ func createProjectCmd() *cobra.Command {
 
 // Project common project interface
 type Project struct {
-	name       string
-	describe   tools.GitDescribe
-	rc         tools.GitDescribe
-	branch     string
-	source     string
-	patchBuild bool
-	version    *semver.Version
-	rcVersion  *semver.Version
-	release    *semver.Version
-	rcRelease  *semver.Version
+	name        string
+	describe    tools.GitDescribe
+	rc          tools.GitDescribe
+	branch      string
+	source      string
+	url         string
+	description string
+	patchBuild  bool
+	version     *semver.Version
+	rcVersion   *semver.Version
+	release     *semver.Version
+	rcRelease   *semver.Version
 }
 
 // Name project name
@@ -105,6 +111,14 @@ func (g Project) Prerelease() string {
 
 func (g Project) Version() string {
 	return g.version.String()
+}
+
+func (g Project) Description() string {
+	return g.description
+}
+
+func (g Project) Url() string {
+	return g.url
 }
 
 func (g Project) Release() string {
@@ -206,17 +220,38 @@ func loadProject(flags projectFlags) *Project {
 		}
 	}
 
+	var url = flags.Url
+	if len(url) == 0 {
+		// remove .git suffix
+		url = strings.TrimSuffix(source, ".git")
+
+		// replace git@server:path -> https://server/path
+		if strings.HasPrefix(url, "git@") {
+			url = strings.TrimPrefix(url, "git@")
+			url = strings.Replace(url, ":", "/", 1)
+			url = "https://" + url
+		}
+
+	}
+
+	var description = flags.Description
+	if len(description) == 0 {
+		description = describe.Hash
+	}
+
 	p := &Project{
-		name:       name,
-		describe:   describe,
-		branch:     branch,
-		source:     source,
-		patchBuild: patchBuild,
-		rc:         rc,
-		rcVersion:  createVersion(lastRC, branch, flags.VersionTemplate, rc),
-		rcRelease:  tools.CreateSemVer(lastRC),
-		version:    createVersion(version, branch, flags.VersionTemplate, describe),
-		release:    tools.CreateSemVer(version),
+		name:        name,
+		describe:    describe,
+		branch:      branch,
+		source:      source,
+		description: description,
+		patchBuild:  patchBuild,
+		url:         url,
+		rc:          rc,
+		rcVersion:   createVersion(lastRC, branch, flags.VersionTemplate, rc),
+		rcRelease:   tools.CreateSemVer(lastRC),
+		version:     createVersion(version, branch, flags.VersionTemplate, describe),
+		release:     tools.CreateSemVer(version),
 	}
 	log.Debug("Versions", log.Fields{"version": p.Version(), "release": p.Release(), "rcVersion": p.rcVersion.String(), "rcRelease": p.rcRelease.String()})
 	return p

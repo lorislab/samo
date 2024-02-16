@@ -27,7 +27,7 @@ func createDockerCmd() *cobra.Command {
 		TraverseChildren: true,
 	}
 
-	addBoolFlag(cmd, "docker-skip-open-containers-labels", "", false, "skip open containers labels ")
+	addBoolFlag(cmd, "docker-skip-opencontainers-labels", "", false, "skip open containers labels ")
 	addStringFlag(cmd, "docker-registry", "", "", "the docker registry")
 	addStringFlag(cmd, "docker-group", "", "", "the docker repository group")
 	addStringFlag(cmd, "docker-repository", "", "", "the docker repository. Default value is the project name.")
@@ -126,9 +126,10 @@ func dockerLabels(project *Project, skipLabels bool, skipOpenContainersLabels bo
 	if !skipOpenContainersLabels {
 		result["org.opencontainers.image.created"] = created
 		result["org.opencontainers.image.title"] = project.Name()
+		result["org.opencontainers.image.description"] = project.Description()
 		result["org.opencontainers.image.revision"] = project.Hash()
 		result["org.opencontainers.image.version"] = project.Version()
-		result["org.opencontainers.image.source"] = project.Source()
+		result["org.opencontainers.image.source"] = project.Url()
 	}
 
 	// add custom labels

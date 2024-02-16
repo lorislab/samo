@@ -7,17 +7,19 @@ import (
 )
 
 type dockerBuildFlags struct {
-	Docker          dockerFlags `mapstructure:",squash"`
-	File            string      `mapstructure:"docker-file"`
-	Profile         string      `mapstructure:"docker-profile"`
-	Context         string      `mapstructure:"docker-context"`
-	Platform        string      `mapstructure:"docker-platform"`
-	Provenance      string      `mapstructure:"docker-provenance"`
-	BuildX          bool        `mapstructure:"docker-buildx"`
-	SkipDevBuild    bool        `mapstructure:"docker-skip-dev"`
-	SkipPull        bool        `mapstructure:"docker-skip-pull"`
-	BuildPush       bool        `mapstructure:"docker-build-push"`
-	SkipRemoveBuild bool        `mapstructure:"docker-remove-build-skip"`
+	Docker                 dockerFlags `mapstructure:",squash"`
+	File                   string      `mapstructure:"docker-file"`
+	Profile                string      `mapstructure:"docker-profile"`
+	Context                string      `mapstructure:"docker-context"`
+	Platform               string      `mapstructure:"docker-platform"`
+	Provenance             string      `mapstructure:"docker-provenance"`
+	BuildX                 bool        `mapstructure:"docker-buildx"`
+	SkipDevBuild           bool        `mapstructure:"docker-skip-dev"`
+	SkipPull               bool        `mapstructure:"docker-skip-pull"`
+	BuildPush              bool        `mapstructure:"docker-build-push"`
+	SkipRemoveBuild        bool        `mapstructure:"docker-remove-build-skip"`
+	AddLabelsAnnotation    bool        `mapstructure:"docker-add-labels-annotations"`
+	PrefixLabelsAnnotation string      `mapstructure:"docker-prefix-labels-annotations"`
 }
 
 func createDockerBuildCmd() *cobra.Command {
@@ -45,6 +47,8 @@ func createDockerBuildCmd() *cobra.Command {
 	addBoolFlag(cmd, "docker-buildx", "", false, "extended build capabilities with BuildKit")
 	addBoolFlag(cmd, "docker-skip-dev", "", false, "skip build image {{ .Name }}:latest")
 	addBoolFlag(cmd, "docker-remove-intermediate-img-skip", "", false, "skip remove build intermediate containers")
+	addBoolFlag(cmd, "docker-add-labels-annotations", "", true, "add all labels as container annotations")
+	addStringFlag(cmd, "docker-prefix-labels-annotations", "", "index:", "prefix for all labels as container annotations")
 
 	return cmd
 }
@@ -96,6 +100,13 @@ func dockerBuild(project *Project, flags dockerBuildFlags) {
 	labels := dockerLabels(project, flags.Docker.Project.SkipLabels, flags.Docker.SkipOpenContainersLabels, flags.Docker.Project.LabelTemplate)
 	for key, value := range labels {
 		command = append(command, "--label", key+"="+value)
+	}
+
+	// create annotations
+	if flags.BuildX && flags.AddLabelsAnnotation {
+		for key, value := range labels {
+			command = append(command, "--annotation", flags.PrefixLabelsAnnotation+key+"="+value)
+		}
 	}
 
 	// add tags
