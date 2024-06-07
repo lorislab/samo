@@ -31,7 +31,7 @@ require (
 	sigs.k8s.io/yaml v1.3.0 // indirect
 )
 
-require github.com/rs/zerolog v1.32.0
+require github.com/rs/zerolog v1.33.0
 
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
