@@ -50,6 +50,11 @@ func helmBuild(project *Project, flags helmBuildFlags) {
 	helmClean(flags.Helm)
 	// add and update custom helm repo
 	helmAddRepo(flags.Helm)
+	// add repo from chart dependencies
+	if flags.Helm.AddRepoDeps {
+		chart := loadChart(project, flags.Helm)
+		helmAddRepoDeps(chart)
+	}
 
 	// filter resources to output dir
 	buildHelmChart(flags, project)

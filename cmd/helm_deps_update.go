@@ -41,6 +41,11 @@ func helmDepsUpdate(project *Project, flags helmDepsUpdateFlags) {
 
 	c := loadChart(project, flags.Helm)
 
+	// add repo from chart dependencies
+	if flags.Helm.AddRepoDeps {
+		helmAddRepoDeps(c)
+	}
+
 	notFound := true
 	update := false
 	for _, d := range c.Metadata.Dependencies {

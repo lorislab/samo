@@ -28,6 +28,7 @@ type helmFlags struct {
 	Dir           string       `mapstructure:"helm-dir"`
 	Registry      string       `mapstructure:"helm-registry"`
 	AbsoluteDir   bool         `mapstructure:"helm-absolute-dir"`
+	AddRepoDeps   bool         `mapstructure:"helm-add-repo-deps"`
 }
 
 func createHelmCmd() *cobra.Command {
@@ -48,6 +49,7 @@ func createHelmCmd() *cobra.Command {
 	addStringFlag(cmd, "helm-push-type", "", "harbor", "helm repository push type. Values: upload,harbor [deprecated]")
 	addStringFlag(cmd, "helm-registry", "", "", "helm OCI registry")
 	addBoolFlag(cmd, "helm-absolute-dir", "", false, "helm chart absolute directory (skip add project name in path)")
+	addBoolFlag(cmd, "helm-add-repo-deps", "", false, "add https repositories from dependencies")
 
 	addChildCmd(cmd, createHelmBuildCmd())
 	addChildCmd(cmd, createHelmPushCmd())
@@ -75,6 +77,53 @@ func helmClean(flags helmFlags) {
 			log.Panic("error delete directory", log.F("output", flags.Dir).E(err))
 		}
 	}
+}
+
+func helmAddRepoDeps(h *chart.Chart) {
+
+	index := false
+	for _, d := range h.Metadata.Dependencies {
+		repo := d.Repository
+		if len(repo) > 0 && strings.HasPrefix(repo, "https://") {
+			helmAddRepository(repo)
+			index = true
+		}
+	}
+
+	// update index of the added repository
+	if index {
+		tools.ExecCmd("helm", "repo", "update")
+	}
+}
+
+func helmAddRepository(repo string) {
+
+	// create name from URL
+	name := strings.TrimPrefix(repo, "https://")
+	index := strings.Index(name, "/")
+	if index >= 0 {
+		name = name[:index]
+	}
+	name = envRegexp.ReplaceAllString(name, "_")
+
+	// add repository
+	var command []string
+	command = append(command, "repo", "add")
+	command = append(command, name, repo)
+	tools.ExecCmd("helm", command...)
+}
+
+var envRegexp = createRegexp()
+
+// initialize yaml file configuration source
+func createRegexp() *regexp.Regexp {
+
+	// initialize the regex for EnvConfigSource
+	tmp, err := regexp.Compile("[^a-zA-Z0-9]+")
+	if err != nil {
+		panic(err)
+	}
+	return tmp
 }
 
 // deprecated

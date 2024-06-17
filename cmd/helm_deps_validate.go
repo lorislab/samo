@@ -35,6 +35,11 @@ func helmDepsValidate(project *Project, flags helmDepsValidateFlags) {
 	chart := loadChart(project, flags.Helm)
 	failed := false
 
+	// add repo from chart dependencies
+	if flags.Helm.AddRepoDeps {
+		helmAddRepoDeps(chart)
+	}
+
 	log.Info("Dependencies validation", log.F("validate-type", flags.ValidateType).F("chart", chart.Name()).F("version", chart.Metadata.Version))
 
 	fmt.Println("Dependencies:")

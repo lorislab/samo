@@ -32,6 +32,12 @@ func createHelmLockUpdateCmd() *cobra.Command {
 
 func helmLockUpdate(project *Project, flags helmLockUpdateFlags) {
 
+	// add repo from chart dependencies
+	if flags.Helm.AddRepoDeps {
+		chart := loadChart(project, flags.Helm)
+		helmAddRepoDeps(chart)
+	}
+
 	dir := helmDir(project, flags.Helm)
 
 	// update helm Chart.lock
