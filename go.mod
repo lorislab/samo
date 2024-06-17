@@ -1,8 +1,7 @@
 module github.com/lorislab/samo
 
 go 1.21
-
-toolchain go1.21.4
+toolchain go1.22.4
 
 require (
 	github.com/Masterminds/semver/v3 v3.2.1
@@ -14,7 +13,7 @@ require (
 	github.com/spf13/viper v1.19.0
 	go.hein.dev/go-version v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.14.3
+	helm.sh/helm/v3 v3.15.2
 )
 
 require (
@@ -28,7 +27,7 @@ require (
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
-	sigs.k8s.io/yaml v1.3.0 // indirect
+	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
 require github.com/rs/zerolog v1.33.0
