@@ -70,6 +70,7 @@ func helmDownload(project *Project, flags helmFlags) {
 
 	if len(flags.Registry) == 0 {
 		helmDownloadRepository(project, flags)
+		return
 	}
 
 	var command []string
