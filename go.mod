@@ -3,7 +3,7 @@ module github.com/lorislab/samo
 go 1.22.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.2.1
+	github.com/Masterminds/semver/v3 v3.3.0
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/afero v1.11.0 // indirect
