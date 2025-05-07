@@ -173,14 +173,14 @@ func loadProject(flags projectFlags) *Project {
 
 	// create project name
 	name := flags.ProjectName
-    	if name == "" {
-    		// create project name if not provided by flag
+	if len(name) == 0 {
+    		name = "no-name"
     		tmp = strings.TrimSuffix(tmp, ".git")
     		tmp = filepath.Base(tmp)
-    		if len(tmp) > 0 && tmp != "." && tmp != "/" {
-    			name = tmp
+   		if len(tmp) > 0 && tmp != "." && tmp != "/" {
+        		name = tmp
     		}
-    	}
+	}
 
 	describe := tools.GitDescribeInfo()
 	rc := describe
