@@ -25,6 +25,7 @@ type projectFlags struct {
 	LabelTemplate       string `mapstructure:"labels-template-list"`
 	Description         string `mapstructure:"description"`
 	Url                 string `mapstructure:"url"`
+	ProjectName         string `mapstructure:"project-name"`
 }
 
 var sourceLinkRegex = `\/\/.*@`
@@ -54,9 +55,11 @@ func createProjectCmd() *cobra.Command {
 	addStringFlag(cmd, "branch-template", "", "fix/{{ .Major }}.{{ .Minor }}.x", "patch-branch name template. Values: Major,Minor,Patch")
 
 	addBoolFlag(cmd, "skip-samo-labels", "", false, "skip samo labels/annotations samo.project.revision,samo.project.version,samo.project.created")
-	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list. 
+	addStringFlag(cmd, "labels-template-list", "", "", `custom labels template list.
 	Values: `+templateValues+`
 	Example: my-label={{ .Branch }},my-const=123,my-count={{ .Count }}`)
+
+    addStringFlag(cmd, "project-name", "", "", "alternate name for the project")
 
 	addChildCmd(cmd, createProjectVersionCmd())
 	addChildCmd(cmd, createProjectNameCmd())
@@ -169,12 +172,15 @@ func loadProject(flags projectFlags) *Project {
 	log.Debug("Project", log.F("source", source))
 
 	// create project name
-	name := "no-name"
-	tmp = strings.TrimSuffix(tmp, ".git")
-	tmp = filepath.Base(tmp)
-	if len(tmp) > 0 && tmp != "." && tmp != "/" {
-		name = tmp
-	}
+	name := flags.ProjectName
+    if name == "" {
+    	// create project name if not provided by flag
+    	tmp = strings.TrimSuffix(tmp, ".git")
+    	tmp = filepath.Base(tmp)
+    	if len(tmp) > 0 && tmp != "." && tmp != "/" {
+    		name = tmp
+    	}
+    }
 
 	describe := tools.GitDescribeInfo()
 	rc := describe
