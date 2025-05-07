@@ -25,7 +25,7 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
-require github.com/rs/zerolog v1.33.0
+require github.com/rs/zerolog v1.34.0
 
 require (
 	github.com/go-viper/mapstructure/v2 v2.2.1 // indirect
