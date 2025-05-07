@@ -59,7 +59,7 @@ func createProjectCmd() *cobra.Command {
 	Values: `+templateValues+`
 	Example: my-label={{ .Branch }},my-const=123,my-count={{ .Count }}`)
 
-    addStringFlag(cmd, "project-name", "", "", "alternate name for the project")
+    	addStringFlag(cmd, "project-name", "", "", "alternate name for the project")
 
 	addChildCmd(cmd, createProjectVersionCmd())
 	addChildCmd(cmd, createProjectNameCmd())
@@ -173,14 +173,14 @@ func loadProject(flags projectFlags) *Project {
 
 	// create project name
 	name := flags.ProjectName
-    if name == "" {
-    	// create project name if not provided by flag
-    	tmp = strings.TrimSuffix(tmp, ".git")
-    	tmp = filepath.Base(tmp)
-    	if len(tmp) > 0 && tmp != "." && tmp != "/" {
-    		name = tmp
+    	if name == "" {
+    		// create project name if not provided by flag
+    		tmp = strings.TrimSuffix(tmp, ".git")
+    		tmp = filepath.Base(tmp)
+    		if len(tmp) > 0 && tmp != "." && tmp != "/" {
+    			name = tmp
+    		}
     	}
-    }
 
 	describe := tools.GitDescribeInfo()
 	rc := describe
