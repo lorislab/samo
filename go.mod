@@ -3,7 +3,7 @@ module github.com/lorislab/samo
 go 1.22.0
 
 require (
-	github.com/Masterminds/semver/v3 v3.3.1
+	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/spf13/afero v1.12.0 // indirect
 	github.com/spf13/cobra v1.9.1
