@@ -1,6 +1,6 @@
 module github.com/lorislab/samo
 
-go 1.22.0
+go 1.24.0
 
 require (
 	github.com/Masterminds/semver/v3 v3.4.0
@@ -11,7 +11,7 @@ require (
 	github.com/spf13/viper v1.20.1
 	go.hein.dev/go-version v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.16.1
+	helm.sh/helm/v3 v3.18.4
 )
 
 require (
@@ -20,8 +20,8 @@ require (
 	github.com/spf13/cast v1.7.1 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7
-	golang.org/x/sys v0.29.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.33.0 // indirect
+	golang.org/x/text v0.26.0 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
 )
 
