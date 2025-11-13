@@ -11,7 +11,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	go.hein.dev/go-version v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.19.0
+	helm.sh/helm/v3 v3.19.2
 )
 
 require (
@@ -20,8 +20,8 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	gitlab.com/digitalxero/go-conventional-commit v1.0.7
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sys v0.37.0 // indirect
+	golang.org/x/text v0.30.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
