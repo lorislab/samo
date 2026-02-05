@@ -96,7 +96,7 @@ func buildHelmChart(flags helmBuildFlags, pro *Project) {
 			log.Fatal("error read file", log.F("file", path).E(err))
 		}
 		// write result to output directory
-		out := strings.Replace(path, flags.Source, flags.Helm.Dir+"/"+pro.name, -1)
+		out := strings.ReplaceAll(path, flags.Source, flags.Helm.Dir+"/"+pro.name)
 		tools.WriteBytesToFile(out, result)
 		log.Debug("Copy file", log.F("out", out).F("in", path))
 	}
