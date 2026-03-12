@@ -11,7 +11,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	go.hein.dev/go-version v0.1.0
 	gopkg.in/yaml.v2 v2.4.0
-	helm.sh/helm/v3 v3.20.0
+	helm.sh/helm/v3 v3.20.1
 )
 
 require (
